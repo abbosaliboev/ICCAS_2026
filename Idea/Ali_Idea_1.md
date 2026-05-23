@@ -1,405 +1,276 @@
-# 🏠 SafeHome — AI-Powered Fall Detection System
+# MobiCare
+### AI 기반 낙상 감지 및 모빌리티 재활 플랫폼
 
-> **Language / 언어 선택**
-> - [🇺🇸 English](#english)
-> - [🇰🇷 한국어](#korean)
-
----
-
-<a name="english"></a>
-# 🇺🇸 English
-
-## What is SafeHome?
-
-SafeHome is an AI-based home safety monitoring system.  
-It detects falls in real time using a camera and immediately notifies family members.  
-It also includes a balance training game called **"Frozen!"** to help prevent falls before they happen.
+![MobiCare](./Images/MobiCare.png)
 
 ---
 
-## Why Does This Matter?
+## 1. 어떤 서비스를?
 
-Every day, people get hurt at home — and no one knows until it's too late.
-
-- A grandmother lives alone. She falls in the hallway at night. She lies there for hours before anyone finds her.
-- A toddler is playing in the living room while mom cooks in the kitchen. The child falls and hits their head.
-- A grandfather just had surgery. His legs are weak. He falls getting up from bed.
-
-These situations happen in millions of homes — every single day.
-
-> **The problem is not the fall itself. The problem is that no one knows.**
+### 핵심 한 줄
+> **"넘어지기 전에 막고, 넘어지면 즉시 알리고, 넘어진 후엔 다시 일으킨다."**
 
 ---
 
-## Who Is This For?
+### 누구를 위한 서비스인가?
 
-| Who | Situation |
-|-----|-----------|
-| 👶 Young children (ages 1–6) | Playing alone while parents are in another room |
-| 👴 Elderly living alone (65+) | Home alone, especially at night |
-| 🧠 Epilepsy patients | Seizures can happen anytime, without warning |
-| 🏥 Post-surgery patients | Weak legs, recovering at home |
-| 🤕 Stroke survivors | Balance problems during rehabilitation |
+한국은 2025년 기준 **초고령사회**에 진입했습니다.  
+65세 이상 인구가 전체의 20%를 넘었고, 이 숫자는 계속 오르고 있습니다.
 
-**One system. One family. Everyone protected.**
+MobiCare는 **모빌리티(이동 능력)를 잃을 위험에 처한 사람들**을 위한 서비스입니다.
 
----
-
-## When Is It Used?
-
-- When a child is playing alone in the living room
-- When an elderly person is home alone during the day
-- When a family member is sleeping and cannot watch
-- When a patient is recovering after surgery or stroke
-- Anytime someone vulnerable is at home without direct supervision
+| 대상 | 규모 | 핵심 위험 |
+|------|------|-----------|
+| 혼자 사는 노인 (65세+) | 한국 약 200만 명 | 낙상 후 장시간 방치 |
+| 뇌졸중 재활 환자 | 연간 약 10만 명 | 재활 중 반복 낙상 |
+| 치매 환자 | 한국 약 100만 명 | 야간 배회 및 낙상 |
+| 정형외과 수술 후 환자 | 연간 약 50만 명 | 회복기 낙상 |
+| 지체 장애인 | 한국 약 130만 명 | 이동 중 균형 상실 및 낙상 |
 
 ---
 
-## Where Does It Work?
-
-SafeHome works in all indoor and outdoor spaces **except** bathrooms and restrooms (for privacy).
+### 어떤 공간에서?
 
 ```
-✅ Living room / Hall
-✅ Bedroom
-✅ Kitchen
-✅ Hallway / Corridor
-✅ Stairs — especially dangerous!
-✅ Garden / Yard
-✅ Balcony / Veranda
-❌ Bathroom (privacy)
-❌ Restroom (privacy)
+집 안 모든 공간:
+✅ 거실 / 복도 / 침실 / 주방
+✅ 계단 (낙상 사고 1위 장소)
+✅ 마당 / 정원 / 발코니
+❌ 욕실 / 화장실 (프라이버시)
 ```
 
-> Stairs are particularly dangerous for both children and elderly — especially in two-story homes at night.
+> 특히 **지역소멸** 현상으로 혼자 사는 농촌 노인 가정에서  
+> 스마트폰과 일반 카메라만으로 즉시 설치 가능한 것이 핵심입니다.
 
 ---
 
-## How Does It Work?
-
-### System Overview
+### 서비스 방법 — 3단계
 
 ```
-📷 Camera (ordinary webcam or IP camera)
-          │
-          ▼
-┌─────────────────────────────┐
-│        AI Engine            │
-│                             │
-│  YOLOv11 Pose Estimation   │
-│  → Detects body position    │
-│  → Identifies fall event    │
-│                             │
-│  Audio Analysis             │
-│  → Baby crying              │
-│  → "Help!" shout            │
-│  → Falling sound            │
-└─────────────────────────────┘
-          │
-          ▼
-   Is this a real fall?
-   (Not just playing or sitting down)
-          │
-          ▼
-┌─────────────────────────────┐
-│        Alert System         │
-│  • Push notification        │
-│  • SMS to family            │
-│  • Dashboard alert          │
-└─────────────────────────────┘
-          │
-          ▼
-┌─────────────────────────────┐
-│        Dashboard            │
-│  • Heatmap (danger zones)   │
-│  • Daily activity log       │
-│  • Weekly AI safety report  │
-└─────────────────────────────┘
+① PREVENT (예방)
+   매일 "Frozen!" 게임 5분
+   → AI가 균형 능력을 조용히 측정
+   → "이번 주 균형 능력 15% 저하" → 가족에게 사전 경고
+
+② DETECT (감지)
+   24시간 카메라 + 음성 분석
+   → 낙상 발생 즉시 감지
+   → 3초 안에 가족 앱 알림 + 문자
+
+③ REHABILITATE (재활)
+   낙상 후 맞춤 운동 프로그램
+   → YOLOv11이 자세와 동작을 실시간 분석
+   → 주간 재활 리포트 → 병원 자동 전송
 ```
 
 ---
 
-### Key Features
+## 2. 어떤 제품으로?
 
-**🔴 Core Features**
-- Real-time fall detection using camera
-- Audio analysis (crying, shouting, falling sounds)
-- Instant family notification (push + SMS)
-- False alarm filtering — distinguishes real falls from playing or sitting
+### 기존 유사 제품의 한계
 
-**🟡 Important Features**
-- **Heatmap** — shows which areas of the home are most dangerous
-- **Danger Zone Alert** — warns when someone enters a high-risk area (e.g., stairs at night)
-- **Response Time Tracking** — records how long it took family to respond
+| 기존 제품 | 한계점 |
+|-----------|--------|
+| 스마트워치 낙상 감지 (Apple Watch 등) | **넘어진 후** 감지. 예방 불가. 고령자 착용 거부감 높음 |
+| 가정용 CCTV | 단순 녹화만. AI 분석 없음. 알림 없음 |
+| 병원 재활 프로그램 | 주 1~2회, 병원 방문 필수. 일상 모니터링 불가 |
+| 기존 낙상 감지 매트 | 특정 위치만 감지. 이동 불가. 재활 기능 없음 |
 
-**🟢 Bonus Features**
-- **AI Weekly Report** — generated by Gemini AI, summarizes weekly safety status
-- **Activity Pattern Analysis** — detects unusual behavior (e.g., no movement for too long)
-- **Multi-camera support** — monitor multiple rooms simultaneously
+### MobiCare가 개선하는 것
+
+```
+기존:  넘어진 후 → 감지
+MobiCare: 넘어지기 전 → 예측 → 예방
+           넘어진 후  → 즉시 감지 → 알림
+           넘어진 다음 → 재활 → 회복
+```
+
+**필요한 것은 단 두 가지:**
+- 일반 카메라 (웹캠 또는 IP 카메라)
+- 스마트폰 (가족용 앱)
+
+추가 센서, 웨어러블, 특수 장비 — 전혀 필요 없습니다.
 
 ---
 
-## 🎮 The Game: "Frozen!"
-
-### Why a Game?
-
-Telling elderly people to "exercise every day" doesn't work.  
-But a fun game? They'll come back tomorrow.
-
-**"Frozen!" turns balance training into a game.**
-
-### How to Play
-
-1. Stand in front of the camera
-2. Music plays — move freely and have fun
-3. Music stops → **Freeze! Don't move!**
-4. The AI measures how still and balanced you are
-5. Score based on stability → earn points
-
-### Why It's Smart
-
-- The game secretly measures **balance quality** every session
-- Data is saved to the dashboard
-- If balance gets worse over weeks → family gets an alert **before** a fall happens
-- It's fun for both children and elderly
-- No instructions needed — anyone understands it instantly
-
-### Prevention + Response Together
+### 핵심 기술 구성
 
 ```
-Daily "Frozen!" game          +        Fall Detection camera
-        ↓                                       ↓
-Balance data collected              If fall happens → alert sent
-Trend tracked over time             Family notified in seconds
-"Balance declining" alert
-sent to family early
+📷 카메라 입력
+    ↓
+YOLOv11 Pose Estimation
+→ 17개 신체 관절 실시간 추적
+→ 낙상 패턴 감지
+→ 균형 능력 정량화 (Balance Score)
+    ↓
+음성 분석 모델
+→ 울음소리 / "도와주세요" / 충격음 감지
+    ↓
+낙상 판단 로직
+→ 오탐(False Alarm) 최소화
+   (앉는 동작 vs 실제 낙상 구별)
+    ↓
+FastAPI 서버 → Firebase
+    ↓
+가족 앱 알림 + 병원 리포트 + 대시보드
 ```
 
 ---
 
-## System Architecture
+### 게임: "Frozen!" — 재활을 게임으로
+
+> **치료실에서 하던 균형 훈련을 집에서, 매일, 재미있게.**
+
+- 음악이 멈추면 그 자리에서 멈추는 단순한 게임
+- YOLOv11이 멈춘 자세의 안정성을 실시간 측정
+- **전 세계 누구나 5초 만에 이해 가능** — 언어 장벽 없음
+- 랭킹 시스템으로 지속적 동기 부여
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    CLIENT SIDE                      │
-│                                                     │
-│   📷 Camera Input    🎙️ Microphone Input            │
-│         │                   │                       │
-│         └─────────┬─────────┘                       │
-│                   ▼                                 │
-│          AI Processing Layer                        │
-│   ┌───────────────────────────────┐                 │
-│   │  YOLOv11 Pose Estimation      │                 │
-│   │  Audio Classification Model   │                 │
-│   │  Fall Event Decision Logic    │                 │
-│   └───────────────┬───────────────┘                 │
-└───────────────────┼─────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────┐
-│                   SERVER SIDE                       │
-│                                                     │
-│   FastAPI Backend                                   │
-│   Firebase / Database                               │
-│   Alert Service (Push / SMS)                        │
-│   Gemini AI Report Generator                        │
-└───────────────────┬─────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────┐
-│                   USER SIDE                         │
-│                                                     │
-│   📱 Mobile App — Family notifications              │
-│   💻 Web Dashboard — Heatmap, reports, history      │
-│   🎮 Game Screen — "Frozen!" balance game           │
-└─────────────────────────────────────────────────────┘
+랭킹 구조:
+├── 개인 랭킹 (지난 주 나 vs 이번 주 나)
+├── 지역 랭킹 (우리 동네 몇 위?)
+└── 연령대 랭킹 (70대 중 몇 위?)
 ```
 
 ---
 
-## Summary
+## 3. 개선했다는 걸 어떻게 증명하는가?
 
-| Question | Answer |
-|----------|--------|
-| **What?** | AI home fall detection + balance game |
-| **Who?** | Elderly, young children, patients |
-| **When?** | Anytime someone is home without supervision |
-| **Where?** | Living room, bedroom, stairs, yard |
-| **Why?** | Falls happen silently — family must know immediately |
-| **How?** | Camera + AI + instant notification + weekly report |
+### 측정 가능한 지표 (Data-Driven)
 
----
-
----
-
-<a name="korean"></a>
-# 🇰🇷 한국어
-
-## SafeHome이란?
-
-SafeHome은 AI 기반 가정 안전 모니터링 시스템입니다.  
-카메라를 통해 실시간으로 낙상을 감지하고, 즉시 가족에게 알림을 보냅니다.  
-또한 **"Frozen!"** 이라는 균형 훈련 게임을 통해 낙상을 미리 예방합니다.
-
----
-
-## 왜 이 시스템이 필요한가?
-
-매일 집 안에서 사람들이 다치는데, 아무도 모르는 경우가 너무 많습니다.
-
-- 할머니가 혼자 사십니다. 밤에 복도에서 넘어지셨습니다. 몇 시간이 지나서야 발견됩니다.
-- 아이가 거실에서 혼자 놀고 있습니다. 엄마는 주방에서 요리 중입니다. 아이가 넘어져 머리를 다칩니다.
-- 할아버지가 수술 후 집에서 회복 중입니다. 다리에 힘이 없습니다. 침대에서 일어나다 넘어집니다.
-
-이런 상황은 전 세계 수백만 가정에서 매일 일어납니다.
-
-> **문제는 넘어지는 것이 아닙니다. 아무도 모른다는 것이 문제입니다.**
-
----
-
-## 누구를 위한 시스템인가?
-
-| 대상 | 상황 |
-|------|------|
-| 👶 영유아 (1~6세) | 부모가 다른 방에 있는 동안 혼자 노는 경우 |
-| 👴 혼자 사는 노인 (65세 이상) | 특히 야간에 혼자 있는 경우 |
-| 🧠 뇌전증(간질) 환자 | 예고 없이 발작이 올 수 있는 경우 |
-| 🏥 수술 후 회복 환자 | 다리 힘이 약해 집에서 회복 중인 경우 |
-| 🤕 뇌졸중 생존자 | 재활 중 균형 감각 저하된 경우 |
-
-**하나의 시스템. 하나의 가족. 모두를 보호합니다.**
-
----
-
-## 언제 사용하는가?
-
-- 아이가 거실에서 혼자 놀 때
-- 노인이 낮 시간 혼자 집에 있을 때
-- 가족이 자고 있어 지켜볼 수 없을 때
-- 수술이나 뇌졸중 후 회복 중인 환자가 집에 있을 때
-- 취약한 가족이 직접적인 감독 없이 집에 있는 모든 상황
-
----
-
-## 어디서 사용하는가?
-
-욕실과 화장실을 **제외한** 모든 실내외 공간에서 작동합니다 (프라이버시 보호).
-
+**① Balance Score (균형 점수)**
 ```
-✅ 거실 / 홀
-✅ 침실
-✅ 주방
-✅ 복도
-✅ 계단 — 특히 위험!
-✅ 정원 / 마당
-✅ 발코니 / 베란다
-❌ 욕실 (프라이버시)
-❌ 화장실 (프라이버시)
+측정 방법:
+YOLOv11 → 신체 중심점(CoM) 추적
+→ 시간당 흔들림 범위 (cm) 측정
+→ 0~100점 정량화
+
+임상 기준: Berg Balance Scale (BBS) 과 상관관계 검증
 ```
 
-> 계단은 어린이와 노인 모두에게 특히 위험합니다. 특히 2층 가정의 야간 이동 시.
-
----
-
-## 어떻게 작동하는가?
-
-### 시스템 개요
-
+**② 낙상 감지 정확도**
 ```
-📷 카메라 (일반 웹캠 또는 IP 카메라)
-          │
-          ▼
-┌─────────────────────────────┐
-│          AI 엔진             │
-│                             │
-│  YOLOv11 포즈 추정           │
-│  → 신체 자세 감지             │
-│  → 낙상 이벤트 식별           │
-│                             │
-│  음성 분석                   │
-│  → 아기 울음소리              │
-│  → "도와주세요!" 소리          │
-│  → 넘어지는 소리              │
-└─────────────────────────────┘
-          │
-          ▼
-   실제 낙상인가?
-   (놀다가 앉는 것과 구별)
-          │
-          ▼
-┌─────────────────────────────┐
-│         알림 시스템           │
-│  • 푸시 알림                 │
-│  • 가족에게 문자(SMS)         │
-│  • 대시보드 경고              │
-└─────────────────────────────┘
-          │
-          ▼
-┌─────────────────────────────┐
-│         대시보드             │
-│  • 히트맵 (위험 구역)         │
-│  • 일일 활동 기록             │
-│  • 주간 AI 안전 리포트        │
-└─────────────────────────────┘
+Precision / Recall / F1-Score 측정
+목표: Precision 90%+, Recall 95%+
+(오탐은 줄이고, 실제 낙상은 놓치지 않는다)
+```
+
+**③ 재활 진행도**
+```
+주간 Balance Score 변화율
+운동 지속률 (며칠 연속 참여했는가)
+병원 방문 횟수 감소율
+```
+
+**④ 알림 응답 시간**
+```
+낙상 발생 → 가족 알림 수신까지:
+목표: 3초 이내
 ```
 
 ---
 
-### 주요 기능
+### 데이터 수집 유형
 
-**🔴 핵심 기능**
-- 카메라를 통한 실시간 낙상 감지
-- 음성 분석 (울음, 외침, 낙상 소리)
-- 즉각적인 가족 알림 (푸시 + 문자)
-- 오탐 필터링 — 실제 낙상과 놀이/앉기 구별
+```
+Skeleton 데이터:
+  - 17개 관절 (x, y, confidence score)
+  - 30 FPS 실시간 추적
 
-**🟡 중요 기능**
-- **히트맵** — 집 안에서 가장 위험한 구역 표시
-- **위험 구역 알림** — 고위험 구역 진입 시 경고 (예: 야간 계단)
-- **대응 시간 기록** — 가족이 반응하기까지 걸린 시간 기록
+음성 데이터:
+  - MFCC features
+  - 16kHz sampling rate
+  - 울음소리 / 충격음 / "도와주세요" 분류
 
-**🟢 추가 기능**
-- **AI 주간 리포트** — Gemini AI가 주간 안전 현황 요약 생성
-- **활동 패턴 분석** — 비정상적인 행동 감지 (예: 너무 오랫동안 움직임 없음)
-- **다중 카메라 지원** — 여러 방 동시 모니터링
+Balance Score:
+  - CoM displacement (cm/s)
+  - 세션 시작 ~ 종료 변화량
+
+이벤트 로그:
+  - timestamp, room ID, alert type, response time
+```
+
+> **Dataset 전략:** Le2i Fall Detection Dataset + UR Fall Detection Dataset 기반으로
+> 초기 모델 검증. 이후 실제 가정 환경에서 자체 소규모 데이터 수집 예정.
 
 ---
 
-## 🎮 게임: "Frozen!"
-
-### 왜 게임인가?
-
-노인에게 "매일 운동하세요"라고 말하는 건 효과가 없습니다.  
-하지만 재미있는 게임이라면? 내일도 스스로 찾아옵니다.
-
-**"Frozen!"은 균형 훈련을 게임으로 만든 것입니다.**
-
-### 게임 방법
-
-1. 카메라 앞에 섭니다
-2. 음악이 흘러나옵니다 — 자유롭게 움직이세요
-3. 음악이 멈추면 → **그대로 멈추세요! 움직이지 마세요!**
-4. AI가 얼마나 안정적으로 멈췄는지 측정합니다
-5. 안정성에 따라 점수 획득
-
-### 왜 똑똑한 게임인가
-
-- 게임을 하는 동안 **균형 능력**이 자동으로 측정됩니다
-- 데이터가 대시보드에 저장됩니다
-- 몇 주에 걸쳐 균형이 나빠지면 → 낙상 **전에** 가족에게 알림
-- 어린이와 노인 모두에게 재미있습니다
-- 설명이 필요 없습니다 — 누구나 즉시 이해합니다
-
-### 예방 + 대응 함께
+### 데이터 시각화 — 대시보드
 
 ```
-매일 "Frozen!" 게임            +        낙상 감지 카메라
-        ↓                                       ↓
-균형 데이터 수집                      낙상 발생 시 → 즉시 알림
-시간에 따른 추세 추적                  몇 초 안에 가족에게 전달
-"균형 저하" 조기 알림
-가족에게 미리 전달
+가족용 앱:
+├── 실시간 알림 (낙상 발생 시)
+├── 오늘의 활동 요약
+└── 이번 주 건강 트렌드 그래프
+
+병원/의사용:
+├── 주간 Balance Score 변화
+├── 운동 참여율
+├── 낙상 발생 이력
+└── AI 생성 재활 리포트 (Gemini AI)
+
+위험 구역 히트맵:
+└── 집 안 어느 곳에서 위험 행동이 많이 감지되었는가
 ```
+
+---
+
+## 4. 기대 효과는?
+
+### 개인 차원
+
+```
+Before MobiCare:
+낙상 → 골절 → 입원 → 모빌리티 상실 → 사회적 고립
+
+After MobiCare:
+균형 저하 감지 → 재활 운동 → 낙상 예방 → 모빌리티 유지
+```
+
+- 낙상 발생률 감소 (재활 운동 지속 시 연구 기준 **30~40% 감소** 가능)
+- 낙상 후 발견 시간: 평균 1시간 → **3초**
+- 재활 운동 참여율: 병원 방문 기반 주 1~2회 → **매일 가능**
+- 장애인 및 재활 환자의 일상 모니터링 → 독립 생활 기간 연장
+
+---
+
+### 사회적 차원
+
+```
+고령화사회 + 지역소멸
+        ↓
+혼자 사는 노인 증가
+        ↓
+MobiCare
+        ↓
+① 의료비 절감 (낙상 예방 = 입원 감소)
+② 가족 심리적 부담 감소
+③ 노인 자립 생활 기간 연장
+④ 지방 의료 인프라 부족 문제 보완
+```
+
+> 한국 건강보험공단 기준, 낙상 관련 입원 치료비는  
+> 연간 **약 1조 원** 이상으로 추정됩니다.  
+> MobiCare는 이 비용의 일부를 구조적으로 줄일 수 있습니다.
+
+---
+
+### AI Mobility 관점에서의 의미
+
+> *"모빌리티(이동 능력)는 단순히 걷는 것이 아닙니다.  
+> 사회에 참여하고, 가족과 연결되고, 인간다운 삶을 사는 것입니다.  
+> MobiCare는 AI로 그 능력을 지킵니다."*
+
+```
+모빌리티 유지
+    = 독립적 생활 유지
+    = 사회 참여 유지
+    = 삶의 질 유지
+```
+
+**MobiCare는 낙상 감지 앱이 아닙니다.**  
+**AI로 사람의 이동 능력과 삶의 질을 지키는 플랫폼입니다.**
 
 ---
 
@@ -415,7 +286,7 @@ SafeHome은 AI 기반 가정 안전 모니터링 시스템입니다.
 │                   ▼                                 │
 │             AI 처리 레이어                            │
 │   ┌───────────────────────────────┐                 │
-│   │  YOLOv11 포즈 추정             │                 │
+│   │  YOLOv11 Pose Estimation      │                 │
 │   │  음성 분류 모델                 │                 │
 │   │  낙상 이벤트 판단 로직           │                 │
 │   └───────────────┬───────────────┘                 │
@@ -447,9 +318,13 @@ SafeHome은 AI 기반 가정 안전 모니터링 시스템입니다.
 
 | 질문 | 답변 |
 |------|------|
-| **무엇을?** | AI 가정 낙상 감지 + 균형 게임 |
-| **누구를 위해?** | 노인, 영유아, 환자 |
+| **무엇을?** | AI 낙상 감지 + 균형 게임 + 재활 플랫폼 |
+| **누구를 위해?** | 노인, 재활 환자, 장애인 |
 | **언제?** | 취약한 가족이 감독 없이 집에 있을 때 |
 | **어디서?** | 거실, 침실, 계단, 마당 |
-| **왜?** | 낙상은 조용히 일어납니다 — 가족이 즉시 알아야 합니다 |
-| **어떻게?** | 카메라 + AI + 즉각 알림 + 주간 리포트 |
+| **왜?** | 낙상은 조용히 일어납니다 — 예방하고, 즉시 알리고, 회복시킨다 |
+| **어떻게?** | 카메라 + YOLOv11 + 음성분석 + 즉각 알림 + 재활 리포트 |
+
+---
+
+*Team 4 · ICCAS 2026*
