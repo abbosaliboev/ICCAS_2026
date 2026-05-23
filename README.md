@@ -79,7 +79,7 @@ All indoor spaces:
 
 | Existing Product | Limitation |
 |-----------------|------------|
-| Smartwatch fall detection (Apple Watch, etc.) | Detects **after** the fall. No prevention. High resistance to wear among elderly |
+| Smartwatch fall detection | Detects **after** the fall. No prevention. High resistance to wear among elderly |
 | Home CCTV | Recording only. No AI analysis. No alerts |
 | Hospital rehabilitation programs | 1–2 visits per week. Requires travel. No daily monitoring |
 | Fall detection mats | Detects only one spot. Not portable. No rehab function |
@@ -481,7 +481,7 @@ MobiCare는 **모빌리티(이동 능력)를 잃을 위험에 처한 사람들**
 
 | 기존 제품 | 한계점 |
 |-----------|--------|
-| 스마트워치 낙상 감지 (Apple Watch 등) | **넘어진 후** 감지. 예방 불가. 고령자 착용 거부감 높음 |
+| 스마트워치 낙상 감지 | **넘어진 후** 감지. 예방 불가. 고령자 착용 거부감 높음 |
 | 가정용 CCTV | 단순 녹화만. AI 분석 없음. 알림 없음 |
 | 병원 재활 프로그램 | 주 1~2회, 병원 방문 필수. 일상 모니터링 불가 |
 | 기존 낙상 감지 매트 | 특정 위치만 감지. 이동 불가. 재활 기능 없음 |
