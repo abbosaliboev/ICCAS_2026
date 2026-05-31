@@ -1,12 +1,21 @@
 # MobiCare
-### AI-Powered Fall Detection & Mobility Rehabilitation Platform
-### AI 기반 낙상 감지 및 모빌리티 재활 플랫폼
+### Edge AI-Based Real-Time Fall Detection and Alert System for Elderly People Living Alone
+### 독거 노인을 위한 엣지 AI 기반 실시간 낙상 감지 및 알림 시스템
 
-![MobiCare](./Images/MobiCare.png)
+![MobiCare](./Docs/Images/MobiCare.png)
 
 > **Language / 언어 선택**
 > - [🇺🇸 English](#english)
 > - [🇰🇷 한국어](#korean)
+
+---
+
+## 📄 Documents
+
+| Document | Link |
+|----------|------|
+| Abstract (Markdown) | [Docs/Poster/abstract.md](./Docs/Poster/abstract.md) |
+| Poster (PDF) | [Docs/Poster/4조 초록.pdf](./Docs/Poster/4조%20초록.pdf) |
 
 ---
 
@@ -22,18 +31,15 @@
 
 ### Who Is It For?
 
-Korea entered a **super-aged society** in 2025.  
-Over 20% of the population is now 65 or older — and the number keeps rising.
+Korea and France have both entered **super-aged societies** — people aged 65 and older now make up over 20% of the total population. In France, about **30% of people aged 65+** experience a fall every year. In Korea, falls account for the **highest proportion** of all injury causes.
 
-MobiCare serves **people at risk of losing their mobility**.
+MobiCare primarily targets **elderly people living alone**, where no caregiver is present to respond immediately after a fall.
 
 | Target | Scale | Core Risk |
 |--------|-------|-----------|
-| Elderly living alone (65+) | ~2 million in Korea | Left unattended after a fall |
-| Stroke rehabilitation patients | ~100,000 per year | Repeated falls during recovery |
-| Dementia patients | ~1 million in Korea | Nighttime wandering and falls |
-| Post-orthopedic surgery patients | ~500,000 per year | Falls during recovery |
-| People with physical disabilities | ~1.3 million in Korea | Balance loss and falls while moving |
+| Elderly living alone (65+) | ~2 million in Korea | Left unattended after a fall — no one to respond |
+| Nursing hospital patients | High-risk environment | Repeated falls, staff cannot monitor all patients |
+| Senior welfare facility residents | Institutional setting | Falls during nighttime or unsupervised hours |
 
 ---
 
@@ -47,8 +53,7 @@ All indoor spaces:
 ❌ Bathroom / Restroom (privacy)
 ```
 
-> Key advantage: installable immediately with just a **smartphone and a regular camera** —  
-> perfect for elderly living alone in rural areas facing community decline.
+> Top 3 fall risk zones: **living room, bathroom surroundings, bedroom** — each with different characteristics and risk patterns.
 
 ---
 
@@ -84,6 +89,8 @@ All indoor spaces:
 | Hospital rehabilitation programs | 1–2 visits per week. Requires travel. No daily monitoring |
 | Fall detection mats | Detects only one spot. Not portable. No rehab function |
 
+> All existing wearable sensor-based systems require users to wear a device at all times — uncomfortable, and they cannot track full-body movement since they only measure one body part.
+
 ### What MobiCare Improves
 
 ```
@@ -104,7 +111,9 @@ No extra sensors, wearables, or special equipment required.
 ### Core Technology
 
 ```
-📷 Camera Input
+📷 Single Camera Input
+    ↓
+Edge AI Device (Lightweight Model)
     ↓
 YOLOv11 Pose Estimation
 → Real-time tracking of 17 body joints
@@ -118,14 +127,16 @@ Fall Decision Logic
 → Minimize false alarms
    (distinguish sitting down vs. actual fall)
     ↓
-FastAPI Server → Firebase
+Alert Service (Push / SMS / KakaoTalk)
     ↓
-Family app alert + Hospital report + Dashboard
+Family app + Dashboard
 ```
+
+> **Edge AI**: the model runs directly on an edge device — low latency, no dependency on cloud connection, privacy-safe.
 
 ---
 
-### Game: "Frozen!" — Rehabilitation as a Game
+### Game: "Frozen!" — Prevention as a Game
 
 > **Balance training from the clinic — now at home, every day, and fun.**
 
@@ -213,9 +224,6 @@ Week 2: automatically upgraded to slightly harder poses
        → alert sent to family
 ```
 
-> This approach goes beyond a simple game —  
-> it becomes an **AI-powered personalized rehabilitation prescription system**.
-
 ---
 
 ## 3. How Do We Prove It Works?
@@ -237,6 +245,8 @@ Clinical reference: validated against Berg Balance Scale (BBS)
 Precision / Recall / F1-Score
 Target: Precision 90%+, Recall 95%+
 (minimize false alarms, never miss a real fall)
+
+Baseline: standard video-based action recognition model
 ```
 
 **③ Rehabilitation Progress**
@@ -294,7 +304,8 @@ Hospital / Doctor view:
 └── AI-generated rehabilitation report (Gemini AI)
 
 Danger zone heatmap:
-└── Where in the home are risky behaviors most frequently detected?
+└── Top 3 risk zones in the home — living room, bedroom, hallway
+    (each zone has different fall characteristics → different response)
 ```
 
 ---
@@ -305,16 +316,17 @@ Danger zone heatmap:
 
 ```
 Before MobiCare:
-fall → fracture → hospitalization → loss of mobility → social isolation
+fall → no one knows → found hours later → fracture → hospitalization → social isolation
 
 After MobiCare:
 balance decline detected → rehab exercise → fall prevented → mobility maintained
+                    OR
+fall detected instantly → family notified in 3 seconds → rapid response
 ```
 
 - Fall rate reduction (research basis: **30–40% reduction** with consistent rehab exercise)
 - Time to discovery after a fall: average 1 hour → **3 seconds**
 - Rehabilitation participation: hospital-based 1–2x/week → **daily possible**
-- Daily monitoring for disabled and rehab patients → extended independent living
 
 ---
 
@@ -330,7 +342,7 @@ MobiCare
 ① Reduced medical costs (fall prevention = fewer hospitalizations)
 ② Reduced psychological burden on families
 ③ Extended period of independent living for elderly
-④ Supplements lack of rural medical infrastructure
+④ Applicable to nursing hospitals and senior welfare facilities
 ```
 
 > Based on Korea's National Health Insurance Service data,  
@@ -345,15 +357,8 @@ MobiCare
 > It's about participating in society, staying connected to family, and living with dignity.  
 > MobiCare protects that ability with AI."*
 
-```
-Maintaining mobility
-    = maintaining independent life
-    = maintaining social participation
-    = maintaining quality of life
-```
-
 **MobiCare is not a fall detection app.**  
-**It is a platform that uses AI to protect people's mobility and quality of life.**
+**It is a platform that uses Edge AI to protect the lives of elderly people living alone.**
 
 ---
 
@@ -361,12 +366,12 @@ Maintaining mobility
 
 | Question | Answer |
 |----------|--------|
-| **What?** | AI fall detection + balance game + rehabilitation platform |
-| **Who?** | Elderly, rehabilitation patients, people with disabilities |
-| **When?** | Whenever a vulnerable person is home without supervision |
-| **Where?** | Living room, bedroom, stairs, yard |
-| **Why?** | Falls happen silently — prevent, detect instantly, and recover |
-| **How?** | Camera + YOLOv11 + audio analysis + instant alert + rehab report |
+| **What?** | Edge AI fall detection + balance game + alert system |
+| **Who?** | Elderly living alone, nursing hospital & welfare facility residents |
+| **When?** | 24/7 — whenever the elderly person is without a caregiver |
+| **Where?** | Living room, bedroom, stairs, hallway |
+| **Why?** | Falls among the elderly living alone go unnoticed for hours |
+| **How?** | Single camera + lightweight Edge AI + instant alert (SMS/Push) |
 
 ---
 
@@ -384,18 +389,17 @@ Maintaining mobility
 
 ### 누구를 위한 서비스인가?
 
-한국은 2025년 기준 **초고령사회**에 진입했습니다.  
-65세 이상 인구가 전체의 20%를 넘었고, 이 숫자는 계속 오르고 있습니다.
+한국과 프랑스는 모두 **초고령사회**에 진입했습니다 — 65세 이상 인구가 전체의 20% 이상입니다.  
+프랑스에서는 65세 이상 노인의 약 **30%**가 매년 낙상을 경험하며,  
+한국에서도 낙상은 전체 손상 원인 중 **가장 높은 비중**을 차지합니다.
 
-MobiCare는 **모빌리티(이동 능력)를 잃을 위험에 처한 사람들**을 위한 서비스입니다.
+MobiCare는 **독거 노인**을 주요 대상으로 합니다 — 낙상 후 즉각적인 확인이 어려운 환경에 있는 분들입니다.
 
 | 대상 | 규모 | 핵심 위험 |
 |------|------|-----------|
-| 혼자 사는 노인 (65세+) | 한국 약 200만 명 | 낙상 후 장시간 방치 |
-| 뇌졸중 재활 환자 | 연간 약 10만 명 | 재활 중 반복 낙상 |
-| 치매 환자 | 한국 약 100만 명 | 야간 배회 및 낙상 |
-| 정형외과 수술 후 환자 | 연간 약 50만 명 | 회복기 낙상 |
-| 지체 장애인 | 한국 약 130만 명 | 이동 중 균형 상실 및 낙상 |
+| 독거 노인 (65세+) | 한국 약 200만 명 | 낙상 후 장시간 방치 — 즉각 대응 불가 |
+| 요양병원 환자 | 고위험 환경 | 반복 낙상, 전체 환자 상시 감시 불가 |
+| 노인복지시설 거주자 | 시설 환경 | 야간 또는 무감독 시간대 낙상 |
 
 ---
 
@@ -409,8 +413,7 @@ MobiCare는 **모빌리티(이동 능력)를 잃을 위험에 처한 사람들**
 ❌ 욕실 / 화장실 (프라이버시)
 ```
 
-> 특히 **지역소멸** 현상으로 혼자 사는 농촌 노인 가정에서  
-> 스마트폰과 일반 카메라만으로 즉시 설치 가능한 것이 핵심입니다.
+> 낙상 위험 구역 Top 3: **거실, 욕실 주변, 침실** — 각 구역마다 낙상 특성과 대응 방식이 다릅니다.
 
 ---
 
@@ -446,6 +449,8 @@ MobiCare는 **모빌리티(이동 능력)를 잃을 위험에 처한 사람들**
 | 병원 재활 프로그램 | 주 1~2회, 병원 방문 필수. 일상 모니터링 불가 |
 | 기존 낙상 감지 매트 | 특정 위치만 감지. 이동 불가. 재활 기능 없음 |
 
+> 기존 웨어러블 센서 방식은 사용자가 장치를 항상 착용해야 하며, 단일 부위 측정으로 전신 거동 파악이 불가합니다.
+
 ### MobiCare가 개선하는 것
 
 ```
@@ -466,7 +471,9 @@ MobiCare: 넘어지기 전 → 예측 → 예방
 ### 핵심 기술 구성
 
 ```
-📷 카메라 입력
+📷 단일 카메라 입력
+    ↓
+엣지 AI 디바이스 (경량화 모델)
     ↓
 YOLOv11 Pose Estimation
 → 17개 신체 관절 실시간 추적
@@ -480,14 +487,16 @@ YOLOv11 Pose Estimation
 → 오탐(False Alarm) 최소화
    (앉는 동작 vs 실제 낙상 구별)
     ↓
-FastAPI 서버 → Firebase
+알림 서비스 (푸시 / 문자 / 카카오톡)
     ↓
-가족 앱 알림 + 병원 리포트 + 대시보드
+가족 앱 + 대시보드
 ```
+
+> **엣지 AI**: 모델이 엣지 디바이스에서 직접 실행 — 낮은 지연시간, 클라우드 연결 불필요, 프라이버시 보호.
 
 ---
 
-### 게임: "Frozen!" — 재활을 게임으로
+### 게임: "Frozen!" — 예방을 게임으로
 
 > **치료실에서 하던 균형 훈련을 집에서, 매일, 재미있게.**
 
@@ -541,9 +550,6 @@ AI가 템플릿 자세와의 일치도 + 안정성 동시 측정
 
 > **사용자가 누구인지 먼저 파악하고, 그에 맞는 게임 조건을 자동으로 설정한다.**
 
-처음 앱을 실행하면 사용자 프로필을 입력합니다.  
-이후 게임 난이도, 자세 유형, 측정 기준이 **자동으로 개인화**됩니다.
-
 ```
 사용자 프로필 입력
 ├── 나이 / 성별
@@ -575,9 +581,6 @@ AI가 템플릿 자세와의 일치도 + 안정성 동시 측정
       → 가족에게 알림
 ```
 
-> 이 방식은 단순한 게임을 넘어  
-> **AI 기반 개인 맞춤 재활 처방 시스템**으로 발전시킵니다.
-
 ---
 
 ## 3. 개선했다는 걸 어떻게 증명하는가?
@@ -599,6 +602,8 @@ YOLOv11 → 신체 중심점(CoM) 추적
 Precision / Recall / F1-Score 측정
 목표: Precision 90%+, Recall 95%+
 (오탐은 줄이고, 실제 낙상은 놓치지 않는다)
+
+Baseline: 기본 영상 학습 모델 (standard video-based action recognition)
 ```
 
 **③ 재활 진행도**
@@ -656,7 +661,8 @@ Balance Score:
 └── AI 생성 재활 리포트 (Gemini AI)
 
 위험 구역 히트맵:
-└── 집 안 어느 곳에서 위험 행동이 많이 감지되었는가
+└── 낙상 위험 Top 3 구역 — 거실, 침실, 복도
+    (구역별 낙상 특성이 다름 → 구역별 대응 방안 제안)
 ```
 
 ---
@@ -667,16 +673,17 @@ Balance Score:
 
 ```
 Before MobiCare:
-낙상 → 골절 → 입원 → 모빌리티 상실 → 사회적 고립
+낙상 → 아무도 모름 → 수 시간 후 발견 → 골절 → 입원 → 사회적 고립
 
 After MobiCare:
 균형 저하 감지 → 재활 운동 → 낙상 예방 → 모빌리티 유지
+              또는
+낙상 즉시 감지 → 3초 안에 가족에게 알림 → 빠른 대응
 ```
 
 - 낙상 발생률 감소 (재활 운동 지속 시 연구 기준 **30~40% 감소** 가능)
 - 낙상 후 발견 시간: 평균 1시간 → **3초**
 - 재활 운동 참여율: 병원 방문 기반 주 1~2회 → **매일 가능**
-- 장애인 및 재활 환자의 일상 모니터링 → 독립 생활 기간 연장
 
 ---
 
@@ -685,14 +692,14 @@ After MobiCare:
 ```
 고령화사회 + 지역소멸
         ↓
-혼자 사는 노인 증가
+독거 노인 증가
         ↓
 MobiCare
         ↓
 ① 의료비 절감 (낙상 예방 = 입원 감소)
 ② 가족 심리적 부담 감소
 ③ 노인 자립 생활 기간 연장
-④ 지방 의료 인프라 부족 문제 보완
+④ 요양병원 / 노인복지시설 안전 시스템으로 확장 가능
 ```
 
 > 한국 건강보험공단 기준, 낙상 관련 입원 치료비는  
@@ -705,17 +712,10 @@ MobiCare
 
 > *"모빌리티(이동 능력)는 단순히 걷는 것이 아닙니다.  
 > 사회에 참여하고, 가족과 연결되고, 인간다운 삶을 사는 것입니다.  
-> MobiCare는 AI로 그 능력을 지킵니다."*
-
-```
-모빌리티 유지
-    = 독립적 생활 유지
-    = 사회 참여 유지
-    = 삶의 질 유지
-```
+> MobiCare는 엣지 AI로 그 능력을 지킵니다."*
 
 **MobiCare는 낙상 감지 앱이 아닙니다.**  
-**AI로 사람의 이동 능력과 삶의 질을 지키는 플랫폼입니다.**
+**엣지 AI로 독거 노인의 삶을 지키는 플랫폼입니다.**
 
 ---
 
@@ -723,17 +723,15 @@ MobiCare
 
 | 질문 | 답변 |
 |------|------|
-| **무엇을?** | AI 낙상 감지 + 균형 게임 + 재활 플랫폼 |
-| **누구를 위해?** | 노인, 재활 환자, 장애인 |
-| **언제?** | 취약한 가족이 감독 없이 집에 있을 때 |
-| **어디서?** | 거실, 침실, 계단, 마당 |
-| **왜?** | 낙상은 조용히 일어납니다 — 예방하고, 즉시 알리고, 회복시킨다 |
-| **어떻게?** | 카메라 + YOLOv11 + 음성분석 + 즉각 알림 + 재활 리포트 |
+| **무엇을?** | 엣지 AI 낙상 감지 + 균형 게임 + 즉각 알림 시스템 |
+| **누구를 위해?** | 독거 노인, 요양병원·복지시설 거주자 |
+| **언제?** | 24시간 — 보호자 없이 혼자 있을 때 항상 |
+| **어디서?** | 거실, 침실, 계단, 복도 |
+| **왜?** | 독거 노인의 낙상은 수 시간 동안 아무도 모른다 |
+| **어떻게?** | 단일 카메라 + 경량 엣지 AI + 즉각 알림 (문자/푸시/카카오톡) |
 
 ---
 
-*Team 4 · ICCAS 2026*
 
-
-반가워요~
-test
+*Team 4 · 초코하임 · ICCAS 2026*
+ b60be35362b9b5af887b79fae4c329be74e55813
