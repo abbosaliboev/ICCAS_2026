@@ -3,16 +3,46 @@ import numpy as np
 from scipy.signal import butter, filtfilt
 import matplotlib.pyplot as plt
 
-# CSV 읽기
-df = pd.read_csv("/Users/parkjonghyuk/Desktop/ICCAS/ICCAS_2026/yolowithfilter/hip_data.csv")
+# =====================================
+# Input
+# =====================================
 
-t = df["elapsed_time"].values
-y = df["mid_hip_y"].values
+CSV_PATH = "hip_positions_video.csv"
 
-# 샘플링 주파수 계산
+# =====================================
+# Load Scale Factor
+# =====================================
+
+scale_df = pd.read_csv(
+    "selected_scale.csv"
+)
+
+SCALE = scale_df[
+    "best_scale"
+].iloc[0]
+
+print(
+    "Scale =",
+    SCALE
+)
+
+# =====================================
+# Read CSV
+# =====================================
+
+df = pd.read_csv(CSV_PATH)
+
+t = df["time"].values
+y = df["hip_y"].values
+
+# =====================================
+# Sampling Frequency
+# =====================================
+
 fs = 1 / np.mean(np.diff(t))
 
 print("Sampling Frequency =", fs)
+print("Scale =", SCALE)
 
 # =====================================
 # Position Filter (5 Hz)
@@ -58,6 +88,24 @@ V_filtered = filtfilt(
 )
 
 # =====================================
+# Pixel/s -> m/s
+# =====================================
+
+velocity_m_s = -V_filtered * SCALE
+
+vel_df = pd.DataFrame({
+    "time": t,
+    "video_velocity_m_s": velocity_m_s
+})
+
+vel_df.to_csv(
+    "video_velocity.csv",
+    index=False
+)
+
+print("Saved : video_velocity.csv")
+
+# =====================================
 # Acceleration
 # =====================================
 
@@ -95,15 +143,51 @@ A_filtered2 = filtfilt(
 )
 
 # =====================================
+# Pixel/s² -> m/s²
+# =====================================
+
+acceleration_m_s2 = -A_filtered2 * SCALE
+
+acc_df = pd.DataFrame({
+    "time": t,
+    "video_acceleration": acceleration_m_s2
+})
+
+acc_df.to_csv(
+    "video_acceleration.csv",
+    index=False
+)
+
+print("Saved : video_acceleration.csv")
+
+# =====================================
+# Save Combined CSV
+# =====================================
+
+result_df = pd.DataFrame({
+    "time": t,
+    "raw_position": y,
+    "filtered_position": y_filtered,
+    "velocity_pixel_s": V_filtered,
+    "velocity_m_s": velocity_m_s,
+    "acceleration_pixel_s2": A_filtered2,
+    "acceleration_m_s2": acceleration_m_s2
+})
+
+result_df.to_csv(
+    "hip_acceleration.csv",
+    index=False
+)
+
+print("Saved : hip_acceleration.csv")
+
+# =====================================
 # Plot
 # =====================================
 
 plt.figure(figsize=(14,14))
 
-# -------------------------------------
 # Position
-# -------------------------------------
-
 plt.subplot(3,1,1)
 
 plt.plot(
@@ -125,10 +209,7 @@ plt.title("Mid-Hip Position")
 plt.legend()
 plt.grid()
 
-# -------------------------------------
 # Velocity
-# -------------------------------------
-
 plt.subplot(3,1,2)
 
 plt.plot(
@@ -156,10 +237,7 @@ plt.title("Velocity")
 plt.legend()
 plt.grid()
 
-# -------------------------------------
 # Acceleration
-# -------------------------------------
-
 plt.subplot(3,1,3)
 
 plt.plot(
