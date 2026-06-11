@@ -1,0 +1,4 @@
+﻿dataset/
+*.task
+__pycache__/
+.claude/
