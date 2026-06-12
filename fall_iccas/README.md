@@ -1,9 +1,253 @@
 # Fall Detection — ST-GCN + Physics Rescue
 **ICCAS 2026 paper project**
 
-Kamera tasviridan yiqilishni aniqlash: ST-GCN skeleton modeli + fizika qoidalari filtri (2-stage).
+> **Language / 언어 / Til**
+> - [🇺🇸 English](#english)
+> - [🇰🇷 한국어](#korean)
+> - [🇺🇿 O'zbekcha](#uzbek)
 
 ---
+
+<a name="english"></a>
+# 🇺🇸 English
+
+Camera-based fall detection: ST-GCN skeleton model + physics rule filter (2-stage).
+
+## Architecture
+
+```
+Camera frames
+      │
+      ▼
+YOLO11n-pose  →  17 COCO keypoints (x, y, conf)
+      │
+      ▼
+Sliding window (T=30, stride=15, ~19 FPS)
+      │
+      ▼
+ST-GCN (Stage 1)  →  fall probability p
+      │
+      ├── p >= 0.55  →  FALL  (confident)
+      ├── 0.50 <= p < 0.55  →  Physics Filter decides (Rescue zone)
+      └── p < 0.50  →  NO-FALL
+```
+
+**Physics Filter** (Stage 2 — Rescue mode):
+- Butterworth low-pass filter on the hip Y coordinate
+- Computes velocity and acceleration thresholds
+- Only activates when Stage 1 is uncertain (it never removes Stage 1 detections)
+
+## Dataset
+
+**UP-Fall Detection Dataset** (Martínez-Villaseñor et al., Sensors 2019)
+- 17 subjects, 11 activities, 3 trials
+- Camera1 images used
+- Activities 1–5 = FALL, Activities 6–11 = NO-FALL
+
+| Activity | Name | Label |
+|---|---|---|
+| 1 | Falling forward (hands) | FALL |
+| 2 | Falling forward (knees) | FALL |
+| 3 | Falling sideways | FALL |
+| 4 | Falling backward | FALL |
+| 5 | Hitting obstacle | FALL |
+| 6 | Sitting abruptly | NO-FALL |
+| 7 | Walking | NO-FALL |
+| 8 | Standing | NO-FALL |
+| 9 | Sitting | NO-FALL |
+| 10 | Picking up object | NO-FALL |
+| 11 | Jumping | NO-FALL |
+
+## Files
+
+```
+fall_iccas/
+├── dataset/                    # UP-Fall images (Subject1-17)
+├── cv_dataset/
+│   ├── X.npy                   # (N, 30, 17, 3) — keypoint sequences
+│   ├── y.npy                   # (N,) — 0/1 labels
+│   └── meta.csv                # subject/activity/trial info
+├── checkpoints/
+│   ├── best_stgcn.pth          # best ST-GCN model
+│   └── two_stage_config.json   # thresholds
+├── stgcn/
+│   ├── model.py                # ST-GCN architecture
+│   ├── graph.py                # 17-joint COCO skeleton graph
+│   ├── physics.py              # PhysicsFilter
+│   └── two_stage.py            # TwoStageDetector (Rescue mode)
+├── prepare_cv_dataset.py       # YOLO keypoint extraction
+├── train_two_stage.py          # Full training pipeline
+└── label_dataset.py            # Sensor CSV labeling (optional)
+```
+
+## Usage
+
+### 1. Prepare the dataset
+```bash
+python prepare_cv_dataset.py
+```
+Produces `cv_dataset/X.npy`, `y.npy`, `meta.csv`.
+
+### 2. Train
+```bash
+python train_two_stage.py
+```
+Results are printed to the terminal; the model is saved to `checkpoints/`.
+
+## Current results (Subject 1 only — subject-dependent)
+
+| Model | Accuracy | Fall F1 | Precision | Recall |
+|---|---|---|---|---|
+| ST-GCN (Stage 1) | 98.8% | 0.960 | 0.96 | 0.96 |
+| ST-GCN + Physics Rescue | 98.8% | 0.960 | 0.96 | 0.96 |
+
+> **Important:** These results were trained/tested on Subject 1 only (subject-dependent).
+> For a real evaluation, LOSO (Leave-One-Subject-Out) is required — after Subjects 2–17 are downloaded.
+
+## Key technical settings
+
+| Parameter | Value |
+|---|---|
+| YOLO model | yolo11n-pose.pt |
+| YOLO conf threshold | 0.1 (low, to detect fall poses) |
+| Window size | 30 frames |
+| Stride | 15 frames |
+| FPS | ~19 Hz |
+| ST-GCN channels | 64→64→64→128→128→128→256→256→256 |
+| Epochs | 60 |
+| Optimizer | Adam lr=1e-3, CosineAnnealingLR |
+| GPU | NVIDIA TITAN RTX 24GB |
+
+## Problems solved
+
+1. **Zero-frame problem** — During falls, YOLO failed to detect the person and output zeros (14.5% of fall frames). Solution: `conf=0.1` + forward-fill interpolation → 0% zero frames.
+2. **Camera folder naming error** — Every trial folder was named `Activity2`. Fixed with a PowerShell script (54 folders).
+3. **Physics filter being harmful** — The old AND logic deleted Stage 1 detections. Solved with the new "Rescue" logic (physics only acts on uncertain cases).
+
+---
+
+<a name="korean"></a>
+# 🇰🇷 한국어
+
+카메라 영상 기반 낙상 감지: ST-GCN 스켈레톤 모델 + 물리 규칙 필터 (2단계).
+
+## 아키텍처
+
+```
+카메라 프레임
+      │
+      ▼
+YOLO11n-pose  →  17개 COCO 키포인트 (x, y, conf)
+      │
+      ▼
+슬라이딩 윈도우 (T=30, stride=15, ~19 FPS)
+      │
+      ▼
+ST-GCN (Stage 1)  →  낙상 확률 p
+      │
+      ├── p >= 0.55  →  FALL  (확신)
+      ├── 0.50 <= p < 0.55  →  Physics Filter가 결정 (Rescue zone)
+      └── p < 0.50  →  NO-FALL
+```
+
+**Physics Filter** (Stage 2 — Rescue 모드):
+- 엉덩이(Hip) Y 좌표에 Butterworth 저역통과 필터 적용
+- 속도와 가속도 임계값 계산
+- Stage 1이 불확실할 때만 작동 (Stage 1이 감지한 것을 절대 제거하지 않음)
+
+## 데이터셋
+
+**UP-Fall Detection Dataset** (Martínez-Villaseñor et al., Sensors 2019)
+- 피험자 17명, 활동 11종, 시행 3회
+- Camera1 이미지 사용
+- Activity 1–5 = FALL, Activity 6–11 = NO-FALL
+
+| Activity | 이름 | 라벨 |
+|---|---|---|
+| 1 | 앞으로 넘어짐 (손) | FALL |
+| 2 | 앞으로 넘어짐 (무릎) | FALL |
+| 3 | 옆으로 넘어짐 | FALL |
+| 4 | 뒤로 넘어짐 | FALL |
+| 5 | 장애물에 부딪힘 | FALL |
+| 6 | 갑자기 앉기 | NO-FALL |
+| 7 | 걷기 | NO-FALL |
+| 8 | 서 있기 | NO-FALL |
+| 9 | 앉아 있기 | NO-FALL |
+| 10 | 물건 줍기 | NO-FALL |
+| 11 | 점프 | NO-FALL |
+
+## 파일 구조
+
+```
+fall_iccas/
+├── dataset/                    # UP-Fall 이미지 (Subject1-17)
+├── cv_dataset/
+│   ├── X.npy                   # (N, 30, 17, 3) — 키포인트 시퀀스
+│   ├── y.npy                   # (N,) — 0/1 라벨
+│   └── meta.csv                # subject/activity/trial 정보
+├── checkpoints/
+│   ├── best_stgcn.pth          # 최고 성능 ST-GCN 모델
+│   └── two_stage_config.json   # 임계값
+├── stgcn/
+│   ├── model.py                # ST-GCN 아키텍처
+│   ├── graph.py                # 17관절 COCO 스켈레톤 그래프
+│   ├── physics.py              # PhysicsFilter
+│   └── two_stage.py            # TwoStageDetector (Rescue 모드)
+├── prepare_cv_dataset.py       # YOLO 키포인트 추출
+├── train_two_stage.py          # 전체 학습 파이프라인
+└── label_dataset.py            # 센서 CSV 라벨링 (선택)
+```
+
+## 사용 방법
+
+### 1. 데이터셋 준비
+```bash
+python prepare_cv_dataset.py
+```
+`cv_dataset/X.npy`, `y.npy`, `meta.csv`가 생성됩니다.
+
+### 2. 학습
+```bash
+python train_two_stage.py
+```
+결과는 터미널에 출력되고, 모델은 `checkpoints/`에 저장됩니다.
+
+## 현재 결과 (Subject 1만 — subject-dependent)
+
+| 모델 | Accuracy | Fall F1 | Precision | Recall |
+|---|---|---|---|---|
+| ST-GCN (Stage 1) | 98.8% | 0.960 | 0.96 | 0.96 |
+| ST-GCN + Physics Rescue | 98.8% | 0.960 | 0.96 | 0.96 |
+
+> **중요:** 이 결과는 Subject 1에서만 train/test한 것입니다 (subject-dependent).
+> 실제 평가를 위해서는 LOSO (Leave-One-Subject-Out)가 필요합니다 — Subject 2–17 다운로드 이후.
+
+## 주요 기술 설정
+
+| 파라미터 | 값 |
+|---|---|
+| YOLO 모델 | yolo11n-pose.pt |
+| YOLO conf 임계값 | 0.1 (낮음, 낙상 자세 감지를 위해) |
+| 윈도우 크기 | 30 프레임 |
+| Stride | 15 프레임 |
+| FPS | ~19 Hz |
+| ST-GCN 채널 | 64→64→64→128→128→128→256→256→256 |
+| Epochs | 60 |
+| Optimizer | Adam lr=1e-3, CosineAnnealingLR |
+| GPU | NVIDIA TITAN RTX 24GB |
+
+## 해결한 문제들
+
+1. **Zero frame 문제** — 낙상 중에 YOLO가 사람을 찾지 못해 0을 출력 (낙상 프레임의 14.5%). 해결: `conf=0.1` + forward-fill 보간 → zero frame 0%.
+2. **카메라 폴더 이름 오류** — 모든 trial에 `Activity2`라는 이름이 붙어 있었음. PowerShell 스크립트로 수정 (54개 폴더).
+3. **Physics filter의 역효과** — 기존 AND 로직이 Stage 1의 감지 결과를 삭제함. 새로운 "Rescue" 로직으로 해결 (physics는 불확실한 경우에만 작동).
+
+---
+
+<a name="uzbek"></a>
+# 🇺🇿 O'zbekcha
+
+Kamera tasviridan yiqilishni aniqlash: ST-GCN skeleton modeli + fizika qoidalari filtri (2-stage).
 
 ## Arxitektura
 
@@ -29,8 +273,6 @@ ST-GCN (Stage 1)  →  fall probability p
 - Velocity va acceleration threshold larini hisoblaydi
 - Faqat Stage 1 noaniq bo'lganda ishga kiradi (hech qachon Stage 1 topganlarni o'chirmaydi)
 
----
-
 ## Dataset
 
 **UP-Fall Detection Dataset** (Martínez-Villaseñor et al., Sensors 2019)
@@ -51,8 +293,6 @@ ST-GCN (Stage 1)  →  fall probability p
 | 9 | Sitting | NO-FALL |
 | 10 | Picking up object | NO-FALL |
 | 11 | Jumping | NO-FALL |
-
----
 
 ## Fayllar
 
@@ -76,8 +316,6 @@ fall_iccas/
 └── label_dataset.py            # Sensor CSV labeling (ixtiyoriy)
 ```
 
----
-
 ## Ishlatish
 
 ### 1. Dataset tayyorlash
@@ -92,8 +330,6 @@ python train_two_stage.py
 ```
 Natijalar terminalga chiqadi, model `checkpoints/` ga saqlanadi.
 
----
-
 ## Hozirgi natijalar (Subject 1 only — subject-dependent)
 
 | Model | Accuracy | Fall F1 | Precision | Recall |
@@ -103,8 +339,6 @@ Natijalar terminalga chiqadi, model `checkpoints/` ga saqlanadi.
 
 > **Muhim:** Bu natijalar Subject 1 da train/test qilingan (subject-dependent).
 > Haqiqiy baholash uchun LOSO (Leave-One-Subject-Out) kerak — Subject 2–17 yuklanganidan keyin.
-
----
 
 ## Muhim texnik sozlamalar
 
@@ -119,8 +353,6 @@ Natijalar terminalga chiqadi, model `checkpoints/` ga saqlanadi.
 | Epochs | 60 |
 | Optimizer | Adam lr=1e-3, CosineAnnealingLR |
 | GPU | NVIDIA TITAN RTX 24GB |
-
----
 
 ## Hal qilingan muammolar
 
