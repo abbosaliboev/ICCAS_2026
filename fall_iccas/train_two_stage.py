@@ -8,9 +8,17 @@ Results printed at end:
   - Stage 1 alone (ST-GCN)
   - Stage 1 + Stage 2 (ST-GCN + Physics)
   - Side-by-side comparison table
+
+Usage examples:
+  python train_two_stage.py
+  python train_two_stage.py --data-dir experiments/subject1_2/cv_dataset \\
+                             --ckpt-dir experiments/subject1_2/checkpoints \\
+                             --exp-name subject1_2
 """
 
 import os
+import sys
+import argparse
 import numpy as np
 import torch
 import torch.nn as nn
@@ -23,8 +31,6 @@ from sklearn.metrics import (
 from stgcn import STGCN, PhysicsFilter, TwoStageDetector
 
 # ── config ────────────────────────────────────────────────────────────────────
-DATA_DIR    = os.path.join(os.path.dirname(__file__), "cv_dataset")
-CKPT_DIR    = os.path.join(os.path.dirname(__file__), "checkpoints")
 EPOCHS      = 60
 BATCH_SIZE  = 32
 LR          = 1e-3
@@ -32,7 +38,21 @@ WEIGHT_DECAY= 1e-4
 DROPOUT     = 0.5
 FPS         = 19.0          # UP-Fall camera ~19 Hz
 DEVICE      = "cuda" if torch.cuda.is_available() else "cpu"
-os.makedirs(CKPT_DIR, exist_ok=True)
+
+
+class _Tee:
+    """Write to both stdout and a log file simultaneously."""
+    def __init__(self, filepath):
+        self._file = open(filepath, "w", encoding="utf-8")
+        self._stdout = sys.stdout
+    def write(self, data):
+        self._file.write(data)
+        self._stdout.write(data)
+    def flush(self):
+        self._file.flush()
+        self._stdout.flush()
+    def close(self):
+        self._file.close()
 
 
 # ── dataset ───────────────────────────────────────────────────────────────────
@@ -135,11 +155,36 @@ def print_results(name, y_true, y_pred):
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    print(f"Device: {DEVICE}\n")
+    parser = argparse.ArgumentParser(description="Train ST-GCN + Physics two-stage fall detector.")
+    parser.add_argument("--data-dir", default=None,
+                        help="Directory with X.npy / y.npy. Default: <script_dir>/cv_dataset")
+    parser.add_argument("--ckpt-dir", default=None,
+                        help="Directory to save checkpoints + results. Default: <script_dir>/checkpoints")
+    parser.add_argument("--exp-name", default=None,
+                        help="Experiment name shown in header. Default: derived from ckpt-dir.")
+    args = parser.parse_args()
+
+    # argparse stores --ckpt-dir as args.ckpt_dir automatically
+    data_dir = args.data_dir or os.path.join(os.path.dirname(__file__), "cv_dataset")
+    ckpt_dir = args.ckpt_dir or os.path.join(os.path.dirname(__file__), "checkpoints")
+    exp_name = args.exp_name or os.path.basename(os.path.normpath(ckpt_dir))
+
+    os.makedirs(ckpt_dir, exist_ok=True)
+
+    # tee stdout → results.txt inside ckpt_dir
+    results_path = os.path.join(ckpt_dir, "results.txt")
+    tee = _Tee(results_path)
+    sys.stdout = tee
+
+    print(f"Experiment  : {exp_name}")
+    print(f"Data dir    : {data_dir}")
+    print(f"Checkpoint  : {ckpt_dir}")
+    print(f"Results     : {results_path}")
+    print(f"Device      : {DEVICE}\n")
 
     # ── load data ─────────────────────────────────────────────────────────────
-    X = np.load(os.path.join(DATA_DIR, "X.npy"))   # (N, T, V, C)
-    y = np.load(os.path.join(DATA_DIR, "y.npy"))   # (N,)
+    X = np.load(os.path.join(data_dir, "X.npy"))   # (N, T, V, C)
+    y = np.load(os.path.join(data_dir, "y.npy"))   # (N,)
     print(f"Data: X={X.shape}  y={y.shape}  FALL={y.sum()}  NO-FALL={(y==0).sum()}")
 
     # stratified split  70/15/15
@@ -176,7 +221,7 @@ def main():
 
         if va_f1 > best_val_f1:
             best_val_f1 = va_f1
-            torch.save(model.state_dict(), os.path.join(CKPT_DIR, "best_stgcn.pth"))
+            torch.save(model.state_dict(), os.path.join(ckpt_dir, "best_stgcn.pth"))
 
         if epoch % 10 == 0 or epoch == 1:
             print(
@@ -187,7 +232,7 @@ def main():
             )
 
     # load best model
-    model.load_state_dict(torch.load(os.path.join(CKPT_DIR, "best_stgcn.pth")))
+    model.load_state_dict(torch.load(os.path.join(ckpt_dir, "best_stgcn.pth")))
     print(f"\nLoaded best model (val fall F1={best_val_f1:.4f})")
 
     # ── Stage 1 test evaluation ───────────────────────────────────────────────
@@ -241,9 +286,13 @@ def main():
         "acc_threshold":     physics.acc_threshold,
         "fps":               FPS,
     }
-    with open(os.path.join(CKPT_DIR, "two_stage_config.json"), "w") as f:
+    with open(os.path.join(ckpt_dir, "two_stage_config.json"), "w") as f:
         json.dump(cfg, f, indent=2)
-    print(f"\nConfig saved: {os.path.join(CKPT_DIR, 'two_stage_config.json')}")
+    print(f"\nConfig saved : {os.path.join(ckpt_dir, 'two_stage_config.json')}")
+    print(f"Results saved: {results_path}")
+
+    tee.close()
+    sys.stdout = tee._stdout
 
 
 if __name__ == "__main__":

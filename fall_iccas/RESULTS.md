@@ -10,7 +10,34 @@
 <a name="english"></a>
 # 🇺🇸 English
 
-## Current best result (Subject 1, subject-dependent)
+## Current best result (Subject 1+2, subject-dependent)
+
+**Date:** 2026-06-13
+**Dataset:** Subject 1+2 — X.npy shape (2210, 30, 17, 3)
+**Split:** 70/15/15 stratified (train=1547, val=331, test=332)
+
+| Model | Accuracy | Fall F1 | Precision | Recall | FP | FN |
+|---|---|---|---|---|---|---|
+| ST-GCN (Stage 1) | 97.9% | 0.931 | 0.87 | 1.00 | 7 | 0 |
+| ST-GCN + Physics Rescue | 98.5% | **0.948** | 0.92 | 0.98 | 4 | 1 |
+
+Confusion matrix (test set, 332 samples):
+```
+Two-stage:
+              Pred NO-FALL  Pred FALL
+True NO-FALL      281           4      (4 FP)
+True FALL           1          46      (1 FN)
+```
+
+Tuned thresholds:
+- `stage1_threshold = 0.90`
+- `rescue_threshold = 0.85`
+- `vel_threshold = 0.02038`
+- `acc_threshold = 0.33960`
+
+---
+
+## Previous best result (Subject 1 only, subject-dependent)
 
 **Date:** 2026-06-11
 **Dataset:** Subject 1 only — X.npy shape (1145, 30, 17, 3)
@@ -35,6 +62,20 @@ Tuned thresholds:
 - `acc_threshold = 0.3545`
 
 ## Run history
+
+### Run 4 — 2026-06-13 (Subject 1+2, 2 subjects)
+What's new:
+- Added Subject 2 to training data (2210 sequences total, was 1145)
+- Physics Rescue now actively helps: FP 7→4 (unlike Subject1-only where rescue was never triggered)
+- Stage 1 recall = 1.00 (zero missed falls)
+
+| Model | Fall F1 |
+|---|---|
+| ST-GCN Stage 1 | 0.931 |
+| ST-GCN + Physics Rescue | **0.948** |
+
+Note: F1 slightly lower than Subject1-only (0.960) — expected since cross-subject generalization is harder.
+Saved to: `experiments/subject1_2/`
 
 ### Run 3 — 2026-06-11 (Physics Rescue + Zero-frame fix)
 What's new:
@@ -104,16 +145,16 @@ Run 2 → Run 3: Physics Rescue logic
 <a name="korean"></a>
 # 🇰🇷 한국어
 
-## 현재 최고 결과 (Subject 1, subject-dependent)
+## 현재 최고 결과 (Subject 1+2, subject-dependent)
 
-**날짜:** 2026-06-11
-**데이터셋:** Subject 1만 — X.npy shape (1145, 30, 17, 3)
-**Split:** 70/15/15 stratified (train=801, val=172, test=172)
+**날짜:** 2026-06-13
+**데이터셋:** Subject 1+2 — X.npy shape (2210, 30, 17, 3)
+**Split:** 70/15/15 stratified (train=1547, val=331, test=332)
 
 | 모델 | Accuracy | Fall F1 | Precision | Recall | FP | FN |
 |---|---|---|---|---|---|---|
-| ST-GCN (Stage 1) | 98.8% | **0.960** | 0.96 | 0.96 | 1 | 1 |
-| ST-GCN + Physics Rescue | 98.8% | **0.960** | 0.96 | 0.96 | 1 | 1 |
+| ST-GCN (Stage 1) | 97.9% | 0.931 | 0.87 | 1.00 | 7 | 0 |
+| ST-GCN + Physics Rescue | 98.5% | **0.948** | 0.92 | 0.98 | 4 | 1 |
 
 Confusion matrix (test set, 172 샘플):
 ```
@@ -198,16 +239,16 @@ Run 2 → Run 3: Physics Rescue 로직
 <a name="uzbek"></a>
 # 🇺🇿 O'zbekcha
 
-## Hozirgi eng yaxshi natija (Subject 1, subject-dependent)
+## Hozirgi eng yaxshi natija (Subject 1+2, subject-dependent)
 
-**Sana:** 2026-06-11
-**Dataset:** Subject 1 only — X.npy shape (1145, 30, 17, 3)
-**Split:** 70/15/15 stratified (train=801, val=172, test=172)
+**Sana:** 2026-06-13
+**Dataset:** Subject 1+2 — X.npy shape (2210, 30, 17, 3)
+**Split:** 70/15/15 stratified (train=1547, val=331, test=332)
 
 | Model | Accuracy | Fall F1 | Precision | Recall | FP | FN |
 |---|---|---|---|---|---|---|
-| ST-GCN (Stage 1) | 98.8% | **0.960** | 0.96 | 0.96 | 1 | 1 |
-| ST-GCN + Physics Rescue | 98.8% | **0.960** | 0.96 | 0.96 | 1 | 1 |
+| ST-GCN (Stage 1) | 97.9% | 0.931 | 0.87 | 1.00 | 7 | 0 |
+| ST-GCN + Physics Rescue | 98.5% | **0.948** | 0.92 | 0.98 | 4 | 1 |
 
 Confusion matrix (test set, 172 samples):
 ```

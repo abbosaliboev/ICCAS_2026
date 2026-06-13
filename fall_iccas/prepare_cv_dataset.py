@@ -14,26 +14,29 @@ Confidence from YOLO kept as 3rd channel.
 
 ST-GCN: X.transpose(0,3,1,2)[:,None] -> (N, C, T, V, 1)
 TCN   : X.reshape(N, T, -1)          -> (N, T, V*C)
+
+Usage examples:
+  python prepare_cv_dataset.py                          # all subjects -> cv_dataset/
+  python prepare_cv_dataset.py --subjects 1 2           # Subject1+2 only
+  python prepare_cv_dataset.py --subjects 1 2 --out-dir experiments/subject1_2/cv_dataset
 """
 
 import os
 import re
 import csv
+import argparse
 import numpy as np
 import cv2
 from ultralytics import YOLO
 
 # ── config ────────────────────────────────────────────────────────────────────
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset")
-OUT_DIR     = os.path.join(os.path.dirname(__file__), "cv_dataset")
 CAMERA      = "Camera1"
 WINDOW_SIZE = 30
 STRIDE      = 15
 FALL_ACTIVITIES = {1, 2, 3, 4, 5}
 N_JOINTS    = 17
 N_COORDS    = 3     # x, y, confidence
-
-os.makedirs(OUT_DIR, exist_ok=True)
 
 # load once
 MODEL = YOLO("yolo11n-pose.pt")   # downloads automatically if not present
@@ -120,12 +123,17 @@ def interpolate_zero_frames(kps: np.ndarray) -> np.ndarray:
     return kps
 
 
-def get_trials(root):
+def get_trials(root, subjects=None):
+    """Yield (subj_id, act_id, trial_id, cam_folder, imgs).
+    subjects: set of ints to include, or None for all.
+    """
     for subj_name in sorted(os.listdir(root)):
         sm = re.match(r"Subject(\d+)$", subj_name)
         if not sm:
             continue
         subj_id = int(sm.group(1))
+        if subjects is not None and subj_id not in subjects:
+            continue
         subj_path = os.path.join(root, subj_name)
 
         for act_name in sorted(os.listdir(subj_path)):
@@ -158,10 +166,27 @@ def get_trials(root):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Extract YOLO keypoints into sliding-window arrays.")
+    parser.add_argument("--subjects", type=int, nargs="+", default=None,
+                        help="Subject IDs to include (e.g. 1 2). Default: all.")
+    parser.add_argument("--out-dir", default=None,
+                        help="Output directory for X.npy / y.npy / meta.csv. "
+                             "Default: <script_dir>/cv_dataset")
+    args = parser.parse_args()
+
+    subjects = set(args.subjects) if args.subjects else None
+    out_dir  = args.out_dir or os.path.join(os.path.dirname(__file__), "cv_dataset")
+    os.makedirs(out_dir, exist_ok=True)
+
+    subj_label = f"Subject{sorted(subjects)}" if subjects else "All subjects"
+    print(f"Dataset dir : {DATASET_DIR}")
+    print(f"Subjects    : {subj_label}")
+    print(f"Output dir  : {out_dir}\n")
+
     all_X, all_y, meta_rows = [], [], []
     seq_id = 0
 
-    for subj_id, act_id, trial_id, cam_folder, imgs in get_trials(DATASET_DIR):
+    for subj_id, act_id, trial_id, cam_folder, imgs in get_trials(DATASET_DIR, subjects):
         label = 1 if act_id in FALL_ACTIVITIES else 0
         print(f"  S{subj_id} A{act_id} T{trial_id}  {len(imgs)} frames  label={label}")
 
@@ -197,10 +222,10 @@ def main():
     X = np.array(all_X, dtype=np.float32)  # (N, T, V, C)
     y = np.array(all_y, dtype=np.int64)
 
-    np.save(os.path.join(OUT_DIR, "X.npy"), X)
-    np.save(os.path.join(OUT_DIR, "y.npy"), y)
+    np.save(os.path.join(out_dir, "X.npy"), X)
+    np.save(os.path.join(out_dir, "y.npy"), y)
 
-    with open(os.path.join(OUT_DIR, "meta.csv"), "w", newline="") as f:
+    with open(os.path.join(out_dir, "meta.csv"), "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["seq_id","subject","activity","trial","start_frame","label"])
         w.writeheader()
         w.writerows(meta_rows)
@@ -209,7 +234,7 @@ def main():
     print(f"y shape  : {y.shape}")
     print(f"FALL     : {(y==1).sum()} sequences")
     print(f"NO-FALL  : {(y==0).sum()} sequences")
-    print(f"\nSaved to : {OUT_DIR}")
+    print(f"\nSaved to : {out_dir}")
     print("\nST-GCN input: X.transpose(0,3,1,2)[:,None]  -> (N, C, T, V, 1)")
     print("TCN input   : X.reshape(N, T, -1)           -> (N, T, V*C)")
 
