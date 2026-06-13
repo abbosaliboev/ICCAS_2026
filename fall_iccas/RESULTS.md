@@ -10,30 +10,31 @@
 <a name="english"></a>
 # 🇺🇸 English
 
-## Current best result (Subject 1+2, subject-dependent — highest F1 so far)
+## Current best result (Subject 1+2+3+4, subject-stratified split)
 
-**Date:** 2026-06-13
-**Dataset:** Subject 1+2 — X.npy shape (2210, 30, 17, 3)
-**Split:** 70/15/15 stratified (train=1547, val=331, test=332)
+**Date:** 2026-06-14
+**Dataset:** Subject 1+2+3+4 — X.npy shape (4479, 30, 17, 3)
+**Split:** Subject-stratified 70/15/15 (train=3134, val=670, test=675)
+**Each subject:** ~800 train / ~170 val / ~170 test
 
 | Model | Accuracy | Fall F1 | Precision | Recall | FP | FN |
 |---|---|---|---|---|---|---|
-| ST-GCN (Stage 1) | 97.9% | 0.931 | 0.87 | 1.00 | 7 | 0 |
-| ST-GCN + Physics Rescue | 98.5% | **0.948** | 0.92 | 0.98 | 4 | 1 |
+| ST-GCN (Stage 1) | 98.5% | 0.950 | 0.95 | 0.95 | 5 | 5 |
+| ST-GCN + Physics Rescue | 98.7% | **0.955** | 0.95 | 0.96 | 5 | 4 |
 
-Confusion matrix (test set, 332 samples):
+Confusion matrix (test set, 675 samples):
 ```
 Two-stage:
               Pred NO-FALL  Pred FALL
-True NO-FALL      281           4      (4 FP)
-True FALL           1          46      (1 FN)
+True NO-FALL      571           5      (5 FP)
+True FALL           4          95      (4 FN)
 ```
 
 Tuned thresholds:
-- `stage1_threshold = 0.90`
-- `rescue_threshold = 0.85`
-- `vel_threshold = 0.02038`
-- `acc_threshold = 0.33960`
+- `stage1_threshold = 0.50`
+- `rescue_threshold = 0.45`
+- `vel_threshold = 0.0237`
+- `acc_threshold = 0.0`
 
 ---
 
@@ -62,6 +63,21 @@ Tuned thresholds:
 - `acc_threshold = 0.3545`
 
 ## Run history
+
+### Run 7 — 2026-06-14 (Subject 1+2+3+4, subject-stratified split)
+What's new:
+- Added Subject 4 (1.62m, 71kg — between Subject2 and Subject3)
+- Fixed split: subject-stratified 70/15/15 (each subject equally in all splits)
+- F1 improved vs 3 subjects: 0.943 → 0.955 (more data helps!)
+- Physics Rescue caught 1 additional fall (FN 5→4)
+- Early stopping at epoch 48 (best val F1=0.970 at epoch ~33)
+
+| Model | Fall F1 |
+|---|---|
+| ST-GCN Stage 1 | 0.950 |
+| ST-GCN + Physics Rescue | **0.955** |
+
+Saved to: `experiments/subject1_2_3_4/`
 
 ### Run 6 — 2026-06-14 (Subject 1+2+3, early stopping fixed)
 What's new:
