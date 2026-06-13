@@ -190,12 +190,43 @@ def main():
     y = np.load(os.path.join(data_dir, "y.npy"))   # (N,)
     print(f"Data: X={X.shape}  y={y.shape}  FALL={y.sum()}  NO-FALL={(y==0).sum()}")
 
-    # stratified split  70/15/15
-    X_tr,  X_tmp, y_tr,  y_tmp = train_test_split(
-        X, y, test_size=0.30, stratify=y, random_state=42)
-    X_val, X_te,  y_val, y_te  = train_test_split(
-        X_tmp, y_tmp, test_size=0.50, stratify=y_tmp, random_state=42)
-    print(f"Split: train={len(y_tr)} val={len(y_val)} test={len(y_te)}\n")
+    # subject-stratified split 70/15/15 — each subject proportionally in all splits
+    meta_path = os.path.join(data_dir, "meta.csv")
+    if os.path.exists(meta_path):
+        import pandas as pd
+        meta = pd.read_csv(meta_path)
+        subjects = meta["subject"].values  # (N,)
+        tr_idx, val_idx, te_idx = [], [], []
+        for subj in np.unique(subjects):
+            idx = np.where(subjects == subj)[0]
+            np.random.seed(42)
+            np.random.shuffle(idx)
+            n = len(idx)
+            n_tr  = int(n * 0.70)
+            n_val = int(n * 0.15)
+            tr_idx.extend(idx[:n_tr])
+            val_idx.extend(idx[n_tr:n_tr + n_val])
+            te_idx.extend(idx[n_tr + n_val:])
+        tr_idx  = np.array(tr_idx)
+        val_idx = np.array(val_idx)
+        te_idx  = np.array(te_idx)
+        X_tr,  y_tr  = X[tr_idx],  y[tr_idx]
+        X_val, y_val = X[val_idx], y[val_idx]
+        X_te,  y_te  = X[te_idx],  y[te_idx]
+        print(f"Subject-stratified split: train={len(y_tr)} val={len(y_val)} test={len(y_te)}")
+        for subj in np.unique(subjects):
+            n_tr_s  = (subjects[tr_idx]  == subj).sum()
+            n_val_s = (subjects[val_idx] == subj).sum()
+            n_te_s  = (subjects[te_idx]  == subj).sum()
+            print(f"  Subject{subj}: train={n_tr_s} val={n_val_s} test={n_te_s}")
+        print()
+    else:
+        # fallback: label-stratified only
+        X_tr,  X_tmp, y_tr,  y_tmp = train_test_split(
+            X, y, test_size=0.30, stratify=y, random_state=42)
+        X_val, X_te,  y_val, y_te  = train_test_split(
+            X_tmp, y_tmp, test_size=0.50, stratify=y_tmp, random_state=42)
+        print(f"Split (label-stratified): train={len(y_tr)} val={len(y_val)} test={len(y_te)}\n")
 
     train_ds = FallDataset(X_tr,  y_tr,  augment=True)
     val_ds   = FallDataset(X_val, y_val)
