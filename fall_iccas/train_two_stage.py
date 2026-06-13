@@ -162,6 +162,8 @@ def main():
                         help="Directory to save checkpoints + results. Default: <script_dir>/checkpoints")
     parser.add_argument("--exp-name", default=None,
                         help="Experiment name shown in header. Default: derived from ckpt-dir.")
+    parser.add_argument("--patience", type=int, default=15,
+                        help="Early stopping: stop if val fall-F1 does not improve for N epochs. Default: 15.")
     args = parser.parse_args()
 
     # argparse stores --ckpt-dir as args.ckpt_dir automatically
@@ -180,7 +182,8 @@ def main():
     print(f"Data dir    : {data_dir}")
     print(f"Checkpoint  : {ckpt_dir}")
     print(f"Results     : {results_path}")
-    print(f"Device      : {DEVICE}\n")
+    print(f"Device      : {DEVICE}")
+    print(f"Patience    : {args.patience}\n")
 
     # ── load data ─────────────────────────────────────────────────────────────
     X = np.load(os.path.join(data_dir, "X.npy"))   # (N, T, V, C)
@@ -212,7 +215,9 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
-    best_val_f1 = -1.0
+    best_val_f1  = -1.0
+    no_improve   = 0
+    stopped_epoch = EPOCHS
     for epoch in range(1, EPOCHS + 1):
         tr_loss, tr_acc = train_epoch(model, train_loader, optimizer, criterion)
         va_loss, va_acc, va_preds, va_labels, _ = evaluate(model, val_loader, criterion)
@@ -220,20 +225,28 @@ def main():
         scheduler.step()
 
         if va_f1 > best_val_f1:
-            best_val_f1 = va_f1
+            best_val_f1  = va_f1
+            no_improve   = 0
             torch.save(model.state_dict(), os.path.join(ckpt_dir, "best_stgcn.pth"))
+        else:
+            no_improve += 1
 
         if epoch % 10 == 0 or epoch == 1:
             print(
                 f"  Epoch {epoch:3d}/{EPOCHS}  "
                 f"tr_loss={tr_loss:.4f} tr_acc={tr_acc:.3f}  "
                 f"val_acc={va_acc:.3f} val_fall_f1={va_f1:.3f}  "
-                f"best_f1={best_val_f1:.3f}"
+                f"best_f1={best_val_f1:.3f}  no_improve={no_improve}"
             )
+
+        if no_improve >= args.patience:
+            stopped_epoch = epoch
+            print(f"\n  Early stopping at epoch {epoch} (no improvement for {args.patience} epochs)")
+            break
 
     # load best model
     model.load_state_dict(torch.load(os.path.join(ckpt_dir, "best_stgcn.pth")))
-    print(f"\nLoaded best model (val fall F1={best_val_f1:.4f})")
+    print(f"\nLoaded best model (val fall F1={best_val_f1:.4f}, stopped at epoch {stopped_epoch})")
 
     # ── Stage 1 test evaluation ───────────────────────────────────────────────
     _, _, s1_te_preds, y_te_labels, s1_te_probs = evaluate(model, test_loader, criterion)

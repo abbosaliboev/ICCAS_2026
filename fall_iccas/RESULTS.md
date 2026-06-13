@@ -10,7 +10,7 @@
 <a name="english"></a>
 # 🇺🇸 English
 
-## Current best result (Subject 1+2, subject-dependent)
+## Current best result (Subject 1+2, subject-dependent — highest F1 so far)
 
 **Date:** 2026-06-13
 **Dataset:** Subject 1+2 — X.npy shape (2210, 30, 17, 3)
@@ -62,6 +62,31 @@ Tuned thresholds:
 - `acc_threshold = 0.3545`
 
 ## Run history
+
+### Run 6 — 2026-06-14 (Subject 1+2+3, early stopping fixed)
+What's new:
+- Added early stopping (patience=15) to prevent overfitting
+- Training stopped at epoch 50 (best val F1=0.993 at epoch ~35)
+- F1 recovered from 0.686 → 0.943
+
+| Model | Fall F1 |
+|---|---|
+| ST-GCN Stage 1 | **0.943** |
+| ST-GCN + Physics Rescue | **0.943** |
+
+Confusion matrix (test, 503 samples):
+```
+              Pred NO-FALL  Pred FALL
+True NO-FALL      429           3    (3 FP)
+True FALL           5          66    (5 FN)
+```
+Note: Physics Rescue didn't add further improvement — Stage 1 already well-calibrated.
+Saved to: `experiments/subject1_2_3/`
+
+### Run 5 — 2026-06-13 (Subject 1+2+3, no early stopping — FAILED RUN)
+- Overfitting: val F1 peaked at epoch 20 (0.640) then collapsed to 0.278
+- F1 = 0.686 (two-stage) — result of overfitting, not true generalization
+- Lesson: early stopping is mandatory for cross-subject training
 
 ### Run 4 — 2026-06-13 (Subject 1+2, 2 subjects)
 What's new:
