@@ -195,6 +195,74 @@ Window size T=30 (~1.58 seconds at 19 FPS)
 Stride     S=15 (~0.79 seconds)
 ```
 
+## Real-time Webcam Demo (`demo_webcam.py`)
+
+### Pipeline
+
+```
+Webcam frame
+    │
+    ▼  YOLO11n-pose (conf=0.1)
+    │  normalized (17, 3) keypoints
+    ▼
+  Ring buffer (deque, maxlen=30)
+    │  every 15 frames:
+    ▼  ffill → (30, 17, 3) window
+  ┌──────────────────────────────────────┐
+  │  PHYSICS-ONLY mode (recommended)     │
+  │                                      │
+  │  1. Personal baseline (EMA hip Y     │
+  │     while standing upright)          │
+  │                                      │
+  │  2. Slow fall:                       │
+  │     drop_from_base > slow_drop       │
+  │     AND is_lying() (shoulder ≈ hip)  │
+  │     for lying_confirm windows        │
+  │                                      │
+  │  3. Fast fall (--fast-fall):         │
+  │     max_velocity + max_acc + net_drop│
+  └──────────────────────────────────────┘
+    │  pred ∈ {0, 1}
+    ▼
+  State machine:
+    fall_streak >= confirm_needed → FALL DETECTED
+    is_standing() for stand_streak → auto-reset
+```
+
+### Key design decisions
+
+| Decision | Reason |
+|---|---|
+| Baseline hip Y (EMA) | Camera-angle/distance independent — person's own reference |
+| `is_lying()` condition | Distinguishes floor-sitting (upright torso) from lying (horizontal) |
+| `--fast-fall` OFF by default | Slow falls are the priority for elderly; fast-fall causes FP when running |
+| `--use-model` display-only | ST-GCN trained on UP-Fall lab data — distribution shift on webcam; physics is reliable |
+| 5s min-lock after alert | Prevents flashing alerts; lying person still triggers while motionless |
+
+### State machine
+
+```
+Idle → fall_streak++ (per window) → [streak ≥ confirm] → FALL ACTIVE
+                                                              │ min_lock (5s)
+FALL ACTIVE → [lock expired] → is_standing() × stand_streak → Idle
+```
+
+### Posture detectors
+
+```python
+is_standing(kp, delta=0.12):  hip_y - shoulder_y > delta
+is_lying(kp, delta=0.10):     hip_y - shoulder_y < delta  (horizontal body)
+```
+
+### Run command
+
+```bash
+python demo_webcam.py --physics-only --confirm 2 --slow-drop 0.12 --lying-confirm 2
+
+# with ST-GCN display overlay (model shown but doesn't gate detection):
+python demo_webcam.py --physics-only --use-model --confirm 2 --slow-drop 0.12 --lying-confirm 2
+```
+
 ## File sources
 
 | File | Description |
@@ -205,6 +273,7 @@ Stride     S=15 (~0.79 seconds)
 | `stgcn/two_stage.py` | TwoStageDetector, Rescue logic, tune_thresholds() |
 | `prepare_cv_dataset.py` | YOLO extraction + interpolation + windowing |
 | `train_two_stage.py` | Full pipeline: split → train → physics fit → evaluate |
+| `demo_webcam.py` | Real-time webcam demo: physics-based detection + optional ST-GCN overlay |
 
 ---
 
@@ -396,6 +465,27 @@ Trial (F 프레임) → 윈도우:
 Stride      S=15 (~0.79초)
 ```
 
+## 실시간 웹캠 데모 (`demo_webcam.py`)
+
+### 핵심 설계 결정
+
+| 결정 | 이유 |
+|---|---|
+| 개인 기준선 hip Y (EMA) | 카메라 각도/거리에 무관 — 본인 기준으로 측정 |
+| `is_lying()` 조건 | 바닥 앉기(상체 직립)와 눕기(수평)를 구분 |
+| `--fast-fall` 기본 OFF | 노인 낙상은 주로 느린 낙상; 빠른 낙상은 달리기에서 FP 발생 |
+| `--use-model` 표시 전용 | ST-GCN이 UP-Fall 실험실 데이터로 학습됨 — 웹캠 도메인 차이; physics가 신뢰도 높음 |
+| 5초 최소 잠금 | 낙상 후 정적인 상태에서도 알림 유지 |
+
+### 실행 명령어
+
+```bash
+python demo_webcam.py --physics-only --confirm 2 --slow-drop 0.12 --lying-confirm 2
+
+# ST-GCN 확률 오버레이 포함 (표시 전용, 감지는 physics 담당):
+python demo_webcam.py --physics-only --use-model --confirm 2 --slow-drop 0.12 --lying-confirm 2
+```
+
 ## 파일별 역할
 
 | 파일 | 설명 |
@@ -406,6 +496,7 @@ Stride      S=15 (~0.79초)
 | `stgcn/two_stage.py` | TwoStageDetector, Rescue 로직, tune_thresholds() |
 | `prepare_cv_dataset.py` | YOLO 추출 + 보간 + 윈도잉 |
 | `train_two_stage.py` | 전체 파이프라인: split → train → physics fit → evaluate |
+| `demo_webcam.py` | 실시간 웹캠 데모: physics 기반 감지 + ST-GCN 오버레이 |
 
 ---
 
@@ -597,6 +688,27 @@ Window size T=30 (~1.58 sekund at 19 FPS)
 Stride     S=15 (~0.79 sekund)
 ```
 
+## Real-time Webcam Demo (`demo_webcam.py`)
+
+### Asosiy dizayn qarorlari
+
+| Qaror | Sabab |
+|---|---|
+| Shaxsiy bazaviy hip Y (EMA) | Kamera burchagi/masofasidan mustaqil — o'z baseline si |
+| `is_lying()` sharti | Polda o'tirish (tik tana) va yotish (gorizontal) ni ajratadi |
+| `--fast-fall` default OFF | Qariyalar asosan sekin yiqiladi; tez yiqilish yugurishda FP beradi |
+| `--use-model` faqat ko'rsatish | ST-GCN UP-Fall lab datada train — webcam da domain shift; physics ishonchli |
+| 5 soniya minimal qulf | Yiqilgandan so'ng harakatsiz holatda ham ogohlantirish saqlanadi |
+
+### Ishga tushirish
+
+```bash
+python demo_webcam.py --physics-only --confirm 2 --slow-drop 0.12 --lying-confirm 2
+
+# ST-GCN ehtimollik overlay bilan (faqat ko'rsatish, aniqlash physics da):
+python demo_webcam.py --physics-only --use-model --confirm 2 --slow-drop 0.12 --lying-confirm 2
+```
+
 ## Fayl manbalar
 
 | Fayl | Tavsif |
@@ -607,3 +719,4 @@ Stride     S=15 (~0.79 sekund)
 | `stgcn/two_stage.py` | TwoStageDetector, Rescue mantiq, tune_thresholds() |
 | `prepare_cv_dataset.py` | YOLO extraction + interpolation + windowing |
 | `train_two_stage.py` | To'liq pipeline: split → train → physics fit → evaluate |
+| `demo_webcam.py` | Real-time webcam demo: physics aniqlash + ST-GCN overlay |
