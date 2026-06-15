@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MobiCare — an ICCAS 2026 paper project for camera-based fall detection of elderly people living alone. Pure Python research code (PyTorch + Ultralytics YOLO); there is no build system, test suite, linter, or requirements file. Dependencies used across scripts: `torch`, `ultralytics`, `opencv-python`, `scipy`, `scikit-learn`, `pandas`, `numpy`, `matplotlib`.
 
-Documentation is multilingual: root `README.md` is English/Korean, `fall_iccas/*.md` docs have English/Korean/Uzbek sections (keep all three in sync when editing them), and code comments mix Korean/English.
+Documentation is multilingual: root `README.md` is English/Korean, `fall_iccas/*.md` docs have English/Korean sections (keep both in sync when editing them), and code comments mix Korean/English.
 
 ## Two codebases
 

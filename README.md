@@ -27,6 +27,34 @@
 
 ---
 
+## 🗓️ Conference Schedule / 학술대회 일정
+
+**Toulouse, France — July 2026**
+
+| Event | Description | Date |
+|-------|-------------|------|
+| **EKC 2026** | 18th Europe-Korea Conference on Science and Technology — poster presentation | July 20–23, 2026 |
+| **ICCAS 2026** | International Collegiate Challenge for AI-Assisted Society — paper presentation | July 18–24, 2026 |
+
+EKC (Europe-Korea Conference) is an annual forum organized by KOFST that connects Korean scientists and engineers across Europe and Korea. The 2026 edition is held in Toulouse, France.
+
+Team departs from **Chungbuk National University (CBNU)**, South Korea · July 6–15, 2026.
+
+---
+
+**프랑스 툴루즈 — 2026년 7월**
+
+| 행사 | 설명 | 일정 |
+|------|------|------|
+| **EKC 2026** | 제18회 한-유럽 과학기술학술대회 — 포스터 발표 | 2026년 7월 20–23일 |
+| **ICCAS 2026** | International Collegiate Challenge for AI-Assisted Society — 논문 발표 | 2026년 7월 18–24일 |
+
+EKC(한-유럽 과학기술학술대회)는 KOFST가 주관하는 연례 포럼으로, 유럽과 한국의 과학기술인을 연결합니다. 2026년 대회는 프랑스 툴루즈에서 개최됩니다.
+
+팀 출발: **충북대학교 (CBNU)** · 2026년 7월 6–15일.
+
+---
+
 <a name="english"></a>
 # 🇺🇸 English
 
