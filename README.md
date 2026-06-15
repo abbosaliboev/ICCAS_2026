@@ -19,6 +19,14 @@
 
 ---
 
+## 🎥 Demo — Fall Detection (ST-GCN + Physics Filter)
+
+> Real-time webcam test: ST-GCN model combined with the physics rescue filter.
+
+![Fall Detection Demo](./Docs/Videos/ph+model.gif)
+
+---
+
 <a name="english"></a>
 # 🇺🇸 English
 
