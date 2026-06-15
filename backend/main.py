@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import (FastAPI, WebSocket, WebSocketDisconnect,
-                     HTTPException, UploadFile, File, Header, Depends)
+                     HTTPException, UploadFile, File, Header, Depends, Query)
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -283,8 +283,20 @@ def get_fall_event(event_id: str, user=Depends(auth_user)):
     return ev
 
 
+def auth_media(authorization: str = Header(None, alias="Authorization"),
+               token: str = Query(None)):
+    """Auth for media endpoints — accepts token as header OR query param (for <video> tags)."""
+    t = token or (authorization or "").replace("Bearer ", "").strip()
+    if not t:
+        raise HTTPException(401, "Missing token")
+    sess = db.get_session(t)
+    if not sess:
+        raise HTTPException(401, "Invalid token")
+    return db.get_user_by_id(sess["user_id"])
+
+
 @app.get("/api/fall-events/{event_id}/video/file")
-def get_clip(event_id: str, user=Depends(auth_user)):
+def get_clip(event_id: str, user=Depends(auth_media)):
     ev = db.get_fall_event(event_id)
     if not ev or not ev.get("video_path"):
         raise HTTPException(404, "영상이 없습니다")
