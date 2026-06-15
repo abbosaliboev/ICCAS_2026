@@ -821,10 +821,10 @@ async function openDetail(eventId) {
   ]);
   if (!ev) return;
 
-  // video
+  // video — pass token as query param so <video> tag can auth
   const videoEl = document.getElementById('detail-video');
   if (ev.video_path) {
-    videoEl.src = `/api/fall-events/${eventId}/video/file`;
+    videoEl.src = `/api/fall-events/${eventId}/video/file?token=${token}`;
     videoEl.load();
     document.getElementById('detail-video-wrap').style.display = '';
   } else {
