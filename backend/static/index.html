@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Fall Guard</title>
+<style>
+  :root {
+    --bg:      #0d1b2a;
+    --card:    #1a2d42;
+    --accent:  #2d6fa4;
+    --red:     #e63946;
+    --green:   #2dc653;
+    --orange:  #f4a261;
+    --text:    #e8edf2;
+    --muted:   #8fa3bb;
+    --border:  #243b55;
+    --radius:  14px;
+    --shadow:  0 4px 20px rgba(0,0,0,0.4);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif; overflow: hidden; }
+
+  /* ── layout ── */
+  #app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  .screen { display: none; flex: 1; flex-direction: column; overflow-y: auto; }
+  .screen.active { display: flex; }
+
+  /* ── topbar ── */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .topbar h1 { font-size: 1.05rem; font-weight: 700; }
+  .topbar .badge { font-size: 0.72rem; padding: 3px 8px; border-radius: 99px; background: var(--accent); }
+
+  /* ── bottom nav ── */
+  .nav { display: flex; background: var(--card); border-top: 1px solid var(--border); flex-shrink: 0; }
+  .nav button { flex: 1; padding: 10px 0 6px; background: none; border: none; color: var(--muted); font-size: 0.65rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color .2s; }
+  .nav button svg { width: 22px; height: 22px; }
+  .nav button.active { color: var(--accent); }
+
+  /* ── button styles ── */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; border-radius: var(--radius); border: none; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity .15s, transform .1s; }
+  .btn:active { transform: scale(0.97); opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-danger  { background: var(--red);   color: #fff; }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-outline { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+  .btn-sm { padding: 10px 14px; font-size: 0.85rem; }
+
+  /* ── form ── */
+  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .form-group label { font-size: 0.82rem; color: var(--muted); }
+  input, select { background: var(--bg); border: 1.5px solid var(--border); color: var(--text); border-radius: 10px; padding: 14px 16px; font-size: 1rem; width: 100%; outline: none; }
+  input:focus, select:focus { border-color: var(--accent); }
+
+  /* ── cards ── */
+  .card { background: var(--card); border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); }
+  .card + .card { margin-top: 12px; }
+  .card-title { font-size: 0.78rem; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+
+  /* ── live video ── */
+  #stream-img { width: 100%; display: block; background: #000; min-height: 200px; border-radius: var(--radius); object-fit: cover; }
+  .stream-wrap { position: relative; }
+  .stream-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; pointer-events: none; border-radius: var(--radius); }
+  .stream-badge { align-self: flex-end; background: rgba(0,0,0,0.65); border-radius: 8px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; }
+  .stream-person { align-self: flex-start; background: rgba(0,0,0,0.65); border-radius: 8px; padding: 4px 10px; font-size: 0.78rem; }
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 5px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── fall alert modal (보호자 전용) ── */
+  #fall-modal-guardian {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 9999;
+    display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
+  }
+  #fall-modal-guardian.show { display: flex; }
+  .modal-box { background: var(--card); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 380px; text-align: center; border: 2px solid var(--orange); box-shadow: 0 0 40px rgba(244,162,97,0.35); }
+  .modal-icon { font-size: 3rem; margin-bottom: 12px; }
+  .modal-title { font-size: 1.4rem; font-weight: 800; color: var(--orange); margin-bottom: 8px; }
+  .modal-sub { font-size: 0.9rem; color: var(--muted); margin-bottom: 10px; line-height: 1.55; }
+  .modal-countdown { font-size: 0.9rem; color: var(--muted); margin-bottom: 24px; }
+  .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── history ── */
+  .event-item { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .event-item:last-child { border-bottom: none; }
+  .event-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .dot-severe { background: var(--red); }
+  .dot-mild   { background: var(--orange); }
+  .dot-normal { background: var(--green); }
+  .event-info { flex: 1; }
+  .event-ts { font-size: 0.82rem; color: var(--muted); }
+  .event-cat { font-size: 0.85rem; font-weight: 700; }
+  .event-arrow { color: var(--muted); }
+
+  /* ── detail ── */
+  .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key { color: var(--muted); }
+
+  /* ── login / register ── */
+  .auth-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; gap: 24px; }
+  .logo-box { text-align: center; }
+  .logo-box .logo-icon { font-size: 3rem; margin-bottom: 8px; }
+  .logo-box h2 { font-size: 1.6rem; font-weight: 800; }
+  .logo-box p  { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+  .auth-form { width: 100%; max-width: 380px; }
+  .auth-link { text-align: center; font-size: 0.85rem; color: var(--muted); margin-top: 14px; }
+  .auth-link span { color: var(--accent); cursor: pointer; text-decoration: underline; }
+
+  /* ── role select ── */
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 380px; }
+  .role-card { background: var(--card); border: 2px solid var(--border); border-radius: var(--radius); padding: 24px 16px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+  .role-card:hover, .role-card.selected { border-color: var(--accent); background: rgba(45,111,164,0.15); }
+  .role-card .role-icon { font-size: 2.2rem; margin-bottom: 10px; }
+  .role-card .role-name { font-size: 1rem; font-weight: 700; }
+  .role-card .role-desc { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── settings ── */
+  .settings-section { padding: 16px; }
+  .settings-section h3 { font-size: 0.78rem; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; }
+
+  /* ── spinner ── */
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; margin: auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── toast ── */
+  #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1e3a5f; color: #fff; padding: 10px 20px; border-radius: 99px; font-size: 0.85rem; opacity: 0; transition: opacity .3s, transform .3s; z-index: 8888; white-space: nowrap; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .p16 { padding: 16px; }
+  .pb0 { padding-bottom: 0; }
+  .gap8 { gap: 8px; }
+  .mt12 { margin-top: 12px; }
+  .mt16 { margin-top: 16px; }
+  .flex { display: flex; }
+  .flex-col { flex-direction: column; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .text-sm { font-size: 0.85rem; }
+  .text-muted { color: var(--muted); }
+  .text-red { color: var(--red); }
+  .text-green { color: var(--green); }
+  .fw700 { font-weight: 700; }
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: LOGIN
+════════════════════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="auth-wrap">
+    <div class="logo-box">
+      <div class="logo-icon">🛡️</div>
+      <h2>Fall Guard</h2>
+      <p>AI 실시간 낙상 감지</p>
+    </div>
+    <div class="auth-form">
+      <div class="form-group">
+        <label>아이디</label>
+        <input id="login-username" type="text" placeholder="아이디 입력" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input id="login-password" type="password" placeholder="비밀번호 입력" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">로그인</button>
+      <div class="auth-link">계정이 없으신가요? <span onclick="showRegister()">회원가입</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: ROLE SELECT
+════════════════════════════════════════════════════ -->
+<div id="screen-role" class="screen">
+  <div class="auth-wrap">
+    <div class="logo-box">
+      <h2>사용자 유형 선택</h2>
+      <p>서비스 이용 목적을 선택해 주세요</p>
+    </div>
+    <div class="role-grid">
+      <div class="role-card" onclick="selectRole('user')">
+        <div class="role-icon">🧓</div>
+        <div class="role-name">실사용자</div>
+        <div class="role-desc">Fall Detection<br>Target</div>
+      </div>
+      <div class="role-card" onclick="selectRole('guardian')">
+        <div class="role-icon">👨‍👩‍👧</div>
+        <div class="role-name">보호자</div>
+        <div class="role-desc">Alert &<br>Monitoring</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: REGISTER
+════════════════════════════════════════════════════ -->
+<div id="screen-register" class="screen">
+  <div style="padding:16px; flex:1; overflow-y:auto;">
+    <h2 style="margin-bottom:20px">사용자 정보 등록</h2>
+    <div class="form-group">
+      <label>이름</label>
+      <input id="reg-name" type="text" placeholder="이름 입력">
+    </div>
+    <div class="form-group">
+      <label>아이디</label>
+      <input id="reg-username" type="text" placeholder="아이디 입력">
+    </div>
+    <div class="form-group">
+      <label>비밀번호</label>
+      <input id="reg-password" type="password" placeholder="비밀번호 입력">
+    </div>
+    <div class="form-group">
+      <label>역할</label>
+      <select id="reg-role">
+        <option value="user">실사용자 (낙상 감지 대상)</option>
+        <option value="guardian">보호자 (알림 수신자)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>나이</label>
+      <input id="reg-age" type="number" placeholder="나이">
+    </div>
+    <div class="form-group">
+      <label>전화번호</label>
+      <input id="reg-phone" type="tel" placeholder="010-0000-0000">
+    </div>
+    <div class="form-group">
+      <label>주소</label>
+      <input id="reg-address" type="text" placeholder="주소 입력">
+    </div>
+    <div class="form-group">
+      <label>보호자 아이디 <span style="color:var(--muted);font-size:.8rem">(실사용자만 입력)</span></label>
+      <input id="reg-guardian" type="text" placeholder="보호자 아이디 (선택사항)">
+    </div>
+    <button class="btn btn-primary mt12" onclick="doRegister()">등록 완료</button>
+    <button class="btn btn-outline mt12" onclick="showScreen('screen-login')">로그인으로 돌아가기</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: DASHBOARD
+════════════════════════════════════════════════════ -->
+<div id="screen-dashboard" class="screen">
+  <div class="topbar">
+    <h1>🛡️ Fall Guard</h1>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="dash-role-badge" class="badge">실사용자</span>
+      <span id="ws-indicator" title="실시간 연결" style="font-size:1.1rem">🔴</span>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px">
+
+    <!-- live stream -->
+    <div class="card pb0">
+      <div class="card-title">실시간 모니터링</div>
+      <div class="stream-wrap">
+        <img id="stream-img" src="" alt="카메라 없음" onerror="this.src=''">
+        <div class="stream-overlay">
+          <div class="stream-badge" id="fall-status-badge">
+            <span class="status-dot"></span>정상
+          </div>
+          <div class="stream-person" id="stream-person-label" style="display:none">감지됨</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding:10px 0">
+        <button class="btn btn-outline btn-sm" style="flex:1" onclick="toggleHeatmap()">위험구역 표시</button>
+        <button class="btn btn-outline btn-sm" style="flex:1" onclick="refreshStream()">새로고침</button>
+      </div>
+    </div>
+
+    <!-- status card -->
+    <div class="card" id="status-card">
+      <div class="card-title">감지 현황</div>
+      <div class="flex justify-between items-center">
+        <div>
+          <div class="fw700" id="status-text">정상</div>
+          <div class="text-sm text-muted" id="status-time">대기 중</div>
+        </div>
+        <div style="font-size:2rem" id="status-icon">✅</div>
+      </div>
+    </div>
+
+    <!-- recent events (guardian view) -->
+    <div class="card" id="recent-events-card">
+      <div class="card-title">최근 낙상 기록</div>
+      <div id="recent-events-list"><div class="text-sm text-muted">기록 없음</div></div>
+    </div>
+
+  </div>
+  <nav class="nav">
+    <button class="active" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      대시보드
+    </button>
+    <button onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      기록
+    </button>
+    <button onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      설정
+    </button>
+  </nav>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: HISTORY
+════════════════════════════════════════════════════ -->
+<div id="screen-history" class="screen">
+  <div class="topbar">
+    <h1>낙상 기록</h1>
+    <button onclick="loadHistory()" style="background:none;border:none;color:var(--accent);font-size:0.85rem;cursor:pointer">새로고침</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:14px">
+    <div id="history-list"><div class="spinner mt12"></div></div>
+  </div>
+  <nav class="nav">
+    <button onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      대시보드
+    </button>
+    <button class="active" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      기록
+    </button>
+    <button onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      설정
+    </button>
+  </nav>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: EVENT DETAIL
+════════════════════════════════════════════════════ -->
+<div id="screen-detail" class="screen">
+  <div class="topbar">
+    <button onclick="switchTab('history')" style="background:none;border:none;color:var(--accent);font-size:1.4rem;cursor:pointer;line-height:1">←</button>
+    <h1>낙상 분석 결과</h1>
+    <div></div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px">
+    <div id="detail-video-wrap" class="card" style="padding:0;overflow:hidden">
+      <video id="detail-video" controls style="width:100%;display:block;background:#000;border-radius:var(--radius)"></video>
+    </div>
+    <div class="card">
+      <div class="card-title">낙상 정보</div>
+      <div id="detail-info"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">119 신고 정보</div>
+      <div id="detail-emergency"></div>
+    </div>
+    <button class="btn btn-danger" id="btn-119" onclick="call119()">119 신고하기</button>
+    <button class="btn btn-outline" id="btn-ack" onclick="ackEvent()">확인 완료</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: SETTINGS
+════════════════════════════════════════════════════ -->
+<div id="screen-settings" class="screen">
+  <div class="topbar">
+    <h1>설정</h1>
+    <button onclick="doLogout()" style="background:none;border:none;color:var(--red);font-size:0.85rem;cursor:pointer;font-weight:700">로그아웃</button>
+  </div>
+  <div style="flex:1;overflow-y:auto">
+
+    <div class="settings-section">
+      <h3>카메라 설정</h3>
+      <div class="card">
+        <div class="form-group">
+          <label>에지 디바이스 스트림 URL</label>
+          <input id="cfg-stream-url" type="url" placeholder="http://JETSON_IP:8081/video">
+        </div>
+        <div class="form-group">
+          <label>디바이스 토큰</label>
+          <input id="cfg-device-token" type="text" placeholder="edge-device-001">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveDeviceConfig()">저장</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>계정 정보</h3>
+      <div class="card">
+        <div id="user-profile-info"></div>
+        <div class="form-group mt12" id="guardian-link-wrap">
+          <label>보호자 아이디 연결</label>
+          <input id="cfg-guardian-id" type="text" placeholder="보호자 아이디">
+          <button class="btn btn-outline btn-sm mt12" onclick="linkGuardian()">연결</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>앱 정보</h3>
+      <div class="card">
+        <div class="detail-row"><span class="detail-key">버전</span><span>1.0.0</span></div>
+        <div class="detail-row"><span class="detail-key">모델</span><span>ST-GCN + Physics</span></div>
+        <div class="detail-row"><span class="detail-key">에지 디바이스</span><span>Jetson Orin NX</span></div>
+      </div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      대시보드
+    </button>
+    <button onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      기록
+    </button>
+    <button class="active" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      설정
+    </button>
+  </nav>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     MODAL B — 보호자: "OO님이 낙상했습니다"
+════════════════════════════════════════════════════ -->
+<div id="fall-modal-guardian">
+  <div class="modal-box">
+    <div class="modal-icon" style="font-size:3.5rem">🚨</div>
+    <div class="modal-title" style="font-size:1.35rem" id="guardian-modal-title">낙상이 감지되었습니다</div>
+    <div class="modal-sub" id="guardian-modal-sub">피보호자의 상태를 확인해 주세요.</div>
+    <div class="modal-countdown" id="guardian-modal-time"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="font-size:1rem;padding:16px" onclick="guardianWatchVideo()">영상 보기</button>
+      <button class="btn btn-danger"  style="font-size:1rem;padding:16px" onclick="call119()">119 신고하기</button>
+      <button class="btn btn-outline" style="font-size:.85rem;padding:12px" onclick="guardianAck()">확인했습니다</button>
+    </div>
+  </div>
+</div>
+
+<!-- toast -->
+<div id="toast"></div>
+
+<script>
+// ── state ─────────────────────────────────────────────────────────────────────
+const API = '';   // same origin
+let token = localStorage.getItem('mg_token') || '';
+let user  = JSON.parse(localStorage.getItem('mg_user') || 'null');
+let ws    = null;
+let countdownTimer = null;
+let currentEventId = null;
+let streamUrl = localStorage.getItem('mg_stream_url') || '';
+let heatmapOn = false;
+
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  if (r.status === 401) { doLogout(); return null; }
+  return r.json().catch(() => null);
+}
+
+function toast(msg, ms = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ── screen router ─────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function switchTab(tab) {
+  const map = { dashboard: 'screen-dashboard', history: 'screen-history', settings: 'screen-settings' };
+  showScreen(map[tab]);
+  // update all nav active states
+  document.querySelectorAll('.nav button').forEach((b, i) => b.classList.remove('active'));
+  document.querySelectorAll(`#${map[tab]} .nav button`).forEach((b, i) => {
+    const tabNames = ['dashboard', 'history', 'settings'];
+    if (tabNames[i] === tab) b.classList.add('active');
+  });
+  if (tab === 'history') loadHistory();
+  if (tab === 'settings') loadSettings();
+}
+
+// ── auth ──────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  if (!username || !password) { toast('아이디와 비밀번호를 입력하세요'); return; }
+  const res = await fetch(API + '/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) { const e = await res.json(); toast(e.detail || '로그인 실패'); return; }
+  const data = await res.json();
+  token = data.token;
+  user  = data.user;
+  localStorage.setItem('mg_token', token);
+  localStorage.setItem('mg_user', JSON.stringify(user));
+  afterLogin();
+}
+
+function afterLogin() {
+  if (!user) return showScreen('screen-login');
+  setupDashboard();
+  showScreen('screen-dashboard');
+  connectWS();
+}
+
+function showRegister() { showScreen('screen-register'); }
+
+async function doRegister() {
+  const body = {
+    username:     document.getElementById('reg-username').value.trim(),
+    password:     document.getElementById('reg-password').value.trim(),
+    role:         document.getElementById('reg-role').value,
+    display_name: document.getElementById('reg-name').value.trim(),
+    age:          parseInt(document.getElementById('reg-age').value) || null,
+    phone:        document.getElementById('reg-phone').value.trim(),
+    address:      document.getElementById('reg-address').value.trim(),
+  };
+  if (!body.username || !body.password) { toast('아이디와 비밀번호를 입력하세요'); return; }
+  const res = await fetch(API + '/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) { const e = await res.json(); toast(e.detail || '등록 실패'); return; }
+  const data = await res.json();
+  token = data.token;
+
+  // link guardian if entered
+  const gid = document.getElementById('reg-guardian').value.trim();
+  if (gid) {
+    await fetch(API + '/api/users/link-guardian', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ guardian_username: gid }),
+    });
+  }
+
+  // refresh user info
+  const me = await fetch(API + '/api/users/me', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }).then(r => r.json());
+  user = me;
+  localStorage.setItem('mg_token', token);
+  localStorage.setItem('mg_user', JSON.stringify(user));
+  toast('등록 완료!');
+  afterLogin();
+}
+
+function selectRole(role) {
+  if (!user) return;
+  user.role = role;
+  localStorage.setItem('mg_user', JSON.stringify(user));
+  afterLogin();
+}
+
+function doLogout() {
+  fetch(API + '/api/auth/logout', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  }).catch(() => {});
+  token = ''; user = null;
+  localStorage.removeItem('mg_token');
+  localStorage.removeItem('mg_user');
+  if (ws) ws.close();
+  showScreen('screen-login');
+}
+
+// ── dashboard ─────────────────────────────────────────────────────────────────
+function setupDashboard() {
+  if (!user) return;
+  document.getElementById('dash-role-badge').textContent = user.role === 'guardian' ? '보호자' : '실사용자';
+  setStreamUrl(streamUrl);
+  loadRecentEvents();
+}
+
+function setStreamUrl(url) {
+  const img = document.getElementById('stream-img');
+  if (url) {
+    img.src = url;
+    img.alt = '스트림 로딩 중...';
+  } else {
+    img.src = '';
+    img.alt = '카메라 미설정\n설정에서 스트림 URL을 입력하세요';
+    img.style.minHeight = '180px';
+  }
+}
+
+function refreshStream() {
+  const img = document.getElementById('stream-img');
+  const url = img.src;
+  img.src = '';
+  setTimeout(() => { img.src = url; }, 300);
+}
+
+function toggleHeatmap() {
+  heatmapOn = !heatmapOn;
+  toast(heatmapOn ? '위험구역 표시 ON' : '위험구역 표시 OFF');
+}
+
+async function loadRecentEvents() {
+  const events = await api('GET', '/api/fall-events');
+  const list = document.getElementById('recent-events-list');
+  if (!events || events.length === 0) {
+    list.innerHTML = '<div class="text-sm text-muted">낙상 기록 없음</div>';
+    return;
+  }
+  const recent = events.slice(0, 3);
+  list.innerHTML = recent.map(e => `
+    <div class="event-item" onclick="openDetail('${e.id}')">
+      <div class="event-dot dot-${e.category || 'severe'}"></div>
+      <div class="event-info">
+        <div class="event-cat">${catLabel(e.category)}</div>
+        <div class="event-ts">${fmtTs(e.timestamp)}</div>
+      </div>
+      <div class="event-arrow">›</div>
+    </div>
+  `).join('');
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connectWS() {
+  if (!token) return;
+  const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = `${wsProto}://${location.host}/ws?token=${token}`;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    document.getElementById('ws-indicator').textContent = '🟢';
+    // keep-alive ping
+    setInterval(() => { if (ws && ws.readyState === 1) ws.send('ping'); }, 20000);
+  };
+
+  ws.onmessage = (evt) => {
+    if (evt.data === 'pong') return;
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'fall_detected') onFallDetected(msg);
+    } catch {}
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ws-indicator').textContent = '🔴';
+    // reconnect after 5s
+    setTimeout(connectWS, 5000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+function onFallDetected(msg) {
+  currentEventId = msg.event_id;
+
+  // update dashboard status
+  document.getElementById('fall-status-badge').innerHTML = '<span style="color:var(--red)">⚠️ 낙상 감지!</span>';
+  document.getElementById('status-text').textContent = '낙상 감지됨';
+  document.getElementById('status-text').style.color = 'var(--red)';
+  document.getElementById('status-icon').textContent = '🚨';
+  document.getElementById('status-time').textContent = fmtTs(msg.timestamp);
+
+  showFallModal(msg);
+  loadRecentEvents();
+}
+
+// ── fall modals ───────────────────────────────────────────────────────────────
+function showFallModal(msg) {
+  if (user && user.role === 'guardian') {
+    if (navigator.vibrate) navigator.vibrate([600, 150, 600, 150, 600]);
+    _showGuardianModal(msg);
+  }
+  // 실사용자: 보호자에게 WS 알림이 이미 전송됨 — 별도 팝업 없음
+}
+
+// 보호자 modal: person name + time + action buttons
+function _showGuardianModal(msg) {
+  const name = msg.monitored_user_name || '피보호자';
+  const ts   = fmtTs(msg.timestamp);
+  const cat  = catLabel(msg.category);
+  document.getElementById('guardian-modal-title').textContent = `${name}님이 낙상했습니다`;
+  document.getElementById('guardian-modal-sub').textContent   = `${cat} · ${ts}`;
+  document.getElementById('guardian-modal-time').textContent  = '영상을 확인하거나 119에 신고하세요.';
+  document.getElementById('fall-modal-guardian').classList.add('show');
+}
+
+function _closeAllModals() {
+  clearInterval(countdownTimer);
+  document.getElementById('fall-modal-guardian').classList.remove('show');
+}
+
+// 보호자 버튼 handlers
+function guardianWatchVideo() {
+  _closeAllModals();
+  if (currentEventId) openDetail(currentEventId);
+}
+
+function guardianAck() {
+  _closeAllModals();
+  if (currentEventId) api('POST', `/api/fall-events/${currentEventId}/acknowledge`);
+  resetFallStatus();
+  toast('확인 완료');
+}
+
+function call119() {
+  toast('119에 연결 중...');
+  window.location.href = 'tel:119';
+}
+
+async function ackEvent() {
+  if (!currentEventId) return;
+  await api('POST', `/api/fall-events/${currentEventId}/acknowledge`);
+  toast('확인 완료');
+  switchTab('history');
+}
+
+function updateFallStatusBadge(text, color = 'orange') {
+  const badge = document.getElementById('fall-status-badge');
+  const col   = color === 'red' ? 'var(--red)' : 'var(--orange)';
+  badge.innerHTML = `<span style="color:${col}">⚠️ ${text}</span>`;
+}
+
+function resetFallStatus() {
+  document.getElementById('fall-status-badge').innerHTML = '<span class="status-dot"></span>정상';
+  document.getElementById('status-text').textContent = '정상';
+  document.getElementById('status-text').style.color = '';
+  document.getElementById('status-icon').textContent = '✅';
+  document.getElementById('status-time').textContent = '대기 중';
+}
+
+// ── history ───────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const list = document.getElementById('history-list');
+  list.innerHTML = '<div class="spinner mt12"></div>';
+  const events = await api('GET', '/api/fall-events');
+  if (!events || events.length === 0) {
+    list.innerHTML = '<div class="empty-state">낙상 기록이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = `<div class="card" style="padding:0 16px">${
+    events.map(e => `
+      <div class="event-item" onclick="openDetail('${e.id}')">
+        <div class="event-dot dot-${e.category || 'severe'}"></div>
+        <div class="event-info">
+          <div class="event-cat">${catLabel(e.category)}</div>
+          <div class="event-ts">${fmtTs(e.timestamp)}</div>
+        </div>
+        <div class="event-arrow">›</div>
+      </div>
+    `).join('')
+  }</div>`;
+}
+
+// ── event detail ──────────────────────────────────────────────────────────────
+async function openDetail(eventId) {
+  currentEventId = eventId;
+  showScreen('screen-detail');
+  const [ev, report] = await Promise.all([
+    api('GET', `/api/fall-events/${eventId}`),
+    api('GET', `/api/fall-events/${eventId}/emergency-report`),
+  ]);
+  if (!ev) return;
+
+  // video
+  const videoEl = document.getElementById('detail-video');
+  if (ev.video_path) {
+    videoEl.src = `/api/fall-events/${eventId}/video/file`;
+    videoEl.load();
+    document.getElementById('detail-video-wrap').style.display = '';
+  } else {
+    document.getElementById('detail-video-wrap').style.display = 'none';
+  }
+
+  // event info
+  document.getElementById('detail-info').innerHTML = `
+    <div class="detail-row"><span class="detail-key">발생 시각</span><span>${fmtTs(ev.timestamp)}</span></div>
+    <div class="detail-row"><span class="detail-key">낙상 유형</span><span>${catLabel(ev.category)}</span></div>
+    <div class="detail-row"><span class="detail-key">심각도</span><span class="text-red fw700">${catLabel(ev.category)}</span></div>
+    <div class="detail-row"><span class="detail-key">영상</span><span>${ev.video_path ? '있음' : '없음'}</span></div>
+  `;
+
+  // emergency report
+  if (report) {
+    document.getElementById('detail-emergency').innerHTML = `
+      <div class="detail-row"><span class="detail-key">이름</span><span>${report.name}</span></div>
+      <div class="detail-row"><span class="detail-key">나이</span><span>${report.age}세</span></div>
+      <div class="detail-row"><span class="detail-key">주소</span><span>${report.address}</span></div>
+      <div class="detail-row"><span class="detail-key">전화</span><span>${report.phone}</span></div>
+      <div class="detail-row"><span class="detail-key">추정 부상</span><span>${report.estimated_injury}</span></div>
+      <div class="detail-row"><span class="detail-key">GPS</span><span>${report.gps}</span></div>
+    `;
+  }
+}
+
+// ── settings ──────────────────────────────────────────────────────────────────
+function loadSettings() {
+  document.getElementById('cfg-stream-url').value   = streamUrl;
+  document.getElementById('cfg-device-token').value = localStorage.getItem('mg_device_token') || 'edge-device-001';
+  if (user) {
+    document.getElementById('user-profile-info').innerHTML = `
+      <div class="detail-row"><span class="detail-key">이름</span><span>${user.display_name || '-'}</span></div>
+      <div class="detail-row"><span class="detail-key">역할</span><span>${user.role === 'guardian' ? '보호자' : '실사용자'}</span></div>
+      <div class="detail-row"><span class="detail-key">전화</span><span>${user.phone || '-'}</span></div>
+      <div class="detail-row"><span class="detail-key">주소</span><span>${user.address || '-'}</span></div>
+    `;
+    document.getElementById('guardian-link-wrap').style.display =
+      user.role === 'user' ? '' : 'none';
+  }
+}
+
+async function saveDeviceConfig() {
+  const url   = document.getElementById('cfg-stream-url').value.trim();
+  const dtoken = document.getElementById('cfg-device-token').value.trim();
+  streamUrl = url;
+  localStorage.setItem('mg_stream_url', url);
+  localStorage.setItem('mg_device_token', dtoken);
+  setStreamUrl(url);
+
+  if (dtoken) {
+    await api('POST', '/api/devices', { device_token: dtoken, stream_url: url });
+  }
+  toast('저장되었습니다');
+}
+
+async function linkGuardian() {
+  const gid = document.getElementById('cfg-guardian-id').value.trim();
+  if (!gid) { toast('보호자 아이디를 입력하세요'); return; }
+  const res = await api('POST', '/api/users/link-guardian', { guardian_username: gid });
+  if (res && res.ok) { toast('보호자 연결 완료'); }
+  else { toast('연결 실패: 보호자 아이디를 확인하세요'); }
+}
+
+// ── utils ─────────────────────────────────────────────────────────────────────
+function catLabel(cat) {
+  return { severe: '중증 낙상', mild: '경증 낙상', normal: '이상 없음' }[cat] || cat || '낙상 감지';
+}
+
+function fmtTs(ts) {
+  if (!ts) return '-';
+  try {
+    return new Date(ts).toLocaleString('ko-KR', {
+      month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+  } catch { return ts; }
+}
+
+// ── boot ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (token && user) {
+    afterLogin();
+  }
+});
+</script>
+</body>
+</html>
