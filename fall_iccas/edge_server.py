@@ -50,6 +50,16 @@ _frame_lock   = threading.Lock()
 _latest_jpg   = None    # bytes
 
 
+def _make_placeholder_jpg(text: str = "Loading...") -> bytes:
+    """Simple gray placeholder frame with text — shown before camera is ready."""
+    img = np.full((240, 320, 3), 40, dtype=np.uint8)
+    cv2.putText(img, text, (20, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (180, 180, 180), 2)
+    _, jpg = cv2.imencode(".jpg", img)
+    return jpg.tobytes()
+
+_PLACEHOLDER_JPG = None   # created lazily after cv2 is imported
+
+
 class _MJPEGHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/":
@@ -69,11 +79,15 @@ class _MJPEGHandler(BaseHTTPRequestHandler):
                 while True:
                     with _frame_lock:
                         jpg = _latest_jpg
-                    if jpg is not None:
-                        self.wfile.write(b"--mjpeg\r\nContent-Type: image/jpeg\r\n\r\n")
-                        self.wfile.write(jpg)
-                        self.wfile.write(b"\r\n")
-                    time.sleep(0.033)
+                    if jpg is None:
+                        global _PLACEHOLDER_JPG
+                        if _PLACEHOLDER_JPG is None:
+                            _PLACEHOLDER_JPG = _make_placeholder_jpg("카메라 준비 중...")
+                        jpg = _PLACEHOLDER_JPG
+                    self.wfile.write(b"--mjpeg\r\nContent-Type: image/jpeg\r\n\r\n")
+                    self.wfile.write(jpg)
+                    self.wfile.write(b"\r\n")
+                    time.sleep(0.05)   # 20 fps max
             except Exception:
                 pass
         elif self.path == "/status":
