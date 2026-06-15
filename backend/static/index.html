@@ -260,18 +260,33 @@
     <!-- live stream -->
     <div class="card pb0">
       <div class="card-title">실시간 모니터링</div>
-      <div class="stream-wrap">
-        <img id="stream-img" src="" alt="카메라 없음" onerror="this.src=''">
+
+      <!-- placeholder: shown when no URL is configured -->
+      <div id="stream-placeholder" style="background:#0a1520;border-radius:var(--radius);padding:28px 16px;text-align:center;color:var(--muted)">
+        <div style="font-size:2rem;margin-bottom:10px">📷</div>
+        <div style="font-size:.88rem;margin-bottom:14px">엣지 디바이스 스트림 URL을 입력하세요</div>
+        <div style="display:flex;gap:8px">
+          <input id="inline-stream-url" type="url" placeholder="http://IP:8081/video"
+                 style="flex:1;padding:10px 12px;font-size:.85rem">
+          <button class="btn btn-primary" style="white-space:nowrap;padding:10px 16px;width:auto"
+                  onclick="applyInlineUrl()">연결</button>
+        </div>
+        <div style="font-size:.73rem;margin-top:8px;color:var(--border)">예: http://localhost:8081/video</div>
+      </div>
+
+      <!-- stream img: shown when URL is set -->
+      <div class="stream-wrap" id="stream-wrap" style="display:none">
+        <img id="stream-img" src="" alt="연결 중..." style="width:100%;display:block;background:#000;min-height:180px;border-radius:var(--radius);object-fit:cover"
+             onerror="onStreamError()">
         <div class="stream-overlay">
-          <div class="stream-badge" id="fall-status-badge">
-            <span class="status-dot"></span>정상
-          </div>
-          <div class="stream-person" id="stream-person-label" style="display:none">감지됨</div>
+          <div class="stream-badge" id="fall-status-badge"><span class="status-dot"></span>정상</div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;padding:10px 0">
+
+      <div style="display:flex;gap:8px;padding:8px 0">
         <button class="btn btn-outline btn-sm" style="flex:1" onclick="toggleHeatmap()">위험구역 표시</button>
         <button class="btn btn-outline btn-sm" style="flex:1" onclick="refreshStream()">새로고침</button>
+        <button class="btn btn-outline btn-sm" style="flex:1;color:var(--muted);font-size:.78rem" onclick="clearStream()">연결 해제</button>
       </div>
     </div>
 
@@ -591,22 +606,53 @@ function setupDashboard() {
 }
 
 function setStreamUrl(url) {
-  const img = document.getElementById('stream-img');
+  streamUrl = url;
+  const img         = document.getElementById('stream-img');
+  const placeholder = document.getElementById('stream-placeholder');
+  const wrap        = document.getElementById('stream-wrap');
+
   if (url) {
     img.src = url;
-    img.alt = '스트림 로딩 중...';
+    placeholder.style.display = 'none';
+    wrap.style.display        = '';
   } else {
     img.src = '';
-    img.alt = '카메라 미설정\n설정에서 스트림 URL을 입력하세요';
-    img.style.minHeight = '180px';
+    placeholder.style.display = '';
+    wrap.style.display        = 'none';
   }
 }
 
-function refreshStream() {
+function applyInlineUrl() {
+  const url = document.getElementById('inline-stream-url').value.trim();
+  if (!url) { toast('URL을 입력하세요'); return; }
+  streamUrl = url;
+  localStorage.setItem('mg_stream_url', url);
+  setStreamUrl(url);
+  // also save to device config
+  const dtoken = localStorage.getItem('mg_device_token') || 'edge-device-001';
+  api('POST', '/api/devices', { device_token: dtoken, stream_url: url }).catch(() => {});
+}
+
+function clearStream() {
+  streamUrl = '';
+  localStorage.removeItem('mg_stream_url');
+  setStreamUrl('');
+  document.getElementById('inline-stream-url').value = '';
+}
+
+function onStreamError() {
+  // MJPEG img fires onerror on disconnect — retry after 2s
   const img = document.getElementById('stream-img');
   const url = img.src;
+  if (!url) return;
+  setTimeout(() => { if (streamUrl) img.src = streamUrl + '?t=' + Date.now(); }, 2000);
+}
+
+function refreshStream() {
+  if (!streamUrl) return;
+  const img = document.getElementById('stream-img');
   img.src = '';
-  setTimeout(() => { img.src = url; }, 300);
+  setTimeout(() => { img.src = streamUrl + '?t=' + Date.now(); }, 300);
 }
 
 function toggleHeatmap() {

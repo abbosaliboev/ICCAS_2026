@@ -19,7 +19,7 @@ TensorRT (Jetson, first run only — exports engine then reuses):
 import os, sys, json, time, threading, argparse, logging
 from collections import deque
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import cv2
@@ -92,7 +92,7 @@ class _MJPEGHandler(BaseHTTPRequestHandler):
 
 
 def start_mjpeg_server(port: int):
-    srv = HTTPServer(("0.0.0.0", port), _MJPEGHandler)
+    srv = ThreadingHTTPServer(("0.0.0.0", port), _MJPEGHandler)
     t = threading.Thread(target=srv.serve_forever, daemon=True)
     t.start()
     log.info(f"MJPEG stream at http://0.0.0.0:{port}/video")
