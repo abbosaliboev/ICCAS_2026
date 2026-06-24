@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -8,908 +8,1472 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Fall Guard</title>
 <style>
-  :root {
-    --bg:      #0d1b2a;
-    --card:    #1a2d42;
-    --accent:  #2d6fa4;
-    --red:     #e63946;
-    --green:   #2dc653;
-    --orange:  #f4a261;
-    --text:    #e8edf2;
-    --muted:   #8fa3bb;
-    --border:  #243b55;
-    --radius:  14px;
-    --shadow:  0 4px 20px rgba(0,0,0,0.4);
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif; overflow: hidden; }
+/* ── THEMES ─────────────────────────────────────────── */
+:root,[data-theme="dark"]{
+  --bg:#080e1a;--bg2:#0d1525;--card:#111c2e;--card2:#162236;
+  --border:#1e2d45;--accent:#3b82f6;--accent2:#1d4ed8;
+  --red:#ef4444;--green:#10b981;--orange:#f59e0b;
+  --text:#f1f5f9;--text2:#cbd5e1;--muted:#64748b;--muted2:#475569;
+  --radius:16px;--rs:10px;
+  --shadow:0 8px 32px rgba(0,0,0,.5);--shadow-sm:0 2px 12px rgba(0,0,0,.3);
+  --sk-a:#1e2d45;--sk-b:#243450;
+}
+[data-theme="light"]{
+  --bg:#f0f4f8;--bg2:#e4ecf4;--card:#fff;--card2:#f8fafc;
+  --border:#e2e8f0;--accent:#2563eb;--accent2:#1d4ed8;
+  --red:#dc2626;--green:#059669;--orange:#d97706;
+  --text:#0f172a;--text2:#1e293b;--muted:#64748b;--muted2:#94a3b8;
+  --shadow:0 8px 32px rgba(0,0,0,.1);--shadow-sm:0 2px 12px rgba(0,0,0,.06);
+  --sk-a:#e2e8f0;--sk-b:#f1f5f9;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,'Pretendard','Noto Sans KR','Noto Sans SC',sans-serif;
+  overflow:hidden;-webkit-font-smoothing:antialiased}
 
-  /* ── layout ── */
-  #app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-  .screen { display: none; flex: 1; flex-direction: column; overflow-y: auto; }
-  .screen.active { display: flex; }
+/* ── LAYOUT ─────────────────────────────────────────── */
+#app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden}
+.screen.active{display:flex;animation:scIn .2s ease}
+@keyframes scIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-  /* ── topbar ── */
-  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .topbar h1 { font-size: 1.05rem; font-weight: 700; }
-  .topbar .badge { font-size: 0.72rem; padding: 3px 8px; border-radius: 99px; background: var(--accent); }
+/* ── TOPBAR ─────────────────────────────────────────── */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:15px 18px;background:var(--card);border-bottom:1px solid var(--border);
+  flex-shrink:0;min-height:56px;gap:8px}
+.topbar h1{font-size:1.05rem;font-weight:700;letter-spacing:-.01em;flex:1;text-align:center}
+.tb-btn{background:none;border:none;color:var(--accent);font-size:.88rem;font-weight:600;
+  cursor:pointer;padding:6px 4px;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.tb-btn.cancel{color:var(--muted)}
+.tb-icon{background:none;border:none;color:var(--muted);font-size:1.35rem;
+  cursor:pointer;padding:4px;line-height:1;-webkit-tap-highlight-color:transparent}
 
-  /* ── bottom nav ── */
-  .nav { display: flex; background: var(--card); border-top: 1px solid var(--border); flex-shrink: 0; }
-  .nav button { flex: 1; padding: 10px 0 6px; background: none; border: none; color: var(--muted); font-size: 0.65rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color .2s; }
-  .nav button svg { width: 22px; height: 22px; }
-  .nav button.active { color: var(--accent); }
+/* ── NAV ─────────────────────────────────────────────── */
+.nav{display:flex;background:var(--card);border-top:1px solid var(--border);
+  flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0)}
+.nav-btn{flex:1;padding:10px 0 8px;background:none;border:none;
+  color:var(--muted);font-size:.62rem;font-weight:500;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  transition:color .18s;position:relative;-webkit-tap-highlight-color:transparent}
+.nav-btn svg{width:22px;height:22px;stroke-width:1.8}
+.nav-btn.active{color:var(--accent)}
+.nav-btn.active::after{content:'';position:absolute;top:0;left:50%;
+  transform:translateX(-50%);width:28px;height:2.5px;
+  background:var(--accent);border-radius:0 0 3px 3px}
 
-  /* ── button styles ── */
-  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; border-radius: var(--radius); border: none; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity .15s, transform .1s; }
-  .btn:active { transform: scale(0.97); opacity: 0.85; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-danger  { background: var(--red);   color: #fff; }
-  .btn-success { background: var(--green); color: #fff; }
-  .btn-outline { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
-  .btn-sm { padding: 10px 14px; font-size: 0.85rem; }
+/* ── BUTTONS ─────────────────────────────────────────── */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:15px;border-radius:var(--radius);border:none;
+  font-size:1rem;font-weight:700;cursor:pointer;
+  transition:opacity .15s,transform .12s;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.97);opacity:.85}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-outline{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+.btn-ghost{background:var(--card2);color:var(--text2);border:1px solid var(--border)}
+.btn-sm{padding:11px 16px;font-size:.88rem;border-radius:var(--rs)}
 
-  /* ── form ── */
-  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-  .form-group label { font-size: 0.82rem; color: var(--muted); }
-  input, select { background: var(--bg); border: 1.5px solid var(--border); color: var(--text); border-radius: 10px; padding: 14px 16px; font-size: 1rem; width: 100%; outline: none; }
-  input:focus, select:focus { border-color: var(--accent); }
+/* ── FORMS ───────────────────────────────────────────── */
+.fg{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.fg label{font-size:.82rem;color:var(--muted);font-weight:500}
+.fi{background:var(--bg2);border:1.5px solid var(--border);color:var(--text);
+  border-radius:var(--rs);padding:14px 16px;font-size:.97rem;
+  width:100%;outline:none;transition:border-color .18s;
+  -webkit-appearance:none}
+.fi:focus{border-color:var(--accent)}
+.fi::placeholder{color:var(--muted2)}
 
-  /* ── cards ── */
-  .card { background: var(--card); border-radius: var(--radius); padding: 16px; border: 1px solid var(--border); }
-  .card + .card { margin-top: 12px; }
-  .card-title { font-size: 0.78rem; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+/* ── CARDS ───────────────────────────────────────────── */
+.card{background:var(--card);border-radius:var(--radius);padding:16px;
+  border:1px solid var(--border)}
+.card+.card{margin-top:12px}
+.ctitle{font-size:.73rem;color:var(--muted);margin-bottom:12px;
+  text-transform:uppercase;letter-spacing:.07em;font-weight:600}
 
-  /* ── live video ── */
-  #stream-img { width: 100%; display: block; background: #000; min-height: 200px; border-radius: var(--radius); object-fit: cover; }
-  .stream-wrap { position: relative; }
-  .stream-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; pointer-events: none; border-radius: var(--radius); }
-  .stream-badge { align-self: flex-end; background: rgba(0,0,0,0.65); border-radius: 8px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; }
-  .stream-person { align-self: flex-start; background: rgba(0,0,0,0.65); border-radius: 8px; padding: 4px 10px; font-size: 0.78rem; }
-  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 5px; animation: pulse 1.5s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+/* ── SKELETON ────────────────────────────────────────── */
+.sk{background:linear-gradient(90deg,var(--sk-a) 25%,var(--sk-b) 50%,var(--sk-a) 75%);
+  background-size:200% 100%;animation:skw 1.4s ease-in-out infinite;border-radius:6px}
+@keyframes skw{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sk-line{height:13px;margin-bottom:10px}
+.sk-line.w60{width:60%}.sk-line.w80{width:80%}.sk-line.w40{width:40%}
+.sk-block{height:70px;border-radius:var(--rs);margin-bottom:1px}
+.sk-circle{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 
-  /* ── fall alert modal (보호자 전용) ── */
-  #fall-modal-guardian {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 9999;
-    display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
-  }
-  #fall-modal-guardian.show { display: flex; }
-  .modal-box { background: var(--card); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 380px; text-align: center; border: 2px solid var(--orange); box-shadow: 0 0 40px rgba(244,162,97,0.35); }
-  .modal-icon { font-size: 3rem; margin-bottom: 12px; }
-  .modal-title { font-size: 1.4rem; font-weight: 800; color: var(--orange); margin-bottom: 8px; }
-  .modal-sub { font-size: 0.9rem; color: var(--muted); margin-bottom: 10px; line-height: 1.55; }
-  .modal-countdown { font-size: 0.9rem; color: var(--muted); margin-bottom: 24px; }
-  .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+/* ── SPINNER ─────────────────────────────────────────── */
+.spinner{width:34px;height:34px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .75s linear infinite;margin:auto}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-  /* ── history ── */
-  .event-item { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
-  .event-item:last-child { border-bottom: none; }
-  .event-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-  .dot-severe { background: var(--red); }
-  .dot-mild   { background: var(--orange); }
-  .dot-normal { background: var(--green); }
-  .event-info { flex: 1; }
-  .event-ts { font-size: 0.82rem; color: var(--muted); }
-  .event-cat { font-size: 0.85rem; font-weight: 700; }
-  .event-arrow { color: var(--muted); }
+/* ── TOAST ───────────────────────────────────────────── */
+#toast{position:fixed;bottom:80px;left:50%;
+  transform:translateX(-50%) translateY(16px);
+  background:var(--text);color:var(--bg);padding:10px 22px;border-radius:99px;
+  font-size:.86rem;font-weight:600;opacity:0;
+  transition:opacity .25s,transform .25s;z-index:9000;white-space:nowrap;
+  box-shadow:var(--shadow-sm)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-  /* ── detail ── */
-  .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-  .detail-row:last-child { border-bottom: none; }
-  .detail-key { color: var(--muted); }
+/* ── AUTH ────────────────────────────────────────────── */
+.auth-wrap{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:32px 24px;gap:28px;overflow-y:auto}
+.logo-mark{width:72px;height:72px;border-radius:22px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 6px;
+  box-shadow:0 8px 24px rgba(59,130,246,.4)}
+.logo-mark svg{width:40px;height:40px;stroke:#fff;stroke-width:2;fill:none}
+.logo-title{font-size:1.8rem;font-weight:800;letter-spacing:-.02em;text-align:center}
+.logo-sub{font-size:.85rem;color:var(--muted);margin-top:4px;text-align:center}
+.auth-form{width:100%;max-width:390px}
+.auth-link{text-align:center;font-size:.85rem;color:var(--muted);margin-top:16px}
+.auth-link span{color:var(--accent);cursor:pointer;font-weight:600}
 
-  /* ── login / register ── */
-  .auth-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; gap: 24px; }
-  .logo-box { text-align: center; }
-  .logo-box .logo-icon { font-size: 3rem; margin-bottom: 8px; }
-  .logo-box h2 { font-size: 1.6rem; font-weight: 800; }
-  .logo-box p  { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
-  .auth-form { width: 100%; max-width: 380px; }
-  .auth-link { text-align: center; font-size: 0.85rem; color: var(--muted); margin-top: 14px; }
-  .auth-link span { color: var(--accent); cursor: pointer; text-decoration: underline; }
+/* ── ROLE ────────────────────────────────────────────── */
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+  width:100%;max-width:390px}
+.role-card{background:var(--card);border:2px solid var(--border);
+  border-radius:var(--radius);padding:24px 16px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s,transform .12s;
+  -webkit-tap-highlight-color:transparent}
+.role-card:active{transform:scale(.97)}
+.role-card.sel,.role-card:hover{border-color:var(--accent);background:rgba(59,130,246,.1)}
+.role-icon{font-size:2.4rem;margin-bottom:10px}
+.role-name{font-size:1rem;font-weight:700}
+.role-desc{font-size:.74rem;color:var(--muted);margin-top:5px;line-height:1.4}
 
-  /* ── role select ── */
-  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 380px; }
-  .role-card { background: var(--card); border: 2px solid var(--border); border-radius: var(--radius); padding: 24px 16px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
-  .role-card:hover, .role-card.selected { border-color: var(--accent); background: rgba(45,111,164,0.15); }
-  .role-card .role-icon { font-size: 2.2rem; margin-bottom: 10px; }
-  .role-card .role-name { font-size: 1rem; font-weight: 700; }
-  .role-card .role-desc { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+/* ── DASHBOARD ───────────────────────────────────────── */
+.status-chip{display:inline-flex;align-items:center;gap:7px;
+  padding:6px 14px;border-radius:99px;font-size:.82rem;font-weight:700}
+.chip-ok{background:rgba(16,185,129,.15);color:var(--green)}
+.chip-bad{background:rgba(239,68,68,.18);color:var(--red);animation:cpulse 1s infinite}
+@keyframes cpulse{0%,100%{opacity:1}50%{opacity:.55}}
+.sdot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+.sdot.blink{animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.ws-badge{font-size:.8rem;padding:3px 9px;border-radius:99px;
+  background:rgba(59,130,246,.15);color:var(--accent);font-weight:600}
+.ws-badge.red{background:rgba(239,68,68,.15);color:var(--red)}
 
-  /* ── settings ── */
-  .settings-section { padding: 16px; }
-  .settings-section h3 { font-size: 0.78rem; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; }
+/* ── STREAM ──────────────────────────────────────────── */
+.stream-wrap{position:relative;background:#000;border-radius:var(--rs);
+  overflow:hidden;min-height:190px}
+#stream-img{width:100%;display:block;object-fit:cover}
+.stream-ov{position:absolute;top:0;left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;justify-content:space-between;
+  padding:10px;pointer-events:none}
+.stream-badge{align-self:flex-end;background:rgba(0,0,0,.65);
+  backdrop-filter:blur(6px);border-radius:8px;padding:5px 12px;
+  font-size:.76rem;font-weight:700}
+.stream-ph{background:var(--bg2);border-radius:var(--rs);
+  padding:28px 16px;text-align:center}
+.stream-ph-icon{font-size:2.2rem;margin-bottom:10px;opacity:.5}
+.stream-ph-txt{font-size:.88rem;color:var(--muted);margin-bottom:14px}
+.stream-acts{display:flex;gap:8px;padding:8px 0 2px}
+.stream-acts .btn{font-size:.8rem;padding:10px;flex:1}
 
-  /* ── spinner ── */
-  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; margin: auto; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ── HISTORY ─────────────────────────────────────────── */
+.events-wrap{padding:0 16px}
+.event-swipe{position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+.event-swipe:last-child{border-bottom:none}
+.event-item{display:flex;align-items:center;gap:13px;padding:14px 0;
+  cursor:pointer;background:var(--card);will-change:transform;
+  position:relative;z-index:1;
+  -webkit-tap-highlight-color:transparent}
+.ev-check{width:24px;height:24px;border-radius:50%;
+  border:2px solid var(--border);background:var(--bg2);
+  flex-shrink:0;display:none;align-items:center;justify-content:center;
+  transition:background .18s,border-color .18s}
+.ev-check.on{background:var(--accent);border-color:var(--accent)}
+.ev-check svg{width:13px;height:13px;stroke:#fff;stroke-width:3;
+  fill:none;display:none}
+.ev-check.on svg{display:block}
+.ev-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-severe{background:var(--red);box-shadow:0 0 6px rgba(239,68,68,.5)}
+.dot-mild{background:var(--orange)}
+.dot-normal{background:var(--green)}
+.ev-info{flex:1;min-width:0}
+.ev-cat{font-size:.9rem;font-weight:700}
+.ev-ts{font-size:.77rem;color:var(--muted);margin-top:2px}
+.ev-pill{font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:99px;flex-shrink:0}
+.pill-severe{background:rgba(239,68,68,.15);color:var(--red)}
+.pill-mild{background:rgba(245,158,11,.15);color:var(--orange)}
+.ev-arr{color:var(--muted);font-size:1.1rem;line-height:1}
+.swipe-actions{position:absolute;right:0;top:0;bottom:0;display:flex;z-index:0}
+.swipe-save{background:var(--green);color:#fff;border:none;padding:0 22px;
+  font-size:.88rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.swipe-del{background:var(--red);color:#fff;border:none;padding:0 22px;
+  font-size:.88rem;font-weight:700;cursor:pointer;white-space:nowrap}
 
-  /* ── toast ── */
-  #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1e3a5f; color: #fff; padding: 10px 20px; border-radius: 99px; font-size: 0.85rem; opacity: 0; transition: opacity .3s, transform .3s; z-index: 8888; white-space: nowrap; }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* select mode shows checkboxes */
+.select-mode .ev-check{display:flex}
+.select-mode .ev-dot{display:none}
+.select-mode .ev-arr{display:none}
+.select-mode .ev-pill{display:none}
 
-  .p16 { padding: 16px; }
-  .pb0 { padding-bottom: 0; }
-  .gap8 { gap: 8px; }
-  .mt12 { margin-top: 12px; }
-  .mt16 { margin-top: 16px; }
-  .flex { display: flex; }
-  .flex-col { flex-direction: column; }
-  .items-center { align-items: center; }
-  .justify-between { justify-content: space-between; }
-  .text-sm { font-size: 0.85rem; }
-  .text-muted { color: var(--muted); }
-  .text-red { color: var(--red); }
-  .text-green { color: var(--green); }
-  .fw700 { font-weight: 700; }
-  .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+/* ── SELECTION BAR ───────────────────────────────────── */
+#sel-bar{position:fixed;bottom:0;left:0;right:0;z-index:200;
+  display:none;flex-direction:column;
+  background:var(--card);border-top:1px solid var(--border);
+  padding:10px 16px calc(16px + env(safe-area-inset-bottom,0));
+  box-shadow:0 -4px 24px rgba(0,0,0,.3);animation:slideUp .22s ease}
+#sel-bar.show{display:flex}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+#sel-count{font-size:.84rem;color:var(--muted);margin-bottom:9px;text-align:center;font-weight:500}
+.sel-acts{display:flex;gap:10px}
+.sel-acts .btn{flex:1;padding:13px}
+
+/* ── DETAIL ──────────────────────────────────────────── */
+.dr{display:flex;justify-content:space-between;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.dr:last-child{border-bottom:none}
+.dk{color:var(--muted);font-size:.85rem}
+.dv{font-weight:600;text-align:right}
+#detail-screenshot-wrap{display:none}
+#detail-screenshot-wrap img{width:100%;border-radius:var(--rs);display:block}
+
+/* ── SETTINGS ────────────────────────────────────────── */
+.sec{padding:20px 16px 0}
+.sec-lbl{font-size:.72rem;color:var(--muted);font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.set-row{display:flex;align-items:center;justify-content:space-between;
+  padding:13px 0;border-bottom:1px solid var(--border)}
+.set-row:last-child{border-bottom:none}
+.set-lbl{font-size:.9rem;font-weight:500}
+.set-hint{font-size:.77rem;color:var(--muted);margin-top:2px}
+
+/* toggle switch */
+.tog{position:relative;width:50px;height:28px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog-sl{position:absolute;inset:0;border-radius:99px;background:var(--border);
+  cursor:pointer;transition:background .25s}
+.tog-sl::before{content:'';position:absolute;width:22px;height:22px;
+  left:3px;top:3px;border-radius:50%;background:#fff;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.tog input:checked+.tog-sl{background:var(--accent)}
+.tog input:checked+.tog-sl::before{transform:translateX(22px)}
+
+/* theme buttons */
+.theme-grp{display:flex;gap:8px}
+.theme-btn{flex:1;padding:10px 6px;border-radius:var(--rs);
+  border:2px solid var(--border);background:var(--card2);
+  color:var(--muted);font-size:.84rem;font-weight:600;
+  cursor:pointer;text-align:center;
+  transition:border-color .18s,color .18s,background .18s;
+  -webkit-tap-highlight-color:transparent}
+.theme-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,.1)}
+
+/* language grid */
+.lang-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lang-btn{padding:10px 4px;border-radius:var(--rs);
+  border:2px solid var(--border);background:var(--card2);
+  cursor:pointer;text-align:center;
+  transition:border-color .18s,background .18s;
+  -webkit-tap-highlight-color:transparent}
+.lang-btn.on{border-color:var(--accent);background:rgba(59,130,246,.1)}
+.lang-flag{font-size:1.5rem;display:block;margin-bottom:3px}
+.lang-name{font-size:.71rem;color:var(--muted);font-weight:600;display:block}
+.lang-btn.on .lang-name{color:var(--accent)}
+
+/* ── MODAL ───────────────────────────────────────────── */
+#fall-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;backdrop-filter:blur(8px)}
+#fall-modal.show{display:flex;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{background:var(--card);border-radius:24px;padding:32px 24px;
+  width:100%;max-width:380px;text-align:center;
+  border:1px solid rgba(245,158,11,.4);
+  box-shadow:0 0 60px rgba(245,158,11,.2);
+  animation:modalPop .35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes modalPop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+.modal-ring{width:80px;height:80px;border-radius:50%;margin:0 auto 16px;
+  background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;
+  animation:ringPulse 1.6s ease infinite}
+@keyframes ringPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}
+  50%{box-shadow:0 0 0 18px rgba(239,68,68,0)}}
+.modal-ring svg{width:38px;height:38px;color:var(--red)}
+.modal-title{font-size:1.3rem;font-weight:800;color:var(--orange);margin-bottom:8px}
+.modal-sub{font-size:.9rem;color:var(--muted);margin-bottom:6px;line-height:1.55}
+.modal-time{font-size:.82rem;color:var(--muted2);margin-bottom:24px}
+.modal-acts{display:flex;flex-direction:column;gap:10px}
+
+/* ── UTILS ───────────────────────────────────────────── */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.p16{padding:16px}.pb0{padding-bottom:0}.gap12{gap:12px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.flex{display:flex}.flex-col{flex-direction:column}
+.ac{align-items:center}.jb{justify-content:space-between}
+.text-muted{color:var(--muted)}.text-red{color:var(--red)}
+.text-green{color:var(--green)}.fw7{font-weight:700}.tc{text-align:center}
+.empty{text-align:center;padding:60px 24px;color:var(--muted)}
+.empty-icon{font-size:2.8rem;margin-bottom:12px;opacity:.35}
+.empty-txt{font-size:.9rem}
 </style>
 </head>
 <body>
 <div id="app">
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN: LOGIN
-════════════════════════════════════════════════════ -->
+<!-- LOGIN -->
 <div id="screen-login" class="screen active">
   <div class="auth-wrap">
-    <div class="logo-box">
-      <div class="logo-icon">🛡️</div>
-      <h2>Fall Guard</h2>
-      <p>AI 실시간 낙상 감지</p>
+    <div>
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="logo-title">Fall Guard</div>
+      <div class="logo-sub" data-i18n="tagline">AI 실시간 낙상 감지</div>
     </div>
     <div class="auth-form">
-      <div class="form-group">
-        <label>아이디</label>
-        <input id="login-username" type="text" placeholder="아이디 입력" autocomplete="username">
+      <div class="fg">
+        <label class="form-label" data-i18n="username">아이디</label>
+        <input id="login-username" class="fi" type="text" autocomplete="username" data-i18n-ph="username">
       </div>
-      <div class="form-group">
-        <label>비밀번호</label>
-        <input id="login-password" type="password" placeholder="비밀번호 입력" autocomplete="current-password">
+      <div class="fg">
+        <label class="form-label" data-i18n="password">비밀번호</label>
+        <input id="login-password" class="fi" type="password" autocomplete="current-password" data-i18n-ph="password">
       </div>
-      <button class="btn btn-primary" onclick="doLogin()">로그인</button>
-      <div class="auth-link">계정이 없으신가요? <span onclick="showRegister()">회원가입</span></div>
+      <button class="btn btn-primary" onclick="doLogin()"><span data-i18n="login">로그인</span></button>
+      <div class="auth-link mt12">
+        <span data-i18n="no_account">계정이 없으신가요?</span>
+        <span onclick="showScreen('screen-register')" data-i18n="register"> 회원가입</span>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN: ROLE SELECT
-════════════════════════════════════════════════════ -->
+<!-- ROLE SELECT -->
 <div id="screen-role" class="screen">
   <div class="auth-wrap">
-    <div class="logo-box">
-      <h2>사용자 유형 선택</h2>
-      <p>서비스 이용 목적을 선택해 주세요</p>
+    <div class="tc">
+      <div class="logo-title" data-i18n="choose_role">사용자 유형 선택</div>
+      <div class="logo-sub" data-i18n="choose_role_sub">서비스 이용 목적을 선택해 주세요</div>
     </div>
     <div class="role-grid">
       <div class="role-card" onclick="selectRole('user')">
         <div class="role-icon">🧓</div>
-        <div class="role-name">실사용자</div>
-        <div class="role-desc">Fall Detection<br>Target</div>
+        <div class="role-name" data-i18n="role_user">실사용자</div>
+        <div class="role-desc" data-i18n="role_user_desc">Fall Detection Target</div>
       </div>
       <div class="role-card" onclick="selectRole('guardian')">
         <div class="role-icon">👨‍👩‍👧</div>
-        <div class="role-name">보호자</div>
-        <div class="role-desc">Alert &<br>Monitoring</div>
+        <div class="role-name" data-i18n="role_guardian">보호자</div>
+        <div class="role-desc" data-i18n="role_guardian_desc">Alert &amp; Monitoring</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN: REGISTER
-════════════════════════════════════════════════════ -->
+<!-- REGISTER -->
 <div id="screen-register" class="screen">
-  <div style="padding:16px; flex:1; overflow-y:auto;">
-    <h2 style="margin-bottom:20px">사용자 정보 등록</h2>
-    <div class="form-group">
-      <label>이름</label>
-      <input id="reg-name" type="text" placeholder="이름 입력">
-    </div>
-    <div class="form-group">
-      <label>아이디</label>
-      <input id="reg-username" type="text" placeholder="아이디 입력">
-    </div>
-    <div class="form-group">
-      <label>비밀번호</label>
-      <input id="reg-password" type="password" placeholder="비밀번호 입력">
-    </div>
-    <div class="form-group">
-      <label>역할</label>
-      <select id="reg-role">
-        <option value="user">실사용자 (낙상 감지 대상)</option>
-        <option value="guardian">보호자 (알림 수신자)</option>
+  <div class="topbar">
+    <button class="tb-icon" onclick="showScreen('screen-login')">←</button>
+    <h1 data-i18n="register_title">회원가입</h1>
+    <div style="width:32px"></div>
+  </div>
+  <div class="scroll p16">
+    <div class="fg"><label data-i18n="name">이름</label><input id="reg-name" class="fi" type="text" data-i18n-ph="name"></div>
+    <div class="fg"><label data-i18n="username">아이디</label><input id="reg-username" class="fi" type="text" autocomplete="username" data-i18n-ph="username"></div>
+    <div class="fg"><label data-i18n="password">비밀번호</label><input id="reg-password" class="fi" type="password" autocomplete="new-password" data-i18n-ph="password"></div>
+    <div class="fg">
+      <label data-i18n="role">역할</label>
+      <select id="reg-role" class="fi">
+        <option value="user" data-i18n="role_user">실사용자</option>
+        <option value="guardian" data-i18n="role_guardian">보호자</option>
       </select>
     </div>
-    <div class="form-group">
-      <label>나이</label>
-      <input id="reg-age" type="number" placeholder="나이">
-    </div>
-    <div class="form-group">
-      <label>전화번호</label>
-      <input id="reg-phone" type="tel" placeholder="010-0000-0000">
-    </div>
-    <div class="form-group">
-      <label>주소</label>
-      <input id="reg-address" type="text" placeholder="주소 입력">
-    </div>
-    <div class="form-group">
-      <label>보호자 아이디 <span style="color:var(--muted);font-size:.8rem">(실사용자만 입력)</span></label>
-      <input id="reg-guardian" type="text" placeholder="보호자 아이디 (선택사항)">
-    </div>
-    <button class="btn btn-primary mt12" onclick="doRegister()">등록 완료</button>
-    <button class="btn btn-outline mt12" onclick="showScreen('screen-login')">로그인으로 돌아가기</button>
+    <div class="fg"><label data-i18n="age">나이</label><input id="reg-age" class="fi" type="number" data-i18n-ph="age"></div>
+    <div class="fg"><label data-i18n="phone">전화번호</label><input id="reg-phone" class="fi" type="tel" placeholder="010-0000-0000"></div>
+    <div class="fg"><label data-i18n="address">주소</label><input id="reg-address" class="fi" type="text" data-i18n-ph="address"></div>
+    <div class="fg"><label data-i18n="guardian_id">보호자 아이디 <span style="color:var(--muted);font-size:.8rem" data-i18n="optional">(선택)</span></label><input id="reg-guardian" class="fi" type="text"></div>
+    <button class="btn btn-primary mt8" onclick="doRegister()"><span data-i18n="register_btn">등록 완료</span></button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN: DASHBOARD
-════════════════════════════════════════════════════ -->
+<!-- DASHBOARD -->
 <div id="screen-dashboard" class="screen">
   <div class="topbar">
+    <div style="width:60px">
+      <span id="dash-role-badge" class="ws-badge">실사용자</span>
+    </div>
     <h1>🛡️ Fall Guard</h1>
-    <div style="display:flex;align-items:center;gap:8px">
-      <span id="dash-role-badge" class="badge">실사용자</span>
-      <span id="ws-indicator" title="실시간 연결" style="font-size:1.1rem">🔴</span>
+    <div style="width:60px;text-align:right">
+      <span id="ws-dot" class="ws-badge red" title="연결 상태">●</span>
     </div>
   </div>
-  <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px">
+  <div class="scroll p16 flex flex-col gap12">
 
-    <!-- live stream -->
     <div class="card pb0">
-      <div class="card-title">실시간 모니터링</div>
-
-      <!-- placeholder: shown when no URL is configured -->
-      <div id="stream-placeholder" style="background:#0a1520;border-radius:var(--radius);padding:28px 16px;text-align:center;color:var(--muted)">
-        <div style="font-size:2rem;margin-bottom:10px">📷</div>
-        <div style="font-size:.88rem;margin-bottom:14px">엣지 디바이스 스트림 URL을 입력하세요</div>
-        <div style="display:flex;gap:8px">
-          <input id="inline-stream-url" type="url" placeholder="http://IP:8081/video"
-                 style="flex:1;padding:10px 12px;font-size:.85rem">
-          <button class="btn btn-primary" style="white-space:nowrap;padding:10px 16px;width:auto"
-                  onclick="applyInlineUrl()">연결</button>
+      <div class="ctitle" data-i18n="live">실시간 모니터링</div>
+      <div id="stream-ph" class="stream-ph">
+        <div class="stream-ph-icon">📷</div>
+        <div class="stream-ph-txt" data-i18n="stream_hint">엣지 디바이스 스트림 URL을 입력하세요</div>
+        <div class="flex gap12" style="margin-bottom:6px">
+          <input id="inline-url" class="fi" type="url" placeholder="/api/stream/video" style="padding:10px 12px;font-size:.85rem">
+          <button class="btn btn-primary btn-sm" style="width:auto;white-space:nowrap" onclick="applyInlineUrl()" data-i18n="connect">연결</button>
         </div>
-        <div style="font-size:.73rem;margin-top:8px;color:var(--border)">예: http://localhost:8081/video</div>
+        <div style="font-size:.72rem;color:var(--muted)" data-i18n="stream_default">기본: /api/stream/video</div>
       </div>
-
-      <!-- stream img: shown when URL is set -->
-      <div class="stream-wrap" id="stream-wrap" style="display:none">
-        <img id="stream-img" src="" alt="연결 중..." style="width:100%;display:block;background:#000;min-height:180px;border-radius:var(--radius);object-fit:cover"
-             onerror="onStreamError()">
-        <div class="stream-overlay">
-          <div class="stream-badge" id="fall-status-badge"><span class="status-dot"></span>정상</div>
-        </div>
+      <div id="stream-wrap" class="stream-wrap" style="display:none">
+        <img id="stream-img" alt="">
       </div>
-
-      <div style="display:flex;gap:8px;padding:8px 0">
-        <button class="btn btn-outline btn-sm" style="flex:1" onclick="toggleHeatmap()">위험구역 표시</button>
-        <button class="btn btn-outline btn-sm" style="flex:1" onclick="refreshStream()">새로고침</button>
-        <button class="btn btn-outline btn-sm" style="flex:1;color:var(--muted);font-size:.78rem" onclick="clearStream()">연결 해제</button>
+      <span id="fall-badge" style="display:none"></span>
+      <div class="stream-acts">
+        <button class="btn btn-ghost btn-sm" onclick="toggleHeatmap()" data-i18n="heatmap">위험구역</button>
+        <button class="btn btn-ghost btn-sm" onclick="refreshStream()" data-i18n="refresh">새로고침</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearStream()" data-i18n="disconnect">해제</button>
       </div>
     </div>
 
-    <!-- status card -->
     <div class="card" id="status-card">
-      <div class="card-title">감지 현황</div>
-      <div class="flex justify-between items-center">
+      <div class="ctitle" data-i18n="detecting">감지 현황</div>
+      <div class="flex ac jb">
         <div>
-          <div class="fw700" id="status-text">정상</div>
-          <div class="text-sm text-muted" id="status-time">대기 중</div>
+          <div class="fw7" id="status-text" data-i18n="status_normal">정상</div>
+          <div style="font-size:.85rem;color:var(--muted);margin-top:3px" id="status-time" data-i18n="waiting">대기 중</div>
         </div>
         <div style="font-size:2rem" id="status-icon">✅</div>
       </div>
     </div>
 
-    <!-- recent events (guardian view) -->
-    <div class="card" id="recent-events-card">
-      <div class="card-title">최근 낙상 기록</div>
-      <div id="recent-events-list"><div class="text-sm text-muted">기록 없음</div></div>
+    <div class="card" id="recent-card">
+      <div class="ctitle" data-i18n="recent_events">최근 낙상 기록</div>
+      <div id="recent-list"><div class="text-muted" style="font-size:.85rem" data-i18n="no_records">기록 없음</div></div>
     </div>
 
   </div>
-  <nav class="nav">
-    <button class="active" onclick="switchTab('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      대시보드
+  <nav class="nav" id="nav-dash">
+    <button class="nav-btn active" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span data-i18n="dashboard">대시보드</span>
     </button>
-    <button onclick="switchTab('history')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
-      기록
+    <button class="nav-btn" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      <span data-i18n="history">기록</span>
     </button>
-    <button onclick="switchTab('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      설정
+    <button class="nav-btn" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span data-i18n="settings">설정</span>
     </button>
   </nav>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN: HISTORY
-════════════════════════════════════════════════════ -->
+<!-- HISTORY -->
 <div id="screen-history" class="screen">
-  <div class="topbar">
-    <h1>낙상 기록</h1>
-    <button onclick="loadHistory()" style="background:none;border:none;color:var(--accent);font-size:0.85rem;cursor:pointer">새로고침</button>
+  <div class="topbar" id="hist-topbar">
+    <div style="width:56px">
+      <button class="tb-btn cancel" id="hist-selall-btn" onclick="toggleSelectAll()" style="display:none" data-i18n="select_all">전체</button>
+    </div>
+    <h1 id="hist-title" data-i18n="fall_history">낙상 기록</h1>
+    <button class="tb-btn" id="hist-sel-btn" onclick="enterSelectMode()" data-i18n="select">선택</button>
   </div>
-  <div style="flex:1;overflow-y:auto;padding:14px">
+  <div class="scroll p16" id="hist-scroll">
     <div id="history-list"><div class="spinner mt12"></div></div>
   </div>
   <nav class="nav">
-    <button onclick="switchTab('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      대시보드
+    <button class="nav-btn" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span data-i18n="dashboard">대시보드</span>
     </button>
-    <button class="active" onclick="switchTab('history')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
-      기록
+    <button class="nav-btn active" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      <span data-i18n="history">기록</span>
     </button>
-    <button onclick="switchTab('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      설정
+    <button class="nav-btn" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span data-i18n="settings">설정</span>
     </button>
   </nav>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN: EVENT DETAIL
-════════════════════════════════════════════════════ -->
+<!-- SELECTION BAR -->
+<div id="sel-bar">
+  <div id="sel-count"></div>
+  <div class="sel-acts">
+    <button class="btn btn-ghost btn-sm" onclick="saveSelected()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span data-i18n="save_selected">저장</span>
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="deleteSelected()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      <span data-i18n="delete_selected">삭제</span>
+    </button>
+  </div>
+</div>
+
+<!-- DETAIL -->
 <div id="screen-detail" class="screen">
   <div class="topbar">
-    <button onclick="switchTab('history')" style="background:none;border:none;color:var(--accent);font-size:1.4rem;cursor:pointer;line-height:1">←</button>
-    <h1>낙상 분석 결과</h1>
-    <div></div>
+    <button class="tb-icon" onclick="switchTab('history')">←</button>
+    <h1 data-i18n="fall_analysis">낙상 분석 결과</h1>
+    <div style="width:32px"></div>
   </div>
-  <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px">
+  <div class="scroll p16 flex flex-col gap12">
     <div id="detail-video-wrap" class="card" style="padding:0;overflow:hidden">
-      <video id="detail-video" controls style="width:100%;display:block;background:#000;border-radius:var(--radius)"></video>
+      <video id="detail-video" controls playsinline webkit-playsinline preload="metadata" style="width:100%;display:block;background:#111;min-height:180px"></video>
+      <div id="detail-video-err" style="display:none;padding:16px;text-align:center"></div>
+    </div>
+    <div id="detail-screenshot-wrap" class="card" style="padding:0;overflow:hidden">
+      <img id="detail-screenshot" alt="screenshot">
     </div>
     <div class="card">
-      <div class="card-title">낙상 정보</div>
+      <div class="ctitle" data-i18n="fall_info">낙상 정보</div>
       <div id="detail-info"></div>
     </div>
     <div class="card">
-      <div class="card-title">119 신고 정보</div>
+      <div class="ctitle" data-i18n="emergency_info">119 신고 정보</div>
       <div id="detail-emergency"></div>
     </div>
-    <button class="btn btn-danger" id="btn-119" onclick="call119()">119 신고하기</button>
-    <button class="btn btn-outline" id="btn-ack" onclick="ackEvent()">확인 완료</button>
+    <button class="btn btn-danger" onclick="call119()"><span data-i18n="call_119">119 신고하기</span></button>
+    <button class="btn btn-outline" onclick="ackEvent()"><span data-i18n="acknowledge">확인 완료</span></button>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     SCREEN: SETTINGS
-════════════════════════════════════════════════════ -->
+<!-- SETTINGS -->
 <div id="screen-settings" class="screen">
   <div class="topbar">
-    <h1>설정</h1>
-    <button onclick="doLogout()" style="background:none;border:none;color:var(--red);font-size:0.85rem;cursor:pointer;font-weight:700">로그아웃</button>
+    <div style="width:32px"></div>
+    <h1 data-i18n="settings">설정</h1>
+    <button class="tb-btn cancel" onclick="doLogout()" data-i18n="logout">로그아웃</button>
   </div>
-  <div style="flex:1;overflow-y:auto">
+  <div class="scroll">
 
-    <div class="settings-section">
-      <h3>카메라 설정</h3>
+    <div class="sec">
+      <div class="sec-lbl" data-i18n="theme_lbl">테마</div>
       <div class="card">
-        <div class="form-group">
-          <label>에지 디바이스 스트림 URL</label>
-          <input id="cfg-stream-url" type="url" placeholder="http://JETSON_IP:8081/video">
+        <div class="theme-grp">
+          <button class="theme-btn on" id="btn-dark" onclick="setTheme('dark')">
+            🌙 <span data-i18n="dark">다크</span>
+          </button>
+          <button class="theme-btn" id="btn-light" onclick="setTheme('light')">
+            ☀️ <span data-i18n="light">라이트</span>
+          </button>
         </div>
-        <div class="form-group">
-          <label>디바이스 토큰</label>
-          <input id="cfg-device-token" type="text" placeholder="edge-device-001">
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="saveDeviceConfig()">저장</button>
       </div>
     </div>
 
-    <div class="settings-section">
-      <h3>계정 정보</h3>
+    <div class="sec mt12">
+      <div class="sec-lbl" data-i18n="language">언어 / Language</div>
+      <div class="card">
+        <div class="lang-grid" id="lang-grid">
+          <div class="lang-btn on" onclick="setLang('ko')"><span class="lang-flag">🇰🇷</span><span class="lang-name">한국어</span></div>
+          <div class="lang-btn" onclick="setLang('en')"><span class="lang-flag">🇺🇸</span><span class="lang-name">English</span></div>
+          <div class="lang-btn" onclick="setLang('es')"><span class="lang-flag">🇪🇸</span><span class="lang-name">Español</span></div>
+          <div class="lang-btn" onclick="setLang('fr')"><span class="lang-flag">🇫🇷</span><span class="lang-name">Français</span></div>
+          <div class="lang-btn" onclick="setLang('ru')"><span class="lang-flag">🇷🇺</span><span class="lang-name">Русский</span></div>
+          <div class="lang-btn" onclick="setLang('zh')"><span class="lang-flag">🇨🇳</span><span class="lang-name">中文</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec mt12">
+      <div class="sec-lbl" data-i18n="camera_lbl">카메라</div>
+      <div class="card">
+        <div class="fg"><label data-i18n="stream_url">스트림 URL</label><input id="cfg-stream-url" class="fi" type="url" placeholder="http://IP:8081/video"></div>
+        <div class="fg"><label data-i18n="device_token">디바이스 토큰</label><input id="cfg-device-token" class="fi" type="text" placeholder="edge-device-001"></div>
+        <button class="btn btn-primary btn-sm" onclick="saveDeviceConfig()"><span data-i18n="save_btn">저장</span></button>
+      </div>
+    </div>
+
+    <div class="sec mt12">
+      <div class="sec-lbl" data-i18n="account_lbl">계정</div>
       <div class="card">
         <div id="user-profile-info"></div>
-        <div class="form-group mt12" id="guardian-link-wrap">
-          <label>보호자 아이디 연결</label>
-          <input id="cfg-guardian-id" type="text" placeholder="보호자 아이디">
-          <button class="btn btn-outline btn-sm mt12" onclick="linkGuardian()">연결</button>
+        <div id="guardian-link-wrap" class="mt12">
+          <div class="fg">
+            <label data-i18n="guardian_id">보호자 아이디</label>
+            <input id="cfg-guardian-id" class="fi" type="text">
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="linkGuardian()"><span data-i18n="link_btn">연결</span></button>
         </div>
       </div>
     </div>
 
-    <div class="settings-section">
-      <h3>앱 정보</h3>
+    <div class="sec mt12" style="margin-bottom:24px">
+      <div class="sec-lbl" data-i18n="app_info_lbl">앱 정보</div>
       <div class="card">
-        <div class="detail-row"><span class="detail-key">버전</span><span>1.0.0</span></div>
-        <div class="detail-row"><span class="detail-key">모델</span><span>ST-GCN + Physics</span></div>
-        <div class="detail-row"><span class="detail-key">에지 디바이스</span><span>Jetson Orin NX</span></div>
+        <div class="dr"><span class="dk" data-i18n="ver_lbl">버전</span><span class="dv">1.0.0</span></div>
+        <div class="dr"><span class="dk" data-i18n="model_lbl">모델</span><span class="dv">ST-GCN + Physics</span></div>
+        <div class="dr"><span class="dk" data-i18n="device_lbl">에지 디바이스</span><span class="dv">Jetson Orin NX</span></div>
       </div>
     </div>
+
   </div>
   <nav class="nav">
-    <button onclick="switchTab('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      대시보드
+    <button class="nav-btn" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span data-i18n="dashboard">대시보드</span>
     </button>
-    <button onclick="switchTab('history')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
-      기록
+    <button class="nav-btn" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      <span data-i18n="history">기록</span>
     </button>
-    <button class="active" onclick="switchTab('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      설정
+    <button class="nav-btn active" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span data-i18n="settings">설정</span>
     </button>
   </nav>
 </div>
 
-<!-- ════════════════════════════════════════════════════
-     MODAL B — 보호자: "OO님이 낙상했습니다"
-════════════════════════════════════════════════════ -->
-<div id="fall-modal-guardian">
+<!-- FALL MODAL -->
+<div id="fall-modal">
   <div class="modal-box">
-    <div class="modal-icon" style="font-size:3.5rem">🚨</div>
-    <div class="modal-title" style="font-size:1.35rem" id="guardian-modal-title">낙상이 감지되었습니다</div>
-    <div class="modal-sub" id="guardian-modal-sub">피보호자의 상태를 확인해 주세요.</div>
-    <div class="modal-countdown" id="guardian-modal-time"></div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" style="font-size:1rem;padding:16px" onclick="guardianWatchVideo()">영상 보기</button>
-      <button class="btn btn-danger"  style="font-size:1rem;padding:16px" onclick="call119()">119 신고하기</button>
-      <button class="btn btn-outline" style="font-size:.85rem;padding:12px" onclick="guardianAck()">확인했습니다</button>
+    <div class="modal-ring">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="modal-title" id="modal-title" data-i18n="fall_detected">낙상이 감지되었습니다</div>
+    <div class="modal-sub" id="modal-sub" data-i18n="fall_check">피보호자의 상태를 확인해 주세요.</div>
+    <div class="modal-time" id="modal-time"></div>
+    <div class="modal-acts">
+      <button class="btn btn-primary" onclick="guardianWatchVideo()"><span data-i18n="watch_video">영상 보기</span></button>
+      <button class="btn btn-danger"  onclick="call119()"><span data-i18n="call_emergency">119 신고하기</span></button>
+      <button class="btn btn-ghost"   onclick="guardianAck()"><span data-i18n="acknowledged_btn">확인했습니다</span></button>
     </div>
   </div>
 </div>
 
-<!-- toast -->
 <div id="toast"></div>
 
 <script>
-// ── state ─────────────────────────────────────────────────────────────────────
-const API = '';   // same origin
-let token = localStorage.getItem('mg_token') || '';
-let user  = JSON.parse(localStorage.getItem('mg_user') || 'null');
-let ws    = null;
-let countdownTimer = null;
-let currentEventId = null;
-let streamUrl = localStorage.getItem('mg_stream_url') || '';
-let heatmapOn = false;
+// ══════════════════════════════════════════════════════
+//  i18n STRINGS
+// ══════════════════════════════════════════════════════
+const STRINGS = {
+ko:{
+  tagline:'AI 실시간 낙상 감지',username:'아이디',password:'비밀번호',
+  login:'로그인',no_account:'계정이 없으신가요?',register:'회원가입',
+  register_title:'회원가입',name:'이름',age:'나이',phone:'전화번호',
+  address:'주소',role:'역할',optional:'(선택)',
+  role_user:'실사용자',role_user_desc:'낙상 감지 대상',
+  role_guardian:'보호자',role_guardian_desc:'알림 & 모니터링',
+  guardian_id:'보호자 아이디',register_btn:'등록 완료',
+  choose_role:'사용자 유형 선택',choose_role_sub:'서비스 이용 목적을 선택해 주세요',
+  dashboard:'대시보드',history:'기록',settings:'설정',
+  live:'실시간 모니터링',detecting:'감지 현황',status_normal:'정상',
+  waiting:'대기 중',stream_hint:'스트림 URL을 입력하세요',
+  stream_default:'기본: /api/stream/video',connect:'연결',
+  heatmap:'위험구역',refresh:'새로고침',disconnect:'해제',
+  fall_history:'낙상 기록',select:'선택',cancel:'취소',
+  select_all:'전체',delete_selected:'삭제',save_selected:'저장',
+  no_records:'낙상 기록이 없습니다',
+  fall_analysis:'낙상 분석 결과',fall_info:'낙상 정보',
+  fall_time:'발생 시각',fall_type:'낙상 유형',severity:'심각도',
+  has_video:'사진',emergency_info:'119 신고 정보',
+  age_lbl:'나이',injury:'추정 부상',gps:'GPS',
+  call_119:'119 신고하기',acknowledge:'알림 해제',
+  theme_lbl:'테마',dark:'다크',light:'라이트',
+  language:'언어',camera_lbl:'카메라 설정',
+  stream_url:'스트림 URL',device_token:'디바이스 토큰',
+  save_btn:'저장',account_lbl:'계정 정보',
+  link_btn:'연결',logout:'로그아웃',
+  guardian_link:'보호자 연결',
+  app_info_lbl:'앱 정보',ver_lbl:'버전',model_lbl:'모델',device_lbl:'에지 디바이스',
+  severe:'중증 낙상',mild:'경증 낙상',normal:'이상 없음',
+  fall_detected:'낙상이 감지되었습니다',fall_check:'피보호자의 상태를 확인해 주세요.',
+  watch_video:'영상 보기',call_emergency:'119 신고하기',acknowledged_btn:'확인했습니다',
+  saved_msg:'저장되었습니다',deleted_msg:'삭제되었습니다',
+  linked_msg:'보호자 연결 완료',link_fail:'연결 실패: 아이디를 확인하세요',
+  login_fail:'로그인 실패',registered_msg:'등록 완료!',
+  yes:'있음',no:'없음',recent_events:'최근 낙상 기록',
+  sel_n:'{0}개 선택됨',
+},
+en:{
+  tagline:'AI Real-time Fall Detection',username:'Username',password:'Password',
+  login:'Log In',no_account:"Don't have an account?",register:'Sign Up',
+  register_title:'Create Account',name:'Name',age:'Age',phone:'Phone',
+  address:'Address',role:'Role',optional:'(optional)',
+  role_user:'User',role_user_desc:'Fall Detection Target',
+  role_guardian:'Guardian',role_guardian_desc:'Alert & Monitoring',
+  guardian_id:"Guardian's username",register_btn:'Create Account',
+  choose_role:'Choose Role',choose_role_sub:'Select how you will use this service',
+  dashboard:'Dashboard',history:'History',settings:'Settings',
+  live:'Live Monitor',detecting:'Detection Status',status_normal:'Normal',
+  waiting:'Waiting...',stream_hint:'Enter edge device stream URL',
+  stream_default:'Default: /api/stream/video',connect:'Connect',
+  heatmap:'Risk Zone',refresh:'Refresh',disconnect:'Disconnect',
+  fall_history:'Fall History',select:'Select',cancel:'Cancel',
+  select_all:'All',delete_selected:'Delete',save_selected:'Save',
+  no_records:'No fall records found',
+  fall_analysis:'Fall Analysis',fall_info:'Fall Info',
+  fall_time:'Time',fall_type:'Type',severity:'Severity',
+  has_video:'Photo',emergency_info:'Emergency Info',
+  age_lbl:'Age',injury:'Est. Injury',gps:'GPS',
+  call_119:'Call Emergency (119)',acknowledge:'Dismiss Alert',
+  theme_lbl:'Theme',dark:'Dark',light:'Light',
+  language:'Language',camera_lbl:'Camera',
+  stream_url:'Stream URL',device_token:'Device Token',
+  save_btn:'Save',account_lbl:'Account',
+  link_btn:'Link',logout:'Log Out',
+  guardian_link:'Link Guardian',
+  app_info_lbl:'App Info',ver_lbl:'Version',model_lbl:'Model',device_lbl:'Edge Device',
+  severe:'Severe Fall',mild:'Mild Fall',normal:'Normal',
+  fall_detected:'Fall Detected!',fall_check:'Please check on the person immediately.',
+  watch_video:'Watch Video',call_emergency:'Call 119',acknowledged_btn:'I understand',
+  saved_msg:'Saved',deleted_msg:'Deleted',
+  linked_msg:'Guardian linked',link_fail:'Failed: check username',
+  login_fail:'Login failed',registered_msg:'Account created!',
+  yes:'Yes',no:'No',recent_events:'Recent Falls',
+  sel_n:'{0} selected',
+},
+es:{
+  tagline:'Detección de caídas IA en tiempo real',username:'Usuario',password:'Contraseña',
+  login:'Iniciar sesión',no_account:'¿No tienes cuenta?',register:'Registrarse',
+  register_title:'Crear cuenta',name:'Nombre',age:'Edad',phone:'Teléfono',
+  address:'Dirección',role:'Rol',optional:'(opcional)',
+  role_user:'Usuario',role_user_desc:'Objetivo de detección',
+  role_guardian:'Guardián',role_guardian_desc:'Alertas y monitoreo',
+  guardian_id:'Usuario guardián',register_btn:'Crear cuenta',
+  choose_role:'Elegir rol',choose_role_sub:'Seleccione cómo usará el servicio',
+  dashboard:'Panel',history:'Historial',settings:'Ajustes',
+  live:'Monitor en vivo',detecting:'Estado de detección',status_normal:'Normal',
+  waiting:'Esperando...',stream_hint:'Ingrese la URL del stream',
+  stream_default:'Por defecto: /api/stream/video',connect:'Conectar',
+  heatmap:'Zona de riesgo',refresh:'Actualizar',disconnect:'Desconectar',
+  fall_history:'Historial de caídas',select:'Seleccionar',cancel:'Cancelar',
+  select_all:'Todo',delete_selected:'Eliminar',save_selected:'Guardar',
+  no_records:'No hay registros de caídas',
+  fall_analysis:'Análisis de caída',fall_info:'Info de caída',
+  fall_time:'Hora',fall_type:'Tipo',severity:'Gravedad',
+  has_video:'Foto',emergency_info:'Info de emergencia',
+  age_lbl:'Edad',injury:'Lesión estimada',gps:'GPS',
+  call_119:'Llamar emergencias',acknowledge:'Descartar alerta',
+  theme_lbl:'Tema',dark:'Oscuro',light:'Claro',
+  language:'Idioma',camera_lbl:'Cámara',
+  stream_url:'URL del stream',device_token:'Token de dispositivo',
+  save_btn:'Guardar',account_lbl:'Cuenta',
+  link_btn:'Vincular',logout:'Cerrar sesión',
+  guardian_link:'Vincular guardián',
+  app_info_lbl:'Info de app',ver_lbl:'Versión',model_lbl:'Modelo',device_lbl:'Dispositivo edge',
+  severe:'Caída grave',mild:'Caída leve',normal:'Normal',
+  fall_detected:'¡Caída detectada!',fall_check:'Por favor verifique a la persona.',
+  watch_video:'Ver video',call_emergency:'Llamar 112',acknowledged_btn:'Entendido',
+  saved_msg:'Guardado',deleted_msg:'Eliminado',
+  linked_msg:'Guardián vinculado',link_fail:'Error: verifique el usuario',
+  login_fail:'Error de inicio de sesión',registered_msg:'¡Cuenta creada!',
+  yes:'Sí',no:'No',recent_events:'Caídas recientes',
+  sel_n:'{0} seleccionados',
+},
+fr:{
+  tagline:'Détection de chute IA en temps réel',username:'Identifiant',password:'Mot de passe',
+  login:'Se connecter',no_account:'Pas encore de compte ?',register:"S'inscrire",
+  register_title:'Créer un compte',name:'Nom',age:'Âge',phone:'Téléphone',
+  address:'Adresse',role:'Rôle',optional:'(optionnel)',
+  role_user:'Utilisateur',role_user_desc:'Cible de détection',
+  role_guardian:'Gardien',role_guardian_desc:'Alertes et surveillance',
+  guardian_id:'Identifiant gardien',register_btn:'Créer le compte',
+  choose_role:'Choisir un rôle',choose_role_sub:'Sélectionnez comment utiliser le service',
+  dashboard:'Tableau de bord',history:'Historique',settings:'Paramètres',
+  live:'Surveillance live',detecting:'État de détection',status_normal:'Normal',
+  waiting:'En attente...',stream_hint:"Entrez l'URL du flux vidéo",
+  stream_default:'Défaut: /api/stream/video',connect:'Connecter',
+  heatmap:'Zone de risque',refresh:'Actualiser',disconnect:'Déconnecter',
+  fall_history:'Historique des chutes',select:'Sélectionner',cancel:'Annuler',
+  select_all:'Tout',delete_selected:'Supprimer',save_selected:'Enregistrer',
+  no_records:'Aucun enregistrement de chute',
+  fall_analysis:'Analyse de chute',fall_info:'Infos chute',
+  fall_time:'Heure',fall_type:'Type',severity:'Gravité',
+  has_video:'Photo',emergency_info:'Info urgence',
+  age_lbl:'Âge',injury:'Blessure estimée',gps:'GPS',
+  call_119:'Appeler urgences (15)',acknowledge:'Ignorer alerte',
+  theme_lbl:'Thème',dark:'Sombre',light:'Clair',
+  language:'Langue',camera_lbl:'Caméra',
+  stream_url:'URL du flux',device_token:"Jeton d'appareil",
+  save_btn:'Enregistrer',account_lbl:'Compte',
+  link_btn:'Lier',logout:'Déconnexion',
+  guardian_link:'Lier un gardien',
+  app_info_lbl:'Infos app',ver_lbl:'Version',model_lbl:'Modèle',device_lbl:'Appareil edge',
+  severe:'Chute grave',mild:'Chute légère',normal:'Normal',
+  fall_detected:'Chute détectée !',fall_check:'Vérifiez la personne immédiatement.',
+  watch_video:'Voir la vidéo',call_emergency:'Appeler 15',acknowledged_btn:"J'ai compris",
+  saved_msg:'Enregistré',deleted_msg:'Supprimé',
+  linked_msg:'Gardien lié',link_fail:'Échec: vérifiez le nom',
+  login_fail:'Échec de connexion',registered_msg:'Compte créé !',
+  yes:'Oui',no:'Non',recent_events:'Chutes récentes',
+  sel_n:'{0} sélectionnés',
+},
+ru:{
+  tagline:'ИИ обнаружение падений в реальном времени',username:'Логин',password:'Пароль',
+  login:'Войти',no_account:'Нет аккаунта?',register:'Регистрация',
+  register_title:'Создать аккаунт',name:'Имя',age:'Возраст',phone:'Телефон',
+  address:'Адрес',role:'Роль',optional:'(необяз.)',
+  role_user:'Пользователь',role_user_desc:'Объект обнаружения',
+  role_guardian:'Опекун',role_guardian_desc:'Оповещения и мониторинг',
+  guardian_id:'Логин опекуна',register_btn:'Создать аккаунт',
+  choose_role:'Выбор роли',choose_role_sub:'Выберите способ использования сервиса',
+  dashboard:'Панель',history:'История',settings:'Настройки',
+  live:'Мониторинг',detecting:'Статус обнаружения',status_normal:'Норма',
+  waiting:'Ожидание...',stream_hint:'Введите URL потока устройства',
+  stream_default:'По умолч.: /api/stream/video',connect:'Подключить',
+  heatmap:'Зона риска',refresh:'Обновить',disconnect:'Отключить',
+  fall_history:'История падений',select:'Выбрать',cancel:'Отмена',
+  select_all:'Все',delete_selected:'Удалить',save_selected:'Сохранить',
+  no_records:'Нет записей о падениях',
+  fall_analysis:'Анализ падения',fall_info:'Инфо о падении',
+  fall_time:'Время',fall_type:'Тип',severity:'Тяжесть',
+  has_video:'Фото',emergency_info:'Экстренные данные',
+  age_lbl:'Возраст',injury:'Предп. травма',gps:'GPS',
+  call_119:'Вызвать скорую (112)',acknowledge:'Закрыть уведомление',
+  theme_lbl:'Тема',dark:'Тёмная',light:'Светлая',
+  language:'Язык',camera_lbl:'Камера',
+  stream_url:'URL потока',device_token:'Токен устройства',
+  save_btn:'Сохранить',account_lbl:'Аккаунт',
+  link_btn:'Привязать',logout:'Выйти',
+  guardian_link:'Привязать опекуна',
+  app_info_lbl:'О приложении',ver_lbl:'Версия',model_lbl:'Модель',device_lbl:'Edge-устройство',
+  severe:'Тяжёлое падение',mild:'Лёгкое падение',normal:'Норма',
+  fall_detected:'Обнаружено падение!',fall_check:'Немедленно проверьте человека.',
+  watch_video:'Смотреть видео',call_emergency:'Вызвать 112',acknowledged_btn:'Понятно',
+  saved_msg:'Сохранено',deleted_msg:'Удалено',
+  linked_msg:'Опекун привязан',link_fail:'Ошибка: проверьте логин',
+  login_fail:'Ошибка входа',registered_msg:'Аккаунт создан!',
+  yes:'Да',no:'Нет',recent_events:'Последние падения',
+  sel_n:'Выбрано: {0}',
+},
+zh:{
+  tagline:'AI实时跌倒检测',username:'用户名',password:'密码',
+  login:'登录',no_account:'还没有账户？',register:'注册',
+  register_title:'创建账户',name:'姓名',age:'年龄',phone:'电话',
+  address:'地址',role:'角色',optional:'（可选）',
+  role_user:'用户',role_user_desc:'跌倒检测对象',
+  role_guardian:'监护人',role_guardian_desc:'警报与监控',
+  guardian_id:'监护人用户名',register_btn:'创建账户',
+  choose_role:'选择角色',choose_role_sub:'请选择您的服务使用目的',
+  dashboard:'仪表板',history:'历史',settings:'设置',
+  live:'实时监控',detecting:'检测状态',status_normal:'正常',
+  waiting:'等待中...',stream_hint:'输入边缘设备流URL',
+  stream_default:'默认：/api/stream/video',connect:'连接',
+  heatmap:'危险区域',refresh:'刷新',disconnect:'断开',
+  fall_history:'跌倒记录',select:'选择',cancel:'取消',
+  select_all:'全部',delete_selected:'删除',save_selected:'保存',
+  no_records:'没有跌倒记录',
+  fall_analysis:'跌倒分析',fall_info:'跌倒信息',
+  fall_time:'发生时间',fall_type:'类型',severity:'严重程度',
+  has_video:'截图',emergency_info:'紧急信息',
+  age_lbl:'年龄',injury:'估计伤情',gps:'GPS',
+  call_119:'拨打急救电话',acknowledge:'关闭提醒',
+  theme_lbl:'主题',dark:'深色',light:'浅色',
+  language:'语言',camera_lbl:'摄像头',
+  stream_url:'流URL',device_token:'设备令牌',
+  save_btn:'保存',account_lbl:'账户',
+  link_btn:'关联',logout:'退出登录',
+  guardian_link:'关联监护人',
+  app_info_lbl:'应用信息',ver_lbl:'版本',model_lbl:'模型',device_lbl:'边缘设备',
+  severe:'严重跌倒',mild:'轻度跌倒',normal:'正常',
+  fall_detected:'检测到跌倒！',fall_check:'请立即检查被保护人状态。',
+  watch_video:'查看视频',call_emergency:'拨打120',acknowledged_btn:'已知晓',
+  saved_msg:'已保存',deleted_msg:'已删除',
+  linked_msg:'监护人已关联',link_fail:'关联失败：请检查用户名',
+  login_fail:'登录失败',registered_msg:'账户已创建！',
+  yes:'有',no:'无',recent_events:'最近跌倒',
+  sel_n:'已选 {0} 项',
+}};
 
-// ── HTTP helpers ──────────────────────────────────────────────────────────────
-async function api(method, path, body) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-  };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(API + path, opts);
-  if (r.status === 401) { doLogout(); return null; }
-  return r.json().catch(() => null);
+const LOCALES={ko:'ko-KR',en:'en-US',es:'es-ES',fr:'fr-FR',ru:'ru-RU',zh:'zh-CN'};
+
+let _lang  = localStorage.getItem('mg_lang') || 'ko';
+let _theme = localStorage.getItem('mg_theme') || 'dark';
+
+function t(key,...args){
+  let s=(STRINGS[_lang]||STRINGS.ko)[key]||(STRINGS.en||{})[key]||key;
+  args.forEach((a,i)=>s=s.replace(`{${i}}`,a));
+  return s;
 }
 
-function toast(msg, ms = 2500) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), ms);
+function applyI18n(){
+  document.documentElement.lang=_lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n');
+    el.textContent=t(k);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{
+    el.placeholder=t(el.getAttribute('data-i18n-ph'));
+  });
+  // update lang-grid active state
+  document.querySelectorAll('.lang-btn').forEach(b=>{
+    b.classList.toggle('on', b.getAttribute('onclick')===`setLang('${_lang}')`);
+  });
+  // update theme buttons
+  document.getElementById('btn-dark')?.classList.toggle('on',_theme==='dark');
+  document.getElementById('btn-light')?.classList.toggle('on',_theme==='light');
 }
 
-// ── screen router ─────────────────────────────────────────────────────────────
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+function setLang(lang){
+  _lang=lang;
+  localStorage.setItem('mg_lang',lang);
+  applyI18n();
+  // re-render dynamic content in every active screen
+  if(document.getElementById('screen-dashboard').classList.contains('active')){
+    loadRecentEvents();
+    if(user){
+      const badge=document.getElementById('dash-role-badge');
+      if(badge) badge.textContent=user.role==='guardian'?t('role_guardian'):t('role_user');
+      resetFallStatus();
+    }
+  }
+  if(document.getElementById('screen-history').classList.contains('active')) loadHistory();
+  if(document.getElementById('screen-settings').classList.contains('active')) loadSettings();
+}
+
+function setTheme(th){
+  _theme=th;
+  localStorage.setItem('mg_theme',th);
+  document.documentElement.setAttribute('data-theme',th);
+  applyI18n();
+}
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+const API='';
+let token=localStorage.getItem('mg_token')||'';
+let user=JSON.parse(localStorage.getItem('mg_user')||'null');
+let ws=null,currentEventId=null;
+let streamUrl=localStorage.getItem('mg_stream_url')||'/api/stream/video';
+let heatmapOn=false;
+let _allEvents=[];
+
+// ── HTTP ───────────────────────────────────────────────
+async function api(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`}};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  if(r.status===401){doLogout();return null;}
+  return r.json().catch(()=>null);
+}
+
+function toast(msg,ms=2500){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),ms);
+}
+
+// ── SCREEN ROUTER ──────────────────────────────────────
+function showScreen(id){
+  if(_selectMode) exitSelectMode();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
-function switchTab(tab) {
-  const map = { dashboard: 'screen-dashboard', history: 'screen-history', settings: 'screen-settings' };
+function switchTab(tab){
+  if(_selectMode) exitSelectMode();
+  const map={dashboard:'screen-dashboard',history:'screen-history',settings:'screen-settings'};
   showScreen(map[tab]);
-  // update all nav active states
-  document.querySelectorAll('.nav button').forEach((b, i) => b.classList.remove('active'));
-  document.querySelectorAll(`#${map[tab]} .nav button`).forEach((b, i) => {
-    const tabNames = ['dashboard', 'history', 'settings'];
-    if (tabNames[i] === tab) b.classList.add('active');
-  });
-  if (tab === 'history') loadHistory();
-  if (tab === 'settings') loadSettings();
+  if(tab==='history') loadHistory();
+  if(tab==='settings') loadSettings();
 }
 
-// ── auth ──────────────────────────────────────────────────────────────────────
-async function doLogin() {
-  const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value.trim();
-  if (!username || !password) { toast('아이디와 비밀번호를 입력하세요'); return; }
-  const res = await fetch(API + '/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+// ── AUTH ───────────────────────────────────────────────
+async function doLogin(){
+  const username=document.getElementById('login-username').value.trim();
+  const password=document.getElementById('login-password').value.trim();
+  if(!username||!password){toast(t('login_fail'));return;}
+  const res=await fetch(API+'/api/auth/login',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username,password})
   });
-  if (!res.ok) { const e = await res.json(); toast(e.detail || '로그인 실패'); return; }
-  const data = await res.json();
-  token = data.token;
-  user  = data.user;
-  localStorage.setItem('mg_token', token);
-  localStorage.setItem('mg_user', JSON.stringify(user));
+  if(!res.ok){const e=await res.json();toast(e.detail||t('login_fail'));return;}
+  const data=await res.json();
+  token=data.token;user=data.user;
+  localStorage.setItem('mg_token',token);
+  localStorage.setItem('mg_user',JSON.stringify(user));
   afterLogin();
 }
 
-function afterLogin() {
-  if (!user) return showScreen('screen-login');
+function afterLogin(){
+  if(!user) return showScreen('screen-login');
+  document.documentElement.setAttribute('data-theme',_theme);
+  applyI18n();
   setupDashboard();
   showScreen('screen-dashboard');
   connectWS();
 }
 
-function showRegister() { showScreen('screen-register'); }
-
-async function doRegister() {
-  const body = {
-    username:     document.getElementById('reg-username').value.trim(),
-    password:     document.getElementById('reg-password').value.trim(),
-    role:         document.getElementById('reg-role').value,
-    display_name: document.getElementById('reg-name').value.trim(),
-    age:          parseInt(document.getElementById('reg-age').value) || null,
-    phone:        document.getElementById('reg-phone').value.trim(),
-    address:      document.getElementById('reg-address').value.trim(),
+async function doRegister(){
+  const body={
+    username:document.getElementById('reg-username').value.trim(),
+    password:document.getElementById('reg-password').value.trim(),
+    role:document.getElementById('reg-role').value,
+    display_name:document.getElementById('reg-name').value.trim(),
+    age:parseInt(document.getElementById('reg-age').value)||null,
+    phone:document.getElementById('reg-phone').value.trim(),
+    address:document.getElementById('reg-address').value.trim(),
   };
-  if (!body.username || !body.password) { toast('아이디와 비밀번호를 입력하세요'); return; }
-  const res = await fetch(API + '/api/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  if(!body.username||!body.password){toast(t('login_fail'));return;}
+  const res=await fetch(API+'/api/auth/register',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
   });
-  if (!res.ok) { const e = await res.json(); toast(e.detail || '등록 실패'); return; }
-  const data = await res.json();
-  token = data.token;
-
-  // link guardian if entered
-  const gid = document.getElementById('reg-guardian').value.trim();
-  if (gid) {
-    await fetch(API + '/api/users/link-guardian', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ guardian_username: gid }),
+  if(!res.ok){const e=await res.json();toast(e.detail||t('login_fail'));return;}
+  const data=await res.json();
+  token=data.token;
+  const gid=document.getElementById('reg-guardian').value.trim();
+  if(gid){
+    await fetch(API+'/api/users/link-guardian',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify({guardian_username:gid})
     });
   }
-
-  // refresh user info
-  const me = await fetch(API + '/api/users/me', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  }).then(r => r.json());
-  user = me;
-  localStorage.setItem('mg_token', token);
-  localStorage.setItem('mg_user', JSON.stringify(user));
-  toast('등록 완료!');
+  const me=await fetch(API+'/api/users/me',{headers:{'Authorization':`Bearer ${token}`}}).then(r=>r.json());
+  user=me;
+  localStorage.setItem('mg_token',token);
+  localStorage.setItem('mg_user',JSON.stringify(user));
+  toast(t('registered_msg'));
   afterLogin();
 }
 
-function selectRole(role) {
-  if (!user) return;
-  user.role = role;
-  localStorage.setItem('mg_user', JSON.stringify(user));
+function selectRole(role){
+  if(!user) return;
+  user.role=role;
+  localStorage.setItem('mg_user',JSON.stringify(user));
   afterLogin();
 }
 
-function doLogout() {
-  fetch(API + '/api/auth/logout', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` }
-  }).catch(() => {});
-  token = ''; user = null;
-  localStorage.removeItem('mg_token');
-  localStorage.removeItem('mg_user');
-  if (ws) ws.close();
+function doLogout(){
+  fetch(API+'/api/auth/logout',{method:'POST',headers:{'Authorization':`Bearer ${token}`}}).catch(()=>{});
+  token='';user=null;
+  localStorage.removeItem('mg_token');localStorage.removeItem('mg_user');
+  if(ws) ws.close();
+  _stopSSE();
   showScreen('screen-login');
 }
 
-// ── dashboard ─────────────────────────────────────────────────────────────────
-function setupDashboard() {
-  if (!user) return;
-  document.getElementById('dash-role-badge').textContent = user.role === 'guardian' ? '보호자' : '실사용자';
+// ── DASHBOARD ──────────────────────────────────────────
+function setupDashboard(){
+  if(!user) return;
+  const badge=document.getElementById('dash-role-badge');
+  badge.textContent=user.role==='guardian'?t('role_guardian'):t('role_user');
   setStreamUrl(streamUrl);
   loadRecentEvents();
 }
 
-function setStreamUrl(url) {
-  streamUrl = url;
-  const img         = document.getElementById('stream-img');
-  const placeholder = document.getElementById('stream-placeholder');
-  const wrap        = document.getElementById('stream-wrap');
+let _sse=null;
+function _startSSE(){
+  if(_sse) return;
+  _sse=new EventSource('/api/stream/sse');
+  _sse.onmessage=e=>{
+    if(e.data==='error') return;
+    const img=document.getElementById('stream-img');
+    if(img) img.src='data:image/jpeg;base64,'+e.data;
+  };
+  _sse.onerror=()=>{_stopSSE();if(streamUrl) setTimeout(_startSSE,2000);};
+}
+function _stopSSE(){if(_sse){_sse.close();_sse=null;}}
 
-  if (url) {
-    img.src = url;
-    placeholder.style.display = 'none';
-    wrap.style.display        = '';
-  } else {
-    img.src = '';
-    placeholder.style.display = '';
-    wrap.style.display        = 'none';
+function setStreamUrl(url){
+  streamUrl=url;
+  const ph=document.getElementById('stream-ph');
+  const wrap=document.getElementById('stream-wrap');
+  if(url){ph.style.display='none';wrap.style.display='';_startSSE();}
+  else{_stopSSE();ph.style.display='';wrap.style.display='none';}
+}
+function applyInlineUrl(){
+  const url=document.getElementById('inline-url').value.trim()||'/api/stream/video';
+  streamUrl=url;localStorage.setItem('mg_stream_url',url);setStreamUrl(url);
+  api('POST','/api/devices',{device_token:localStorage.getItem('mg_device_token')||'edge-device-001',stream_url:url}).catch(()=>{});
+}
+function clearStream(){localStorage.removeItem('mg_stream_url');streamUrl='/api/stream/video';setStreamUrl(streamUrl);}
+function refreshStream(){_stopSSE();if(streamUrl) setTimeout(_startSSE,300);}
+function toggleHeatmap(){heatmapOn=!heatmapOn;toast(heatmapOn?'ON':'OFF');}
+
+async function loadRecentEvents(){
+  const events=await api('GET','/api/fall-events');
+  const list=document.getElementById('recent-list');
+  if(!events||!events.length){
+    list.innerHTML=`<div class="text-muted" style="font-size:.85rem">${t('no_records')}</div>`;return;
   }
+  list.innerHTML=events.slice(0,3).map(e=>`
+    <div class="event-item" onclick="openDetail('${e.id}')" style="border-bottom:1px solid var(--border);padding:12px 0">
+      <div class="ev-dot dot-${e.category||'severe'}"></div>
+      <div class="ev-info"><div class="ev-cat">${catLabel(e.category)}</div><div class="ev-ts">${fmtTs(e.timestamp)}</div></div>
+      <div class="ev-arr">›</div>
+    </div>`).join('');
 }
 
-function applyInlineUrl() {
-  const url = document.getElementById('inline-stream-url').value.trim();
-  if (!url) { toast('URL을 입력하세요'); return; }
-  streamUrl = url;
-  localStorage.setItem('mg_stream_url', url);
-  setStreamUrl(url);
-  // also save to device config
-  const dtoken = localStorage.getItem('mg_device_token') || 'edge-device-001';
-  api('POST', '/api/devices', { device_token: dtoken, stream_url: url }).catch(() => {});
+// ── WEBSOCKET ──────────────────────────────────────────
+function connectWS(){
+  if(!token) return;
+  const proto=location.protocol==='https:'?'wss':'ws';
+  ws=new WebSocket(`${proto}://${location.host}/ws?token=${token}`);
+  ws.onopen=()=>{
+    const d=document.getElementById('ws-dot');
+    d.textContent='●';d.className='ws-badge';
+    setInterval(()=>{if(ws&&ws.readyState===1)ws.send('ping');},20000);
+  };
+  ws.onmessage=evt=>{
+    if(evt.data==='pong') return;
+    try{const m=JSON.parse(evt.data);if(m.type==='fall_detected') onFallDetected(m);}catch{}
+  };
+  ws.onclose=()=>{
+    const d=document.getElementById('ws-dot');
+    d.textContent='●';d.className='ws-badge red';
+    setTimeout(connectWS,5000);
+  };
+  ws.onerror=()=>ws.close();
 }
 
-function clearStream() {
-  streamUrl = '';
-  localStorage.removeItem('mg_stream_url');
-  setStreamUrl('');
-  document.getElementById('inline-stream-url').value = '';
-}
-
-function onStreamError() {
-  // MJPEG img fires onerror on disconnect — retry after 2s
-  const img = document.getElementById('stream-img');
-  const url = img.src;
-  if (!url) return;
-  setTimeout(() => { if (streamUrl) img.src = streamUrl + '?t=' + Date.now(); }, 2000);
-}
-
-function refreshStream() {
-  if (!streamUrl) return;
-  const img = document.getElementById('stream-img');
-  img.src = '';
-  setTimeout(() => { img.src = streamUrl + '?t=' + Date.now(); }, 300);
-}
-
-function toggleHeatmap() {
-  heatmapOn = !heatmapOn;
-  toast(heatmapOn ? '위험구역 표시 ON' : '위험구역 표시 OFF');
-}
-
-async function loadRecentEvents() {
-  const events = await api('GET', '/api/fall-events');
-  const list = document.getElementById('recent-events-list');
-  if (!events || events.length === 0) {
-    list.innerHTML = '<div class="text-sm text-muted">낙상 기록 없음</div>';
-    return;
+function onFallDetected(msg){
+  currentEventId=msg.event_id;
+  const badge=document.getElementById('fall-badge');
+  badge.innerHTML=`<span style="color:var(--red)">⚠️ ${t('fall_detected')}</span>`;
+  document.getElementById('status-text').textContent=t('fall_detected');
+  document.getElementById('status-text').style.color='var(--red)';
+  document.getElementById('status-icon').textContent='🚨';
+  document.getElementById('status-time').textContent=fmtTs(msg.timestamp);
+  if(user&&user.role==='guardian'){
+    if(navigator.vibrate) navigator.vibrate([600,150,600,150,600]);
+    document.getElementById('modal-title').textContent=
+      `${msg.monitored_user_name||''}님 ${t('fall_detected')}`;
+    document.getElementById('modal-sub').textContent=t('fall_check');
+    document.getElementById('modal-time').textContent=fmtTs(msg.timestamp);
+    document.getElementById('fall-modal').classList.add('show');
   }
-  const recent = events.slice(0, 3);
-  list.innerHTML = recent.map(e => `
-    <div class="event-item" onclick="openDetail('${e.id}')">
-      <div class="event-dot dot-${e.category || 'severe'}"></div>
-      <div class="event-info">
-        <div class="event-cat">${catLabel(e.category)}</div>
-        <div class="event-ts">${fmtTs(e.timestamp)}</div>
-      </div>
-      <div class="event-arrow">›</div>
-    </div>
-  `).join('');
-}
-
-// ── WebSocket ─────────────────────────────────────────────────────────────────
-function connectWS() {
-  if (!token) return;
-  const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-  const url = `${wsProto}://${location.host}/ws?token=${token}`;
-  ws = new WebSocket(url);
-
-  ws.onopen = () => {
-    document.getElementById('ws-indicator').textContent = '🟢';
-    // keep-alive ping
-    setInterval(() => { if (ws && ws.readyState === 1) ws.send('ping'); }, 20000);
-  };
-
-  ws.onmessage = (evt) => {
-    if (evt.data === 'pong') return;
-    try {
-      const msg = JSON.parse(evt.data);
-      if (msg.type === 'fall_detected') onFallDetected(msg);
-    } catch {}
-  };
-
-  ws.onclose = () => {
-    document.getElementById('ws-indicator').textContent = '🔴';
-    // reconnect after 5s
-    setTimeout(connectWS, 5000);
-  };
-
-  ws.onerror = () => ws.close();
-}
-
-function onFallDetected(msg) {
-  currentEventId = msg.event_id;
-
-  // update dashboard status
-  document.getElementById('fall-status-badge').innerHTML = '<span style="color:var(--red)">⚠️ 낙상 감지!</span>';
-  document.getElementById('status-text').textContent = '낙상 감지됨';
-  document.getElementById('status-text').style.color = 'var(--red)';
-  document.getElementById('status-icon').textContent = '🚨';
-  document.getElementById('status-time').textContent = fmtTs(msg.timestamp);
-
-  showFallModal(msg);
   loadRecentEvents();
 }
 
-// ── fall modals ───────────────────────────────────────────────────────────────
-function showFallModal(msg) {
-  if (user && user.role === 'guardian') {
-    if (navigator.vibrate) navigator.vibrate([600, 150, 600, 150, 600]);
-    _showGuardianModal(msg);
-  }
-  // 실사용자: 보호자에게 WS 알림이 이미 전송됨 — 별도 팝업 없음
+function guardianWatchVideo(){
+  document.getElementById('fall-modal').classList.remove('show');
+  if(currentEventId) openDetail(currentEventId);
+}
+function guardianAck(){
+  document.getElementById('fall-modal').classList.remove('show');
+  if(currentEventId) api('POST',`/api/fall-events/${currentEventId}/acknowledge`);
+  resetFallStatus();toast(t('acknowledge'));
+}
+function call119(){toast(t('call_119'));window.location.href='tel:119';}
+async function ackEvent(){
+  if(!currentEventId) return;
+  await api('POST',`/api/fall-events/${currentEventId}/acknowledge`);
+  toast(t('acknowledge'));switchTab('history');
+}
+function resetFallStatus(){
+  document.getElementById('fall-badge').innerHTML=`<span class="sdot blink"></span> ${t('status_normal')}`;
+  document.getElementById('status-text').textContent=t('status_normal');
+  document.getElementById('status-text').style.color='';
+  document.getElementById('status-icon').textContent='✅';
+  document.getElementById('status-time').textContent=t('waiting');
 }
 
-// 보호자 modal: person name + time + action buttons
-function _showGuardianModal(msg) {
-  const name = msg.monitored_user_name || '피보호자';
-  const ts   = fmtTs(msg.timestamp);
-  const cat  = catLabel(msg.category);
-  document.getElementById('guardian-modal-title').textContent = `${name}님이 낙상했습니다`;
-  document.getElementById('guardian-modal-sub').textContent   = `${cat} · ${ts}`;
-  document.getElementById('guardian-modal-time').textContent  = '영상을 확인하거나 119에 신고하세요.';
-  document.getElementById('fall-modal-guardian').classList.add('show');
-}
+// ── HISTORY ────────────────────────────────────────────
+async function loadHistory(){
+  const list=document.getElementById('history-list');
+  // skeleton
+  list.innerHTML=`<div class="card events-wrap">${
+    Array(4).fill(0).map(()=>`
+      <div style="display:flex;align-items:center;gap:13px;padding:14px 0;border-bottom:1px solid var(--border)">
+        <div class="sk sk-circle"></div>
+        <div style="flex:1"><div class="sk sk-line w80"></div><div class="sk sk-line w40"></div></div>
+        <div class="sk sk-line" style="width:50px"></div>
+      </div>`).join('')
+  }</div>`;
 
-function _closeAllModals() {
-  clearInterval(countdownTimer);
-  document.getElementById('fall-modal-guardian').classList.remove('show');
-}
+  const events=await api('GET','/api/fall-events');
+  _allEvents=events||[];
 
-// 보호자 버튼 handlers
-function guardianWatchVideo() {
-  _closeAllModals();
-  if (currentEventId) openDetail(currentEventId);
-}
-
-function guardianAck() {
-  _closeAllModals();
-  if (currentEventId) api('POST', `/api/fall-events/${currentEventId}/acknowledge`);
-  resetFallStatus();
-  toast('확인 완료');
-}
-
-function call119() {
-  toast('119에 연결 중...');
-  window.location.href = 'tel:119';
-}
-
-async function ackEvent() {
-  if (!currentEventId) return;
-  await api('POST', `/api/fall-events/${currentEventId}/acknowledge`);
-  toast('확인 완료');
-  switchTab('history');
-}
-
-function updateFallStatusBadge(text, color = 'orange') {
-  const badge = document.getElementById('fall-status-badge');
-  const col   = color === 'red' ? 'var(--red)' : 'var(--orange)';
-  badge.innerHTML = `<span style="color:${col}">⚠️ ${text}</span>`;
-}
-
-function resetFallStatus() {
-  document.getElementById('fall-status-badge').innerHTML = '<span class="status-dot"></span>정상';
-  document.getElementById('status-text').textContent = '정상';
-  document.getElementById('status-text').style.color = '';
-  document.getElementById('status-icon').textContent = '✅';
-  document.getElementById('status-time').textContent = '대기 중';
-}
-
-// ── history ───────────────────────────────────────────────────────────────────
-async function loadHistory() {
-  const list = document.getElementById('history-list');
-  list.innerHTML = '<div class="spinner mt12"></div>';
-  const events = await api('GET', '/api/fall-events');
-  if (!events || events.length === 0) {
-    list.innerHTML = '<div class="empty-state">낙상 기록이 없습니다</div>';
+  if(!_allEvents.length){
+    list.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">${t('no_records')}</div></div>`;
     return;
   }
-  list.innerHTML = `<div class="card" style="padding:0 16px">${
-    events.map(e => `
-      <div class="event-item" onclick="openDetail('${e.id}')">
-        <div class="event-dot dot-${e.category || 'severe'}"></div>
-        <div class="event-info">
-          <div class="event-cat">${catLabel(e.category)}</div>
-          <div class="event-ts">${fmtTs(e.timestamp)}</div>
+  list.innerHTML=`<div class="card events-wrap">${
+    _allEvents.map(e=>`
+      <div class="event-swipe" data-id="${e.id}">
+        <div class="swipe-actions">
+          <button class="swipe-save" onclick="saveEvent('${e.id}')">${t('save_selected')}</button>
+          <button class="swipe-del" onclick="deleteEvent('${e.id}')">${t('delete_selected')}</button>
         </div>
-        <div class="event-arrow">›</div>
-      </div>
-    `).join('')
+        <div class="event-item" onclick="onItemClick('${e.id}')">
+          <div class="ev-check" id="chk-${e.id}">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="ev-dot dot-${e.category||'severe'}"></div>
+          <div class="ev-info">
+            <div class="ev-cat">${catLabel(e.category)}</div>
+            <div class="ev-ts">${fmtTs(e.timestamp)}</div>
+          </div>
+          <div class="ev-pill pill-${e.category||'severe'}">${catLabel(e.category)}</div>
+          <div class="ev-arr">›</div>
+        </div>
+      </div>`).join('')
   }</div>`;
+  list.querySelectorAll('.event-swipe').forEach(_initSwipe);
 }
 
-// ── event detail ──────────────────────────────────────────────────────────────
-async function openDetail(eventId) {
-  currentEventId = eventId;
+function onItemClick(id){
+  if(_selectMode) toggleSelect(id);
+  else openDetail(id);
+}
+
+// ── DETAIL ─────────────────────────────────────────────
+async function openDetail(eventId){
+  currentEventId=eventId;
   showScreen('screen-detail');
-  const [ev, report] = await Promise.all([
-    api('GET', `/api/fall-events/${eventId}`),
-    api('GET', `/api/fall-events/${eventId}/emergency-report`),
+  const videoWrap=document.getElementById('detail-video-wrap');
+  const ssWrap=document.getElementById('detail-screenshot-wrap');
+  const ssImg=document.getElementById('detail-screenshot');
+  const videoEl=document.getElementById('detail-video');
+  // reset
+  videoWrap.style.display='none';ssWrap.style.display='none';
+  document.getElementById('detail-info').innerHTML=`<div class="spinner mt12"></div>`;
+  document.getElementById('detail-emergency').innerHTML='';
+
+  const [ev,report]=await Promise.all([
+    api('GET',`/api/fall-events/${eventId}`),
+    api('GET',`/api/fall-events/${eventId}/emergency-report`),
   ]);
-  if (!ev) return;
+  if(!ev) return;
 
-  // video — pass token as query param so <video> tag can auth
-  const videoEl = document.getElementById('detail-video');
-  if (ev.video_path) {
-    videoEl.src = `/api/fall-events/${eventId}/video/file?token=${token}`;
+  if(ev.video_path){
+    const errDiv=document.getElementById('detail-video-err');
+    errDiv.style.display='none';
+    videoEl.style.display='block';
+    videoEl.poster=ev.thumbnail_path?`/api/fall-events/${eventId}/screenshot?token=${token}`:'';
+    videoEl.onerror=()=>{
+      const c=videoEl.error?videoEl.error.code:'?';
+      const can=videoEl.canPlayType('video/mp4; codecs="avc1.42E01F"')||'no';
+      errDiv.innerHTML=`<span style="color:var(--text-muted);font-size:12px">⚠ 재생 오류 err:${c} can:${can}</span><br><br>`
+        +`<a href="/api/fall-events/${eventId}/video/file?token=${token}" download="fall_${eventId.slice(0,8)}.mp4" `
+        +`style="padding:8px 18px;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-size:14px">다운로드</a>`;
+      errDiv.style.display='block';
+      videoEl.style.display='none';
+    };
+    videoEl.src=`/api/fall-events/${eventId}/video/file?token=${token}`;
     videoEl.load();
-    document.getElementById('detail-video-wrap').style.display = '';
-  } else {
-    document.getElementById('detail-video-wrap').style.display = 'none';
+    videoWrap.style.display='';
+  }
+  if(ev.thumbnail_path){
+    ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}`;
+    ssWrap.style.display='';
   }
 
-  // event info
-  document.getElementById('detail-info').innerHTML = `
-    <div class="detail-row"><span class="detail-key">발생 시각</span><span>${fmtTs(ev.timestamp)}</span></div>
-    <div class="detail-row"><span class="detail-key">낙상 유형</span><span>${catLabel(ev.category)}</span></div>
-    <div class="detail-row"><span class="detail-key">심각도</span><span class="text-red fw700">${catLabel(ev.category)}</span></div>
-    <div class="detail-row"><span class="detail-key">영상</span><span>${ev.video_path ? '있음' : '없음'}</span></div>
-  `;
+  document.getElementById('detail-info').innerHTML=`
+    <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
+    <div class="dr"><span class="dk">${t('fall_type')}</span><span class="dv">${catLabel(ev.category)}</span></div>
+    <div class="dr"><span class="dk">${t('severity')}</span><span class="dv text-red fw7">${catLabel(ev.category)}</span></div>
+    <div class="dr"><span class="dk">${t('has_video')}</span><span class="dv">${ev.thumbnail_path?t('yes'):t('no')}</span></div>`;
 
-  // emergency report
-  if (report) {
-    document.getElementById('detail-emergency').innerHTML = `
-      <div class="detail-row"><span class="detail-key">이름</span><span>${report.name}</span></div>
-      <div class="detail-row"><span class="detail-key">나이</span><span>${report.age}세</span></div>
-      <div class="detail-row"><span class="detail-key">주소</span><span>${report.address}</span></div>
-      <div class="detail-row"><span class="detail-key">전화</span><span>${report.phone}</span></div>
-      <div class="detail-row"><span class="detail-key">추정 부상</span><span>${report.estimated_injury}</span></div>
-      <div class="detail-row"><span class="detail-key">GPS</span><span>${report.gps}</span></div>
-    `;
+  if(report){
+    document.getElementById('detail-emergency').innerHTML=`
+      <div class="dr"><span class="dk">${t('name')}</span><span class="dv">${report.name||'-'}</span></div>
+      <div class="dr"><span class="dk">${t('age_lbl')}</span><span class="dv">${report.age?report.age+(_lang==='ko'?'세':''):'-'}</span></div>
+      <div class="dr"><span class="dk">${t('address')}</span><span class="dv">${report.address||'-'}</span></div>
+      <div class="dr"><span class="dk">${t('phone')}</span><span class="dv">${report.phone||'-'}</span></div>
+      <div class="dr"><span class="dk">${t('injury')}</span><span class="dv">${report.estimated_injury||'-'}</span></div>
+      <div class="dr"><span class="dk">${t('gps')}</span><span class="dv">${report.gps||'-'}</span></div>`;
   }
 }
 
-// ── settings ──────────────────────────────────────────────────────────────────
-function loadSettings() {
-  document.getElementById('cfg-stream-url').value   = streamUrl;
-  document.getElementById('cfg-device-token').value = localStorage.getItem('mg_device_token') || 'edge-device-001';
-  if (user) {
-    document.getElementById('user-profile-info').innerHTML = `
-      <div class="detail-row"><span class="detail-key">이름</span><span>${user.display_name || '-'}</span></div>
-      <div class="detail-row"><span class="detail-key">역할</span><span>${user.role === 'guardian' ? '보호자' : '실사용자'}</span></div>
-      <div class="detail-row"><span class="detail-key">전화</span><span>${user.phone || '-'}</span></div>
-      <div class="detail-row"><span class="detail-key">주소</span><span>${user.address || '-'}</span></div>
-    `;
-    document.getElementById('guardian-link-wrap').style.display =
-      user.role === 'user' ? '' : 'none';
+// ── DELETE ─────────────────────────────────────────────
+async function deleteEvent(id){
+  const res=await api('DELETE',`/api/fall-events/${id}`);
+  if(res!==null){toast(t('deleted_msg'));loadHistory();}
+}
+
+// ── SAVE (single swipe) ────────────────────────────────
+async function saveEvent(id){
+  const ev=_allEvents.find(e=>e.id===id);
+  if(!ev) return;
+  const url=ev.thumbnail_path
+    ?`/api/fall-events/${id}/screenshot?token=${token}`
+    :ev.video_path
+      ?`/api/fall-events/${id}/video/file?token=${token}`
+      :null;
+  if(!url){toast(t('no_records'));return;}
+  const ext=ev.thumbnail_path?'jpg':'mp4';
+  const a=document.createElement('a');
+  a.href=url;a.download=`fall_${id.slice(0,8)}.${ext}`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  toast(t('saved_msg'));
+}
+
+// ── SELECT MODE ────────────────────────────────────────
+let _selectMode=false;
+let _selected=new Set();
+
+function enterSelectMode(){
+  _selectMode=true;_selected.clear();
+  document.getElementById('history-list').classList.add('select-mode');
+  // topbar
+  document.getElementById('hist-title').textContent=t('select');
+  document.getElementById('hist-sel-btn').textContent=t('cancel');
+  document.getElementById('hist-sel-btn').onclick=exitSelectMode;
+  document.getElementById('hist-selall-btn').style.display='';
+  // show sel bar
+  document.getElementById('sel-bar').classList.add('show');
+  // add bottom padding so list doesn't hide behind bar
+  document.getElementById('hist-scroll').style.paddingBottom='130px';
+  updateSelBar();
+}
+
+function exitSelectMode(){
+  _selectMode=false;_selected.clear();
+  document.getElementById('history-list').classList.remove('select-mode');
+  document.querySelectorAll('.ev-check').forEach(c=>c.classList.remove('on'));
+  // reset topbar
+  document.getElementById('hist-title').setAttribute('data-i18n','fall_history');
+  document.getElementById('hist-title').textContent=t('fall_history');
+  document.getElementById('hist-sel-btn').setAttribute('data-i18n','select');
+  document.getElementById('hist-sel-btn').textContent=t('select');
+  document.getElementById('hist-sel-btn').onclick=enterSelectMode;
+  document.getElementById('hist-selall-btn').style.display='none';
+  document.getElementById('sel-bar').classList.remove('show');
+  document.getElementById('hist-scroll').style.paddingBottom='';
+}
+
+function toggleSelect(id){
+  if(_selected.has(id)) _selected.delete(id);
+  else _selected.add(id);
+  const chk=document.getElementById(`chk-${id}`);
+  if(chk) chk.classList.toggle('on',_selected.has(id));
+  updateSelBar();
+}
+
+function toggleSelectAll(){
+  const allIds=_allEvents.map(e=>e.id);
+  const allSelected=allIds.every(id=>_selected.has(id));
+  if(allSelected){_selected.clear();}
+  else{allIds.forEach(id=>_selected.add(id));}
+  document.querySelectorAll('.ev-check').forEach(c=>{
+    const id=c.id.replace('chk-','');
+    c.classList.toggle('on',_selected.has(id));
+  });
+  updateSelBar();
+}
+
+function updateSelBar(){
+  const n=_selected.size;
+  document.getElementById('sel-count').textContent=t('sel_n',n);
+  document.getElementById('hist-selall-btn').textContent=
+    _allEvents.length>0&&_selected.size===_allEvents.length?t('cancel'):t('select_all');
+}
+
+async function deleteSelected(){
+  if(!_selected.size) return;
+  const ids=[..._selected];
+  await Promise.all(ids.map(id=>api('DELETE',`/api/fall-events/${id}`)));
+  toast(t('deleted_msg'));
+  exitSelectMode();
+  loadHistory();
+}
+
+async function saveSelected(){
+  if(!_selected.size) return;
+  const ids=[..._selected];
+  for(const id of ids){
+    const ev=_allEvents.find(e=>e.id===id);
+    if(!ev) continue;
+    const url=ev.thumbnail_path
+      ?`/api/fall-events/${id}/screenshot?token=${token}`
+      :ev.video_path
+        ?`/api/fall-events/${id}/video/file?token=${token}`
+        :null;
+    if(!url) continue;
+    const a=document.createElement('a');
+    a.href=url;a.download=`fall_${id.slice(0,8)}.${ev.thumbnail_path?'jpg':'mp4'}`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    await new Promise(r=>setTimeout(r,400));
+  }
+  toast(t('saved_msg'));
+}
+
+// ── SWIPE TO DELETE ────────────────────────────────────
+let _activeSwipe=null;
+function _initSwipe(wrap){
+  const inner=wrap.querySelector('.event-item');
+  const actions=wrap.querySelector('.swipe-actions');
+  let sx=0,sy=0,moved=false;
+  inner.addEventListener('click',e=>{
+    if(_activeSwipe===wrap){_closeSwipe(wrap);e.stopImmediatePropagation();}
+  },true);
+  wrap.addEventListener('touchstart',e=>{
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;
+    moved=false;inner.style.transition='none';
+  },{passive:true});
+  wrap.addEventListener('touchmove',e=>{
+    const dx=e.touches[0].clientX-sx,dy=e.touches[0].clientY-sy;
+    if(!moved&&Math.abs(dy)>Math.abs(dx)) return;
+    moved=true;
+    const w=actions.offsetWidth;
+    if(dx<0&&!_selectMode){
+      e.preventDefault();
+      inner.style.transform=`translateX(${Math.max(-w,dx)}px)`;
+    } else if(_activeSwipe===wrap&&dx>0){
+      e.preventDefault();
+      inner.style.transform=`translateX(${Math.min(0,-w+dx)}px)`;
+    }
+  },{passive:false});
+  wrap.addEventListener('touchend',e=>{
+    if(!moved) return;
+    const dx=e.changedTouches[0].clientX-sx,w=actions.offsetWidth;
+    inner.style.transition='transform .22s cubic-bezier(.25,.8,.25,1)';
+    if(dx<-w*.35&&!_selectMode){
+      inner.style.transform=`translateX(-${w}px)`;
+      if(_activeSwipe&&_activeSwipe!==wrap) _closeSwipe(_activeSwipe);
+      _activeSwipe=wrap;
+    } else {
+      inner.style.transform='translateX(0)';
+      if(_activeSwipe===wrap) _activeSwipe=null;
+    }
+  },{passive:true});
+}
+function _closeSwipe(wrap){
+  const inner=wrap.querySelector('.event-item');
+  inner.style.transition='transform .22s cubic-bezier(.25,.8,.25,1)';
+  inner.style.transform='translateX(0)';
+  if(_activeSwipe===wrap) _activeSwipe=null;
+}
+document.addEventListener('touchstart',e=>{
+  if(_activeSwipe&&!_activeSwipe.contains(e.target)) _closeSwipe(_activeSwipe);
+},{passive:true});
+
+// ── SETTINGS ───────────────────────────────────────────
+function loadSettings(){
+  document.getElementById('cfg-stream-url').value=streamUrl;
+  document.getElementById('cfg-device-token').value=localStorage.getItem('mg_device_token')||'edge-device-001';
+  applyI18n();
+  if(user){
+    document.getElementById('user-profile-info').innerHTML=`
+      <div class="dr"><span class="dk">${t('name')}</span><span class="dv">${user.display_name||'-'}</span></div>
+      <div class="dr"><span class="dk">${t('role')}</span><span class="dv">${user.role==='guardian'?t('role_guardian'):t('role_user')}</span></div>
+      <div class="dr"><span class="dk">${t('phone')}</span><span class="dv">${user.phone||'-'}</span></div>
+      <div class="dr"><span class="dk">${t('address')}</span><span class="dv">${user.address||'-'}</span></div>`;
+    document.getElementById('guardian-link-wrap').style.display=user.role==='user'?'':'none';
   }
 }
 
-async function saveDeviceConfig() {
-  const url   = document.getElementById('cfg-stream-url').value.trim();
-  const dtoken = document.getElementById('cfg-device-token').value.trim();
-  streamUrl = url;
-  localStorage.setItem('mg_stream_url', url);
-  localStorage.setItem('mg_device_token', dtoken);
+async function saveDeviceConfig(){
+  const url=document.getElementById('cfg-stream-url').value.trim();
+  const dtoken=document.getElementById('cfg-device-token').value.trim();
+  streamUrl=url;localStorage.setItem('mg_stream_url',url);
+  localStorage.setItem('mg_device_token',dtoken);
   setStreamUrl(url);
-
-  if (dtoken) {
-    await api('POST', '/api/devices', { device_token: dtoken, stream_url: url });
-  }
-  toast('저장되었습니다');
+  if(dtoken) await api('POST','/api/devices',{device_token:dtoken,stream_url:url});
+  toast(t('saved_msg'));
 }
 
-async function linkGuardian() {
-  const gid = document.getElementById('cfg-guardian-id').value.trim();
-  if (!gid) { toast('보호자 아이디를 입력하세요'); return; }
-  const res = await api('POST', '/api/users/link-guardian', { guardian_username: gid });
-  if (res && res.ok) { toast('보호자 연결 완료'); }
-  else { toast('연결 실패: 보호자 아이디를 확인하세요'); }
+async function linkGuardian(){
+  const gid=document.getElementById('cfg-guardian-id').value.trim();
+  if(!gid){toast(t('link_fail'));return;}
+  const res=await api('POST','/api/users/link-guardian',{guardian_username:gid});
+  toast(res&&res.ok?t('linked_msg'):t('link_fail'));
 }
 
-// ── utils ─────────────────────────────────────────────────────────────────────
-function catLabel(cat) {
-  return { severe: '중증 낙상', mild: '경증 낙상', normal: '이상 없음' }[cat] || cat || '낙상 감지';
+// ── UTILS ──────────────────────────────────────────────
+function catLabel(cat){
+  return{severe:t('severe'),mild:t('mild'),normal:t('normal')}[cat]||cat||t('severe');
+}
+function fmtTs(ts){
+  if(!ts) return '-';
+  try{return new Date(ts).toLocaleString(LOCALES[_lang]||'ko-KR',{
+    month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'
+  });}catch{return ts;}
 }
 
-function fmtTs(ts) {
-  if (!ts) return '-';
-  try {
-    return new Date(ts).toLocaleString('ko-KR', {
-      month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-  } catch { return ts; }
-}
-
-// ── boot ─────────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
-  if (token && user) {
-    afterLogin();
-  }
+// ── BOOT ───────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  document.documentElement.setAttribute('data-theme',_theme);
+  applyI18n();
+  if(token&&user) afterLogin();
 });
 </script>
 </body>

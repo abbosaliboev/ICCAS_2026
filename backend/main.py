@@ -1,3 +1,4 @@
+
 """
 MobiCare Backend Server
 
@@ -17,10 +18,11 @@ from typing import Optional
 
 from fastapi import (FastAPI, WebSocket, WebSocketDisconnect,
                      HTTPException, UploadFile, File, Header, Depends, Query)
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import httpx
 import uvicorn
 
 import db
@@ -130,15 +132,17 @@ class LinkGuardianReq(BaseModel):
 
 # ── routes ────────────────────────────────────────────────────────────────────
 
+_NO_CACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
+
 @app.get("/app", include_in_schema=False)
 @app.get("/app/{path:path}", include_in_schema=False)
 async def spa(path: str = ""):
-    return FileResponse(str(STATIC / "index.html"))
+    return FileResponse(str(STATIC / "index.html"), headers=_NO_CACHE)
 
 
 @app.get("/", include_in_schema=False)
 async def root():
-    return FileResponse(str(STATIC / "index.html"))
+    return FileResponse(str(STATIC / "index.html"), headers=_NO_CACHE)
 
 
 # ── auth ──────────────────────────────────────────────────────────────────────
@@ -301,9 +305,9 @@ def get_clip(event_id: str, user=Depends(auth_media)):
     if not ev or not ev.get("video_path"):
         raise HTTPException(404, "영상이 없습니다")
     path = Path(ev["video_path"])
-    if not path.exists():
+    if not path.exists() or path.stat().st_size < 1000:
         raise HTTPException(404, "파일을 찾을 수 없습니다")
-    return FileResponse(str(path), media_type="video/mp4",
+    return FileResponse(str(path), media_type='video/mp4; codecs="avc1.42E01F"',
                         headers={"Content-Disposition": f'inline; filename="{event_id}.mp4"'})
 
 
@@ -311,6 +315,40 @@ def get_clip(event_id: str, user=Depends(auth_media)):
 def ack_event(event_id: str, user=Depends(auth_user)):
     db.acknowledge_fall_event(event_id)
     return {"ok": True}
+
+
+@app.delete("/api/fall-events/{event_id}")
+def delete_event(event_id: str, user=Depends(auth_user)):
+    import shutil
+    ev = db.get_fall_event(event_id)
+    if ev:
+        for key in ("video_path", "thumbnail_path"):
+            p = ev.get(key)
+            if p and Path(p).exists():
+                Path(p).unlink(missing_ok=True)
+    db.delete_fall_event(event_id)
+    return {"ok": True}
+
+
+@app.post("/api/fall-events/{event_id}/screenshot")
+async def upload_screenshot(event_id: str, file: UploadFile = File(...), dev=Depends(auth_device)):
+    fname = f"{event_id}_thumb.jpg"
+    dest  = THUMBS / fname
+    with open(dest, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    db.update_fall_event_thumbnail(event_id, str(dest))
+    return {"ok": True}
+
+
+@app.get("/api/fall-events/{event_id}/screenshot")
+def get_screenshot(event_id: str, user=Depends(auth_media)):
+    ev = db.get_fall_event(event_id)
+    if not ev or not ev.get("thumbnail_path"):
+        raise HTTPException(404, "No screenshot")
+    path = Path(ev["thumbnail_path"])
+    if not path.exists():
+        raise HTTPException(404, "File not found")
+    return FileResponse(str(path), media_type="image/jpeg")
 
 
 @app.get("/api/fall-events/{event_id}/emergency-report")
@@ -356,6 +394,73 @@ async def websocket_endpoint(ws: WebSocket, token: str = ""):
                 await ws.send_text("pong")
     except WebSocketDisconnect:
         mgr.disconnect(ws, user_id)
+
+
+# ── MJPEG stream proxy ────────────────────────────────────────────────────────
+# Edge server runs on the same machine at localhost:8081.
+# Proxying here lets the browser load the stream from the same origin (port 8000),
+# avoiding CORS issues and the need to expose port 8081 to the network separately.
+
+EDGE_STREAM_URL     = os.environ.get("EDGE_STREAM_URL",     "http://localhost:8081/video")
+EDGE_SNAPSHOT_URL   = os.environ.get("EDGE_SNAPSHOT_URL",  "http://localhost:8081/snapshot")
+
+
+@app.get("/api/stream/video")
+async def proxy_stream():
+    async def _gen():
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(connect=3.0, read=None, write=None, pool=None)
+            ) as client:
+                async with client.stream("GET", EDGE_STREAM_URL) as r:
+                    async for chunk in r.aiter_bytes(chunk_size=4096):
+                        yield chunk
+        except Exception as exc:
+            import logging
+            logging.getLogger("main").warning(f"Stream proxy error: {exc}")
+
+    return StreamingResponse(
+        _gen(),
+        media_type="multipart/x-mixed-replace; boundary=--mjpeg",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/api/stream/snapshot")
+async def stream_snapshot():
+    """Return the latest JPEG frame — works on all browsers including iOS Safari."""
+    from fastapi.responses import Response
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(2.0)) as client:
+            r = await client.get(EDGE_SNAPSHOT_URL)
+            return Response(content=r.content, media_type="image/jpeg",
+                            headers={"Cache-Control": "no-cache, no-store"})
+    except Exception:
+        raise HTTPException(503, "Stream unavailable")
+
+
+@app.get("/api/stream/sse")
+async def stream_sse():
+    """SSE stream of base64-encoded JPEG frames — universally supported including iOS Safari."""
+    import asyncio, base64
+
+    async def _generate():
+        async with httpx.AsyncClient(timeout=httpx.Timeout(2.0)) as client:
+            while True:
+                try:
+                    r = await client.get(EDGE_SNAPSHOT_URL)
+                    if r.status_code == 200:
+                        b64 = base64.b64encode(r.content).decode()
+                        yield f"data: {b64}\n\n"
+                except Exception:
+                    yield "data: error\n\n"
+                await asyncio.sleep(0.1)   # 10 fps
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── heatmap (stub — returns static data) ─────────────────────────────────────

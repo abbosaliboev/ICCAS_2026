@@ -248,6 +248,20 @@ def update_fall_event_video(event_id: str, video_path: str):
     conn.close()
 
 
+def delete_fall_event(event_id: str):
+    conn = get_conn()
+    conn.execute("DELETE FROM fall_events WHERE id=?", (event_id,))
+    conn.commit()
+    conn.close()
+
+
+def update_fall_event_thumbnail(event_id: str, thumbnail_path: str):
+    conn = get_conn()
+    conn.execute("UPDATE fall_events SET thumbnail_path=? WHERE id=?", (thumbnail_path, event_id))
+    conn.commit()
+    conn.close()
+
+
 def acknowledge_fall_event(event_id: str):
     conn = get_conn()
     conn.execute("UPDATE fall_events SET is_acknowledged=1 WHERE id=?", (event_id,))
