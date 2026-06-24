@@ -62,6 +62,7 @@ _PLACEHOLDER_JPG = None   # created lazily after cv2 is imported
 
 class _MJPEGHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        global _PLACEHOLDER_JPG
         if self.path == "/":
             body = b"<html><body><img src='/video' style='max-width:100%'></body></html>"
             self.send_response(200)
@@ -80,7 +81,6 @@ class _MJPEGHandler(BaseHTTPRequestHandler):
                     with _frame_lock:
                         jpg = _latest_jpg
                     if jpg is None:
-                        global _PLACEHOLDER_JPG
                         if _PLACEHOLDER_JPG is None:
                             _PLACEHOLDER_JPG = _make_placeholder_jpg("카메라 준비 중...")
                         jpg = _PLACEHOLDER_JPG
@@ -90,6 +90,20 @@ class _MJPEGHandler(BaseHTTPRequestHandler):
                     time.sleep(0.05)   # 20 fps max
             except Exception:
                 pass
+        elif self.path == "/snapshot":
+            with _frame_lock:
+                jpg = _latest_jpg
+            if jpg is None:
+                if _PLACEHOLDER_JPG is None:
+                    _PLACEHOLDER_JPG = _make_placeholder_jpg("카메라 준비 중...")
+                jpg = _PLACEHOLDER_JPG
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(jpg)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "no-cache, no-store")
+            self.end_headers()
+            self.wfile.write(jpg)
         elif self.path == "/status":
             body = json.dumps({"status": "ok", "time": datetime.now().isoformat()}).encode()
             self.send_response(200)
@@ -112,61 +126,6 @@ def start_mjpeg_server(port: int):
     log.info(f"MJPEG stream at http://0.0.0.0:{port}/video")
 
 
-# ── video clip recorder ───────────────────────────────────────────────────────
-class ClipRecorder:
-    """Buffers raw frames and saves a clip when triggered."""
-
-    def __init__(self, clip_dir: str, pre_s: float = 5.0, post_s: float = 10.0, fps: float = 15.0):
-        self.clip_dir  = Path(clip_dir)
-        self.clip_dir.mkdir(parents=True, exist_ok=True)
-        self.pre_buf   = deque(maxlen=int(pre_s * fps))
-        self.post_buf  = []
-        self.post_need = int(post_s * fps)
-        self.recording = False
-        self.clip_path = None
-        self.fps       = fps
-        self._lock     = threading.Lock()
-
-    def add_frame(self, frame: np.ndarray):
-        with self._lock:
-            if self.recording:
-                self.post_buf.append(frame.copy())
-                if len(self.post_buf) >= self.post_need:
-                    self._flush()
-            else:
-                self.pre_buf.append(frame.copy())
-
-    def trigger(self, event_id: str) -> str:
-        with self._lock:
-            if self.recording:
-                return self.clip_path
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            self.clip_path = str(self.clip_dir / f"fall_{ts}_{event_id[:8]}.mp4")
-            self.post_buf  = list(self.pre_buf)
-            self.recording = True
-        log.info(f"Recording clip → {self.clip_path}")
-        return self.clip_path
-
-    def _flush(self):
-        frames = list(self.post_buf)
-        path   = self.clip_path
-        self.recording = False
-        self.post_buf  = []
-        t = threading.Thread(target=self._write, args=(path, frames), daemon=True)
-        t.start()
-
-    def _write(self, path: str, frames: list):
-        if not frames:
-            return
-        h, w = frames[0].shape[:2]
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(path, fourcc, self.fps, (w, h))
-        for f in frames:
-            out.write(f)
-        out.release()
-        log.info(f"Clip saved: {path}")
-
-
 # ── backend HTTP client ───────────────────────────────────────────────────────
 class BackendClient:
     def __init__(self, base_url: str, device_token: str):
@@ -174,12 +133,11 @@ class BackendClient:
         self.token   = device_token
         self.headers = {"X-Device-Token": device_token}
 
-    def post_fall(self, event_id: str, category: str, timestamp: str, clip_path: str | None = None) -> bool:
+    def post_fall(self, event_id: str, category: str, timestamp: str) -> bool:
         payload = {
             "event_id":  event_id,
             "category":  category,
             "timestamp": timestamp,
-            "clip_path": clip_path or "",
         }
         try:
             r = requests.post(
@@ -196,21 +154,21 @@ class BackendClient:
             log.warning(f"Cannot reach backend: {e}")
         return False
 
-    def upload_clip(self, event_id: str, clip_path: str):
-        if not os.path.exists(clip_path):
+    def upload_screenshot(self, event_id: str, img_path: str):
+        if not os.path.exists(img_path):
             return
         try:
-            with open(clip_path, "rb") as f:
+            with open(img_path, "rb") as f:
                 r = requests.post(
-                    f"{self.base}/api/fall-events/{event_id}/video",
-                    files={"file": (os.path.basename(clip_path), f, "video/mp4")},
+                    f"{self.base}/api/fall-events/{event_id}/screenshot",
+                    files={"file": (os.path.basename(img_path), f, "image/jpeg")},
                     headers=self.headers,
-                    timeout=30,
+                    timeout=10,
                 )
             if r.status_code in (200, 201):
-                log.info(f"Clip uploaded for {event_id}")
+                log.info(f"Screenshot uploaded for {event_id}")
         except Exception as e:
-            log.warning(f"Clip upload failed: {e}")
+            log.warning(f"Screenshot upload failed: {e}")
 
 
 # ── keypoint helpers (same as demo_webcam.py) ─────────────────────────────────
@@ -303,7 +261,7 @@ def load_yolo(tensorrt: bool):
         if not os.path.exists(engine):
             log.info("Exporting YOLO to TensorRT engine (one-time, ~2 min)…")
             m = YOLO("yolo11n-pose.pt")
-            m.export(format="engine", half=True, device=0)
+            m.export(format="engine", half=True, device=0, imgsz=320)
             log.info("TensorRT export done.")
         log.info(f"Loading TensorRT engine: {engine}")
         return YOLO(engine)
@@ -313,13 +271,14 @@ def load_yolo(tensorrt: bool):
 # ── main loop ─────────────────────────────────────────────────────────────────
 
 def main():
+    global _latest_jpg
     ap = argparse.ArgumentParser()
     ap.add_argument("--exp",          default=None,            help="Experiment dir (default: experiments/subject1_2_3_4)")
     ap.add_argument("--source",       default="0",             help="Camera index or RTSP URL")
     ap.add_argument("--backend",      default="http://localhost:8000", help="Backend server URL")
     ap.add_argument("--device-token", default="edge-device-001", help="Device token for backend auth")
     ap.add_argument("--stream-port",  type=int, default=8081,  help="MJPEG HTTP port (default 8081)")
-    ap.add_argument("--clip-dir",     default="clips",         help="Directory to save fall clips")
+    ap.add_argument("--snap-dir",     default="snapshots",     help="Directory to save fall screenshots")
     ap.add_argument("--confirm",      type=int, default=3,     help="Consecutive FALL windows to confirm (default 3)")
     ap.add_argument("--min-lock",     type=float, default=5.0, help="Min seconds to hold FALL alert")
     ap.add_argument("--stand-streak", type=int, default=2,     help="Standing windows to auto-reset")
@@ -340,13 +299,14 @@ def main():
 
     start_mjpeg_server(args.stream_port)
 
-    clip_dir = args.clip_dir if os.path.isabs(args.clip_dir) else os.path.join(base, args.clip_dir)
-    recorder = ClipRecorder(clip_dir, pre_s=5.0, post_s=10.0, fps=15.0)
+    snap_dir = args.snap_dir if os.path.isabs(args.snap_dir) else os.path.join(base, args.snap_dir)
+    Path(snap_dir).mkdir(parents=True, exist_ok=True)
     client   = BackendClient(args.backend, args.device_token)
 
-    # resolve camera source
+    # resolve camera source — use CAP_V4L2 for integer indices (needed on Jetson)
     src = int(args.source) if args.source.isdigit() else args.source
-    cap = cv2.VideoCapture(src)
+    backend = cv2.CAP_V4L2 if isinstance(src, int) else cv2.CAP_ANY
+    cap = cv2.VideoCapture(src, backend)
     if not cap.isOpened():
         log.error(f"Cannot open source: {src}")
         sys.exit(1)
@@ -355,7 +315,10 @@ def main():
 
     buf           = deque(maxlen=WINDOW)
     frame_no      = 0
-    fps_disp      = 0.0
+    fps_disp      = 0.0   # overall loop FPS
+    cam_fps       = 0.0   # camera frame delivery FPS
+    yolo_fps      = 0.0   # YOLO inference FPS  (1 / inference_time)
+    stgcn_fps     = 0.0   # ST-GCN inference FPS (1 / inference_time)
     t_prev        = time.time()
     fall_streak   = 0
     fall_active   = False
@@ -363,17 +326,23 @@ def main():
     stand_streak  = 0
     baseline_hip  = 0.0
     lying_streak  = 0
-    current_event_id   = None
-    current_clip_path  = None
+    no_person_frames = 0
+    current_event_id = None
 
     log.info("Edge server running. Ctrl+C to stop.")
 
     while True:
+        t_read0 = time.time()
         ret, frame = cap.read()
+        t_read1 = time.time()
         if not ret:
             log.warning("Frame read failed — retrying")
             time.sleep(0.1)
             continue
+
+        # camera FPS: inverse of time blocked inside cap.read()
+        read_dt = max(t_read1 - t_read0, 1e-6)
+        cam_fps = 0.9 * cam_fps + 0.1 / read_dt
 
         h, w = frame.shape[:2]
         frame_no += 1
@@ -381,9 +350,16 @@ def main():
         fps_disp = 0.9 * fps_disp + 0.1 / max(now - t_prev, 1e-6)
         t_prev = now
 
-        results = yolo(frame, verbose=False, conf=0.1)
+        t_yolo0 = time.time()
+        results = yolo(frame, verbose=False, conf=0.1, imgsz=320)
+        t_yolo1 = time.time()
+        yolo_fps = 0.9 * yolo_fps + 0.1 / max(t_yolo1 - t_yolo0, 1e-6)
+
         kp = extract_kp(results[0], h, w)
         buf.append(kp)
+
+        person_visible = float(kp[:, 2].max()) > 0.15
+        no_person_frames = 0 if person_visible else no_person_frames + 1
 
         draw_skeleton(frame, kp, h, w)
 
@@ -391,10 +367,16 @@ def main():
         if len(buf) == WINDOW and frame_no % STRIDE == 0:
             seq = ffill(np.stack(buf, axis=0))
             x_t = to_stgcn_tensor(seq, device)
-            with torch.no_grad():
-                logits = detector.model(x_t)
-                prob   = float(torch.softmax(logits, dim=-1)[0, 1].item())
-            pred = detector.predict_one(x_t.squeeze(0), seq)
+
+            # skip inference if too few joints visible (edge/close-up = distorted skeleton)
+            n_vis  = int((kp[:, 2] > 0.15).sum())
+            vis_kp = kp[kp[:, 2] > 0.15]
+            h_span = float(vis_kp[:, 1].max() - vis_kp[:, 1].min()) if n_vis >= 4 else 0.0
+            if n_vis >= 9 and h_span <= 0.80:
+                t_stgcn0 = time.time()
+                pred = detector.predict_one(x_t.squeeze(0), seq)
+                t_stgcn1 = time.time()
+                stgcn_fps = 0.9 * stgcn_fps + 0.1 / max(t_stgcn1 - t_stgcn0, 1e-6)
 
             # personal standing baseline
             if not fall_active and is_standing(kp):
@@ -410,15 +392,23 @@ def main():
                 fall_active  = True
                 fall_lock_t  = time.time() + args.min_lock
                 stand_streak = 0
-                event_id     = f"{datetime.now().strftime('%Y%m%d%H%M%S')}"
-                current_event_id  = event_id
-                current_clip_path = recorder.trigger(event_id)
-                client.post_fall(event_id, "severe", datetime.now().isoformat(), current_clip_path)
+                event_id         = datetime.now().strftime('%Y%m%d%H%M%S')
+                current_event_id = event_id
+                client.post_fall(event_id, "severe", datetime.now().isoformat())
                 log.info("FALL DETECTED — alert active")
+                ss_path = os.path.join(snap_dir, f"{event_id}.jpg")
+                cv2.imwrite(ss_path, frame)
+                threading.Thread(target=client.upload_screenshot, args=(event_id, ss_path), daemon=True).start()
 
         # auto-reset
         if fall_active and time.time() > fall_lock_t:
-            if is_standing(kp):
+            if no_person_frames > 50:
+                fall_active  = False
+                fall_streak  = 0
+                stand_streak = 0
+                lying_streak = 0
+                log.info("Auto-reset: person left frame")
+            elif is_standing(kp):
                 stand_streak += 1
                 if stand_streak >= args.stand_streak:
                     fall_active  = False
@@ -429,34 +419,17 @@ def main():
             else:
                 stand_streak = 0
 
-        # upload clip once it's ready (non-blocking check)
-        if current_clip_path and os.path.exists(current_clip_path) and not recorder.recording:
-            eid, cp = current_event_id, current_clip_path
-            current_event_id = None; current_clip_path = None
-            threading.Thread(target=client.upload_clip, args=(eid, cp), daemon=True).start()
-
-        # ── overlay ──────────────────────────────────────────────────────────
-        if fall_active:
-            color, label = (0,0,255), "FALL DETECTED"
-        elif fall_streak > 0:
-            color, label = (0,165,255), f"FALL? {fall_streak}/{args.confirm}"
-        elif len(buf) == WINDOW:
-            color, label = (0,220,0), "NO FALL"
-        else:
-            color, label = (200,200,0), "Buffering..."
-
-        cv2.rectangle(frame, (0, 0), (w, 50), (20,20,20), -1)
-        cv2.putText(frame, label, (10, 38), cv2.FONT_HERSHEY_SIMPLEX, 1.1, color, 3, cv2.LINE_AA)
-        cv2.putText(frame, f"fps={fps_disp:.0f}  device={device}", (10, h-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150,150,150), 1, cv2.LINE_AA)
+        # ── overlay: loop / camera / YOLO / ST-GCN FPS ───────────────────────
+        cv2.putText(frame,
+            f"loop={fps_disp:.0f}fps  cam={cam_fps:.0f}fps  yolo={yolo_fps:.0f}fps  stgcn={stgcn_fps:.0f}fps  [{device}]",
+            (10, h-10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (150, 150, 150), 1, cv2.LINE_AA)
+        if frame_no % 60 == 0:
+            log.info(f"FPS — loop={fps_disp:.1f}  cam={cam_fps:.1f}  yolo={yolo_fps:.1f}  stgcn={stgcn_fps:.1f}")
 
         # MJPEG publish
         _, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
         with _frame_lock:
             _latest_jpg = jpg.tobytes()
-
-        # video recording
-        recorder.add_frame(frame)
 
         if args.display:
             cv2.imshow("MobiCare Edge", frame)
