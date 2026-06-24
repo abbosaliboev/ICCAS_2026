@@ -1,1 +1,609 @@
-﻿# Model Architecture / ëª¨ë¸ ì•„í‚¤í…ì²˜> **Language / ì–¸ì–´**> - [ðŸ‡ºðŸ‡¸ English](#english)> - [ðŸ‡°ðŸ‡· í•œêµ­ì–´](#korean)---<a name="english"></a># ðŸ‡ºðŸ‡¸ English## Overview```Input: camera frames (Camera1, ~19 FPS)         â”‚         â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚  YOLO11n-pose   â”‚  conf=0.1, batch_size=8  â”‚  (keypoint det) â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜           â”‚  (F, 17, 3) â€” frame, joint, [x, y, conf]           â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚ Zero-frame fill â”‚  forward-fill â†’ backward-fill  â”‚ (interpolation) â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜           â”‚           â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚ Sliding window  â”‚  T=30, stride=15  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜           â”‚  (N, 30, 17, 3)           â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚   ST-GCN        â”‚  Stage 1  â”‚   (9 blocks)    â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜           â”‚  fall probability p           â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚        Physics Rescue             â”‚  Stage 2  â”‚  p >= 0.55  â†’ FALL               â”‚  â”‚  0.50 <= p < 0.55 â†’ physics?     â”‚  â”‚  p < 0.50   â†’ NO-FALL            â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜```## ST-GCN (Spatial Temporal Graph Convolutional Network)**Primary source:** Yan et al., "Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition", AAAI 2018.### Skeleton graph17 COCO keypoints (YOLO11n-pose output):```0: nose          5: left_shoulder    11: left_hip1: left_eye      6: right_shoulder   12: right_hip2: right_eye     7: left_elbow       13: left_knee3: left_ear      8: right_elbow      14: right_knee4: right_ear     9: left_wrist       15: left_ankle                10: right_wrist      16: right_ankle```**Adjacency matrix A** â€” shape (3, 17, 17), 3 subsets:- `A[0]` â€” self-link (each joint with itself)- `A[1]` â€” centripetal (shoulders, hips â†’ toward center)- `A[2]` â€” centrifugal (from center â†’ hand/foot extremities)Center node: `11` (left_hip, BFS root)### Architecture```Input: (N, C=3, T=30, V=17, M=1)Block 1-3:   SpatialGCN(3â†’64)  + TemporalConv(64, stride=1)Block 4-6:   SpatialGCN(64â†’128) + TemporalConv(128, stride=2 block4)Block 7-9:   SpatialGCN(128â†’256) + TemporalConv(256, stride=2 block7)GlobalAvgPool â†’ Dropout(0.5) â†’ Linear(256â†’2)Output: (N, 2) logits  â†’  softmax  â†’  fall probability```Each STGCNBlock:```SpatialGCN:  x â†’ einsum(A, x) â†’ BatchNorm â†’ ReLU  + learnable attention mask on ATemporalConv:  Conv2d(C, C, kernel=(9,1), padding=(4,0)) â†’ BatchNorm â†’ ReLU  + residual connection (1x1 conv if channels change)```### Training settings| Parameter | Value ||---|---|| Epochs | 60 || Batch size | 32 || Optimizer | Adam (lr=1e-3, weight_decay=1e-4) || Scheduler | CosineAnnealingLR (T_max=60) || Dropout | 0.5 || Class imbalance | WeightedRandomSampler (FALL:NO-FALL = 1:~6) || Augmentation | Horizontal flip (p=0.5) + Gaussian noise (Ïƒ=0.01) || Best model | saved based on val fall F1 |## Physics Filter (Stage 2)### Computation```python# 1. Get mid-hip Y coordinate (COCO indices 11, 12)hip_y = (seq[:, 11, 1] + seq[:, 12, 1]) / 2.0   # 0=top, 1=bottom# 2. Position filter (4 Hz Butterworth lowpass)hip_y_filtered = lowpass(hip_y, fc=4.0)# 3. Velocity (downward = positive)velocity = gradient(hip_y_filtered, dt=1/fps)velocity_f = lowpass(velocity, fc=8.0)# 4. Accelerationacceleration = gradient(velocity_f, dt=1/fps)acceleration_f = lowpass(acceleration, fc=6.0)# 5. Featuresmax_velocity = velocity_f.max()max_abs_acc  = abs(acceleration_f).max()hip_drop     = hip_y_filtered.max() - hip_y_filtered.min()```### ThresholdsFound via grid search on the validation set:- `vel_threshold = 0.0354` (normalized units/s)- `acc_threshold = 0.3545` (normalized units/sÂ²)Decision: `max_velocity > vel_threshold AND max_abs_acc > acc_threshold` â†’ physics confirms fall### Rescue logic```Stage 1 prob:  â‰¥ 0.55  â†’ FALL   (Stage 1 confident, physics not consulted)  [0.50, 0.55)  â†’ physics decides  â† Rescue zone  < 0.50  â†’ NO-FALL```**Key difference from the old AND logic:**- **Old (AND):** `Stage1=1 AND physics=1` â€” physics could delete Stage 1 detections- **New (Rescue):** physics can only rescue what Stage 1 MISSED## Dataset preparation### YOLO keypoint extraction```pythonMODEL = YOLO("yolo11n-pose.pt")# conf=0.1 â€” low threshold for fall posesresults = MODEL(batch, conf=0.1)# take the most confident personperson_idx = keypoints.conf.sum(dim=1).argmax()# normalizationxy_norm = xy_pixels / [image_width, image_height]  # in [0, 1] range```### Zero-frame interpolation```pythondef interpolate_zero_frames(kps):    # Forward fill: use the last detected frame    for i in range(len(kps)):        if frame_is_zero(kps[i]):            kps[i] = last_valid_frame    # Backward fill: fill zeros at the beginning    ...```**Result:** zero frames in fall sequences 14.5% â†’ **0%**### Sliding window```Trial (F frames) â†’ windows:  [0:30], [15:45], [30:60], ...Window size T=30 (~1.58 seconds at 19 FPS)Stride     S=15 (~0.79 seconds)```## Real-time Webcam Demo (`demo_webcam.py`)### Pipeline```Webcam frame    â”‚    â–¼  YOLO11n-pose (conf=0.1)    â”‚  normalized (17, 3) keypoints    â–¼  Ring buffer (deque, maxlen=30)    â”‚  every 15 frames:    â–¼  ffill â†’ (30, 17, 3) window  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚  PHYSICS-ONLY mode (recommended)     â”‚  â”‚                                      â”‚  â”‚  1. Personal baseline (EMA hip Y     â”‚  â”‚     while standing upright)          â”‚  â”‚                                      â”‚  â”‚  2. Slow fall:                       â”‚  â”‚     drop_from_base > slow_drop       â”‚  â”‚     AND is_lying() (shoulder â‰ˆ hip)  â”‚  â”‚     for lying_confirm windows        â”‚  â”‚                                      â”‚  â”‚  3. Fast fall (--fast-fall):         â”‚  â”‚     max_velocity + max_acc + net_dropâ”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â”‚  pred âˆˆ {0, 1}    â–¼  State machine:    fall_streak >= confirm_needed â†’ FALL DETECTED    is_standing() for stand_streak â†’ auto-reset```### Key design decisions| Decision | Reason ||---|---|| Baseline hip Y (EMA) | Camera-angle/distance independent â€” person's own reference || `is_lying()` condition | Distinguishes floor-sitting (upright torso) from lying (horizontal) || `--fast-fall` OFF by default | Slow falls are the priority for elderly; fast-fall causes FP when running || `--use-model` display-only | ST-GCN trained on UP-Fall lab data â€” distribution shift on webcam; physics is reliable || 5s min-lock after alert | Prevents flashing alerts; lying person still triggers while motionless |### State machine```Idle â†’ fall_streak++ (per window) â†’ [streak â‰¥ confirm] â†’ FALL ACTIVE                                                              â”‚ min_lock (5s)FALL ACTIVE â†’ [lock expired] â†’ is_standing() Ã— stand_streak â†’ Idle```### Posture detectors```pythonis_standing(kp, delta=0.12):  hip_y - shoulder_y > deltais_lying(kp, delta=0.10):     hip_y - shoulder_y < delta  (horizontal body)```### Run command```bashpython demo_webcam.py --physics-only --confirm 2 --slow-drop 0.12 --lying-confirm 2# with ST-GCN display overlay (model shown but doesn't gate detection):python demo_webcam.py --physics-only --use-model --confirm 2 --slow-drop 0.12 --lying-confirm 2```## File sources| File | Description ||---|---|| `stgcn/graph.py` | 17-joint COCO skeleton, adjacency matrix A(3,17,17) || `stgcn/model.py` | ST-GCN 9 blocks, learnable attention || `stgcn/physics.py` | Butterworth filter, threshold fitting, grid search || `stgcn/two_stage.py` | TwoStageDetector, Rescue logic, tune_thresholds() || `prepare_cv_dataset.py` | YOLO extraction + interpolation + windowing || `train_two_stage.py` | Full pipeline: split â†’ train â†’ physics fit â†’ evaluate || `demo_webcam.py` | Real-time webcam demo: physics-based detection + optional ST-GCN overlay |---<a name="korean"></a># ðŸ‡°ðŸ‡· í•œêµ­ì–´## ì „ì²´ êµ¬ì¡°```ìž…ë ¥: ì¹´ë©”ë¼ í”„ë ˆìž„ (Camera1, ~19 FPS)         â”‚         â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚  YOLO11n-pose   â”‚  conf=0.1, batch_size=8  â”‚  (í‚¤í¬ì¸íŠ¸ ê²€ì¶œ) â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜           â”‚  (F, 17, 3) â€” frame, joint, [x, y, conf]           â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚ Zero-frame fill â”‚  forward-fill â†’ backward-fill  â”‚ (ë³´ê°„)          â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜           â”‚           â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚ Sliding window  â”‚  T=30, stride=15  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜           â”‚  (N, 30, 17, 3)           â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚   ST-GCN        â”‚  Stage 1  â”‚   (9 blocks)    â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”˜           â”‚  ë‚™ìƒ í™•ë¥  p           â–¼  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚        Physics Rescue             â”‚  Stage 2  â”‚  p >= 0.55  â†’ FALL               â”‚  â”‚  0.50 <= p < 0.55 â†’ physics?     â”‚  â”‚  p < 0.50   â†’ NO-FALL            â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜```## ST-GCN (Spatial Temporal Graph Convolutional Network)**ì£¼ìš” ì¶œì²˜:** Yan et al., "Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition", AAAI 2018.### ìŠ¤ì¼ˆë ˆí†¤ ê·¸ëž˜í”„17ê°œ COCO í‚¤í¬ì¸íŠ¸ (YOLO11n-pose ì¶œë ¥):```0: nose          5: left_shoulder    11: left_hip1: left_eye      6: right_shoulder   12: right_hip2: right_eye     7: left_elbow       13: left_knee3: left_ear      8: right_elbow      14: right_knee4: right_ear     9: left_wrist       15: left_ankle                10: right_wrist      16: right_ankle```**ì¸ì ‘ í–‰ë ¬ A** â€” shape (3, 17, 17), 3ê°œ subset:- `A[0]` â€” self-link (ê° ê´€ì ˆì´ ìžê¸° ìžì‹ ê³¼ ì—°ê²°)- `A[1]` â€” centripetal (ì–´ê¹¨, ì—‰ë©ì´ â†’ ì¤‘ì‹¬ ë°©í–¥)- `A[2]` â€” centrifugal (ì¤‘ì‹¬ â†’ ì†/ë°œ ë ë°©í–¥)Center node: `11` (left_hip, BFS root)### ì•„í‚¤í…ì²˜```ìž…ë ¥: (N, C=3, T=30, V=17, M=1)Block 1-3:   SpatialGCN(3â†’64)  + TemporalConv(64, stride=1)Block 4-6:   SpatialGCN(64â†’128) + TemporalConv(128, stride=2 block4)Block 7-9:   SpatialGCN(128â†’256) + TemporalConv(256, stride=2 block7)GlobalAvgPool â†’ Dropout(0.5) â†’ Linear(256â†’2)ì¶œë ¥: (N, 2) logits  â†’  softmax  â†’  ë‚™ìƒ í™•ë¥ ```ê° STGCNBlock:```SpatialGCN:  x â†’ einsum(A, x) â†’ BatchNorm â†’ ReLU  + Aì— ëŒ€í•œ learnable attention maskTemporalConv:  Conv2d(C, C, kernel=(9,1), padding=(4,0)) â†’ BatchNorm â†’ ReLU  + residual connection (ì±„ë„ì´ ë°”ë€Œë©´ 1x1 conv)```### í•™ìŠµ ì„¤ì •| íŒŒë¼ë¯¸í„° | ê°’ ||---|---|| Epochs | 60 || Batch size | 32 || Optimizer | Adam (lr=1e-3, weight_decay=1e-4) || Scheduler | CosineAnnealingLR (T_max=60) || Dropout | 0.5 || í´ëž˜ìŠ¤ ë¶ˆê· í˜• | WeightedRandomSampler (FALL:NO-FALL = 1:~6) || Augmentation | ì¢Œìš° ë°˜ì „ (p=0.5) + ê°€ìš°ì‹œì•ˆ ë…¸ì´ì¦ˆ (Ïƒ=0.01) || Best model | val fall F1 ê¸°ì¤€ìœ¼ë¡œ ì €ìž¥ |## Physics Filter (Stage 2)### ê³„ì‚°```python# 1. mid-hip Y ì¢Œí‘œ ì¶”ì¶œ (COCO index 11, 12)hip_y = (seq[:, 11, 1] + seq[:, 12, 1]) / 2.0   # 0=ìœ„, 1=ì•„ëž˜# 2. ìœ„ì¹˜ í•„í„° (4 Hz Butterworth lowpass)hip_y_filtered = lowpass(hip_y, fc=4.0)# 3. ì†ë„ (ì•„ëž˜ ë°©í–¥ = ì–‘ìˆ˜)velocity = gradient(hip_y_filtered, dt=1/fps)velocity_f = lowpass(velocity, fc=8.0)# 4. ê°€ì†ë„acceleration = gradient(velocity_f, dt=1/fps)acceleration_f = lowpass(acceleration, fc=6.0)# 5. íŠ¹ì§•ëŸ‰max_velocity = velocity_f.max()max_abs_acc  = abs(acceleration_f).max()hip_drop     = hip_y_filtered.max() - hip_y_filtered.min()```### ìž„ê³„ê°’Validation setì—ì„œ grid searchë¡œ ê²°ì •:- `vel_threshold = 0.0354` (normalized units/s)- `acc_threshold = 0.3545` (normalized units/sÂ²)íŒì •: `max_velocity > vel_threshold AND max_abs_acc > acc_threshold` â†’ physicsê°€ ë‚™ìƒìœ¼ë¡œ í™•ì¸### Rescue ë¡œì§```Stage 1 í™•ë¥ :  â‰¥ 0.55  â†’ FALL   (Stage 1 í™•ì‹ , physics ë¯¸ì‚¬ìš©)  [0.50, 0.55)  â†’ physicsê°€ ê²°ì •  â† Rescue zone  < 0.50  â†’ NO-FALL```**ê¸°ì¡´ AND ë¡œì§ê³¼ì˜ ì¤‘ìš”í•œ ì°¨ì´:**- **ê¸°ì¡´ (AND):** `Stage1=1 AND physics=1` â€” physicsê°€ Stage 1ì˜ ê°ì§€ë¥¼ ì‚­ì œí•  ìˆ˜ ìžˆìŒ- **ì‹ ê·œ (Rescue):** physicsëŠ” Stage 1ì´ ë†“ì¹œ(MISS) ê²ƒë§Œ êµ¬ì œí•  ìˆ˜ ìžˆìŒ## ë°ì´í„°ì…‹ ì¤€ë¹„### YOLO í‚¤í¬ì¸íŠ¸ ì¶”ì¶œ```pythonMODEL = YOLO("yolo11n-pose.pt")# conf=0.1 â€” ë‚™ìƒ ìžì„¸ë¥¼ ìœ„í•œ ë‚®ì€ ìž„ê³„ê°’results = MODEL(batch, conf=0.1)# ê°€ìž¥ í™•ì‹ ë„ ë†’ì€ ì‚¬ëžŒ ì„ íƒperson_idx = keypoints.conf.sum(dim=1).argmax()# ì •ê·œí™”xy_norm = xy_pixels / [image_width, image_height]  # [0, 1] ë²”ìœ„```### Zero-frame ë³´ê°„```pythondef interpolate_zero_frames(kps):    # Forward fill: ë§ˆì§€ë§‰ìœ¼ë¡œ ê²€ì¶œëœ í”„ë ˆìž„ ì‚¬ìš©    for i in range(len(kps)):        if frame_is_zero(kps[i]):            kps[i] = last_valid_frame    # Backward fill: ì‹œìž‘ ë¶€ë¶„ì˜ zero ì±„ìš°ê¸°    ...```**ê²°ê³¼:** ë‚™ìƒ ì‹œí€€ìŠ¤ì˜ zero frame 14.5% â†’ **0%**### ìŠ¬ë¼ì´ë”© ìœˆë„ìš°```Trial (F í”„ë ˆìž„) â†’ ìœˆë„ìš°:  [0:30], [15:45], [30:60], ...ìœˆë„ìš° í¬ê¸° T=30 (19 FPS ê¸°ì¤€ ~1.58ì´ˆ)Stride      S=15 (~0.79ì´ˆ)```## ì‹¤ì‹œê°„ ì›¹ìº  ë°ëª¨ (`demo_webcam.py`)### í•µì‹¬ ì„¤ê³„ ê²°ì •| ê²°ì • | ì´ìœ  ||---|---|| ê°œì¸ ê¸°ì¤€ì„  hip Y (EMA) | ì¹´ë©”ë¼ ê°ë„/ê±°ë¦¬ì— ë¬´ê´€ â€” ë³¸ì¸ ê¸°ì¤€ìœ¼ë¡œ ì¸¡ì • || `is_lying()` ì¡°ê±´ | ë°”ë‹¥ ì•‰ê¸°(ìƒì²´ ì§ë¦½)ì™€ ëˆ•ê¸°(ìˆ˜í‰)ë¥¼ êµ¬ë¶„ || `--fast-fall` ê¸°ë³¸ OFF | ë…¸ì¸ ë‚™ìƒì€ ì£¼ë¡œ ëŠë¦° ë‚™ìƒ; ë¹ ë¥¸ ë‚™ìƒì€ ë‹¬ë¦¬ê¸°ì—ì„œ FP ë°œìƒ || `--use-model` í‘œì‹œ ì „ìš© | ST-GCNì´ UP-Fall ì‹¤í—˜ì‹¤ ë°ì´í„°ë¡œ í•™ìŠµë¨ â€” ì›¹ìº  ë„ë©”ì¸ ì°¨ì´; physicsê°€ ì‹ ë¢°ë„ ë†’ìŒ || 5ì´ˆ ìµœì†Œ ìž ê¸ˆ | ë‚™ìƒ í›„ ì •ì ì¸ ìƒíƒœì—ì„œë„ ì•Œë¦¼ ìœ ì§€ |### ì‹¤í–‰ ëª…ë ¹ì–´```bashpython demo_webcam.py --physics-only --confirm 2 --slow-drop 0.12 --lying-confirm 2# ST-GCN í™•ë¥  ì˜¤ë²„ë ˆì´ í¬í•¨ (í‘œì‹œ ì „ìš©, ê°ì§€ëŠ” physics ë‹´ë‹¹):python demo_webcam.py --physics-only --use-model --confirm 2 --slow-drop 0.12 --lying-confirm 2```## íŒŒì¼ë³„ ì—­í• | íŒŒì¼ | ì„¤ëª… ||---|---|| `stgcn/graph.py` | 17ê´€ì ˆ COCO ìŠ¤ì¼ˆë ˆí†¤, ì¸ì ‘ í–‰ë ¬ A(3,17,17) || `stgcn/model.py` | ST-GCN 9 blocks, learnable attention || `stgcn/physics.py` | Butterworth í•„í„°, ìž„ê³„ê°’ fitting, grid search || `stgcn/two_stage.py` | TwoStageDetector, Rescue ë¡œì§, tune_thresholds() || `prepare_cv_dataset.py` | YOLO ì¶”ì¶œ + ë³´ê°„ + ìœˆë„ìž‰ || `train_two_stage.py` | ì „ì²´ íŒŒì´í”„ë¼ì¸: split â†’ train â†’ physics fit â†’ evaluate || `demo_webcam.py` | ì‹¤ì‹œê°„ ì›¹ìº  ë°ëª¨: physics ê¸°ë°˜ ê°ì§€ + ST-GCN ì˜¤ë²„ë ˆì´ |
+# Model Architecture / 모델 아키텍처 / Model Arxitekturasi
+
+> **Language / 언어 / Til**
+> - [🇺🇸 English](#english)
+> - [🇰🇷 한국어](#korean)
+> - [🇺🇿 O'zbekcha](#uzbek)
+
+---
+
+<a name="english"></a>
+# 🇺🇸 English
+
+## Overview
+
+```
+Input: camera frames (Camera1, ~19 FPS)
+         │
+         ▼
+  ┌─────────────────┐
+  │  YOLO11n-pose   │  conf=0.1, batch_size=8
+  │  (keypoint det) │
+  └────────┬────────┘
+           │  (F, 17, 3) — frame, joint, [x, y, conf]
+           ▼
+  ┌─────────────────┐
+  │ Zero-frame fill │  forward-fill → backward-fill
+  │ (interpolation) │
+  └────────┬────────┘
+           │
+           ▼
+  ┌─────────────────┐
+  │ Sliding window  │  T=30, stride=15
+  └────────┬────────┘
+           │  (N, 30, 17, 3)
+           ▼
+  ┌─────────────────┐
+  │   ST-GCN        │  Stage 1
+  │   (9 blocks)    │
+  └────────┬────────┘
+           │  fall probability p
+           ▼
+  ┌───────────────────────────────────┐
+  │        Physics Rescue             │  Stage 2
+  │  p >= 0.55  → FALL               │
+  │  0.50 <= p < 0.55 → physics?     │
+  │  p < 0.50   → NO-FALL            │
+  └───────────────────────────────────┘
+```
+
+## ST-GCN (Spatial Temporal Graph Convolutional Network)
+
+**Primary source:** Yan et al., "Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition", AAAI 2018.
+
+### Skeleton graph
+
+17 COCO keypoints (YOLO11n-pose output):
+
+```
+0: nose          5: left_shoulder    11: left_hip
+1: left_eye      6: right_shoulder   12: right_hip
+2: right_eye     7: left_elbow       13: left_knee
+3: left_ear      8: right_elbow      14: right_knee
+4: right_ear     9: left_wrist       15: left_ankle
+                10: right_wrist      16: right_ankle
+```
+
+**Adjacency matrix A** — shape (3, 17, 17), 3 subsets:
+- `A[0]` — self-link (each joint with itself)
+- `A[1]` — centripetal (shoulders, hips → toward center)
+- `A[2]` — centrifugal (from center → hand/foot extremities)
+
+Center node: `11` (left_hip, BFS root)
+
+### Architecture
+
+```
+Input: (N, C=3, T=30, V=17, M=1)
+
+Block 1-3:   SpatialGCN(3→64)  + TemporalConv(64, stride=1)
+Block 4-6:   SpatialGCN(64→128) + TemporalConv(128, stride=2 block4)
+Block 7-9:   SpatialGCN(128→256) + TemporalConv(256, stride=2 block7)
+
+GlobalAvgPool → Dropout(0.5) → Linear(256→2)
+
+Output: (N, 2) logits  →  softmax  →  fall probability
+```
+
+Each STGCNBlock:
+```
+SpatialGCN:
+  x → einsum(A, x) → BatchNorm → ReLU
+  + learnable attention mask on A
+
+TemporalConv:
+  Conv2d(C, C, kernel=(9,1), padding=(4,0)) → BatchNorm → ReLU
+  + residual connection (1x1 conv if channels change)
+```
+
+### Training settings
+
+| Parameter | Value |
+|---|---|
+| Epochs | 60 |
+| Batch size | 32 |
+| Optimizer | Adam (lr=1e-3, weight_decay=1e-4) |
+| Scheduler | CosineAnnealingLR (T_max=60) |
+| Dropout | 0.5 |
+| Class imbalance | WeightedRandomSampler (FALL:NO-FALL = 1:~6) |
+| Augmentation | Horizontal flip (p=0.5) + Gaussian noise (σ=0.01) |
+| Best model | saved based on val fall F1 |
+
+## Physics Filter (Stage 2)
+
+### Computation
+
+```python
+# 1. Get mid-hip Y coordinate (COCO indices 11, 12)
+hip_y = (seq[:, 11, 1] + seq[:, 12, 1]) / 2.0   # 0=top, 1=bottom
+
+# 2. Position filter (4 Hz Butterworth lowpass)
+hip_y_filtered = lowpass(hip_y, fc=4.0)
+
+# 3. Velocity (downward = positive)
+velocity = gradient(hip_y_filtered, dt=1/fps)
+velocity_f = lowpass(velocity, fc=8.0)
+
+# 4. Acceleration
+acceleration = gradient(velocity_f, dt=1/fps)
+acceleration_f = lowpass(acceleration, fc=6.0)
+
+# 5. Features
+max_velocity = velocity_f.max()
+max_abs_acc  = abs(acceleration_f).max()
+hip_drop     = hip_y_filtered.max() - hip_y_filtered.min()
+```
+
+### Thresholds
+
+Found via grid search on the validation set:
+- `vel_threshold = 0.0354` (normalized units/s)
+- `acc_threshold = 0.3545` (normalized units/s²)
+
+Decision: `max_velocity > vel_threshold AND max_abs_acc > acc_threshold` → physics confirms fall
+
+### Rescue logic
+
+```
+Stage 1 prob:
+  ≥ 0.55  → FALL   (Stage 1 confident, physics not consulted)
+  [0.50, 0.55)  → physics decides  ← Rescue zone
+  < 0.50  → NO-FALL
+```
+
+**Key difference from the old AND logic:**
+- **Old (AND):** `Stage1=1 AND physics=1` — physics could delete Stage 1 detections
+- **New (Rescue):** physics can only rescue what Stage 1 MISSED
+
+## Dataset preparation
+
+### YOLO keypoint extraction
+
+```python
+MODEL = YOLO("yolo11n-pose.pt")
+# conf=0.1 — low threshold for fall poses
+results = MODEL(batch, conf=0.1)
+
+# take the most confident person
+person_idx = keypoints.conf.sum(dim=1).argmax()
+
+# normalization
+xy_norm = xy_pixels / [image_width, image_height]  # in [0, 1] range
+```
+
+### Zero-frame interpolation
+
+```python
+def interpolate_zero_frames(kps):
+    # Forward fill: use the last detected frame
+    for i in range(len(kps)):
+        if frame_is_zero(kps[i]):
+            kps[i] = last_valid_frame
+    # Backward fill: fill zeros at the beginning
+    ...
+```
+
+**Result:** zero frames in fall sequences 14.5% → **0%**
+
+### Sliding window
+
+```
+Trial (F frames) → windows:
+  [0:30], [15:45], [30:60], ...
+
+Window size T=30 (~1.58 seconds at 19 FPS)
+Stride     S=15 (~0.79 seconds)
+```
+
+## File sources
+
+| File | Description |
+|---|---|
+| `stgcn/graph.py` | 17-joint COCO skeleton, adjacency matrix A(3,17,17) |
+| `stgcn/model.py` | ST-GCN 9 blocks, learnable attention |
+| `stgcn/physics.py` | Butterworth filter, threshold fitting, grid search |
+| `stgcn/two_stage.py` | TwoStageDetector, Rescue logic, tune_thresholds() |
+| `prepare_cv_dataset.py` | YOLO extraction + interpolation + windowing |
+| `train_two_stage.py` | Full pipeline: split → train → physics fit → evaluate |
+
+---
+
+<a name="korean"></a>
+# 🇰🇷 한국어
+
+## 전체 구조
+
+```
+입력: 카메라 프레임 (Camera1, ~19 FPS)
+         │
+         ▼
+  ┌─────────────────┐
+  │  YOLO11n-pose   │  conf=0.1, batch_size=8
+  │  (키포인트 검출) │
+  └────────┬────────┘
+           │  (F, 17, 3) — frame, joint, [x, y, conf]
+           ▼
+  ┌─────────────────┐
+  │ Zero-frame fill │  forward-fill → backward-fill
+  │ (보간)          │
+  └────────┬────────┘
+           │
+           ▼
+  ┌─────────────────┐
+  │ Sliding window  │  T=30, stride=15
+  └────────┬────────┘
+           │  (N, 30, 17, 3)
+           ▼
+  ┌─────────────────┐
+  │   ST-GCN        │  Stage 1
+  │   (9 blocks)    │
+  └────────┬────────┘
+           │  낙상 확률 p
+           ▼
+  ┌───────────────────────────────────┐
+  │        Physics Rescue             │  Stage 2
+  │  p >= 0.55  → FALL               │
+  │  0.50 <= p < 0.55 → physics?     │
+  │  p < 0.50   → NO-FALL            │
+  └───────────────────────────────────┘
+```
+
+## ST-GCN (Spatial Temporal Graph Convolutional Network)
+
+**주요 출처:** Yan et al., "Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition", AAAI 2018.
+
+### 스켈레톤 그래프
+
+17개 COCO 키포인트 (YOLO11n-pose 출력):
+
+```
+0: nose          5: left_shoulder    11: left_hip
+1: left_eye      6: right_shoulder   12: right_hip
+2: right_eye     7: left_elbow       13: left_knee
+3: left_ear      8: right_elbow      14: right_knee
+4: right_ear     9: left_wrist       15: left_ankle
+                10: right_wrist      16: right_ankle
+```
+
+**인접 행렬 A** — shape (3, 17, 17), 3개 subset:
+- `A[0]` — self-link (각 관절이 자기 자신과 연결)
+- `A[1]` — centripetal (어깨, 엉덩이 → 중심 방향)
+- `A[2]` — centrifugal (중심 → 손/발 끝 방향)
+
+Center node: `11` (left_hip, BFS root)
+
+### 아키텍처
+
+```
+입력: (N, C=3, T=30, V=17, M=1)
+
+Block 1-3:   SpatialGCN(3→64)  + TemporalConv(64, stride=1)
+Block 4-6:   SpatialGCN(64→128) + TemporalConv(128, stride=2 block4)
+Block 7-9:   SpatialGCN(128→256) + TemporalConv(256, stride=2 block7)
+
+GlobalAvgPool → Dropout(0.5) → Linear(256→2)
+
+출력: (N, 2) logits  →  softmax  →  낙상 확률
+```
+
+각 STGCNBlock:
+```
+SpatialGCN:
+  x → einsum(A, x) → BatchNorm → ReLU
+  + A에 대한 learnable attention mask
+
+TemporalConv:
+  Conv2d(C, C, kernel=(9,1), padding=(4,0)) → BatchNorm → ReLU
+  + residual connection (채널이 바뀌면 1x1 conv)
+```
+
+### 학습 설정
+
+| 파라미터 | 값 |
+|---|---|
+| Epochs | 60 |
+| Batch size | 32 |
+| Optimizer | Adam (lr=1e-3, weight_decay=1e-4) |
+| Scheduler | CosineAnnealingLR (T_max=60) |
+| Dropout | 0.5 |
+| 클래스 불균형 | WeightedRandomSampler (FALL:NO-FALL = 1:~6) |
+| Augmentation | 좌우 반전 (p=0.5) + 가우시안 노이즈 (σ=0.01) |
+| Best model | val fall F1 기준으로 저장 |
+
+## Physics Filter (Stage 2)
+
+### 계산
+
+```python
+# 1. mid-hip Y 좌표 추출 (COCO index 11, 12)
+hip_y = (seq[:, 11, 1] + seq[:, 12, 1]) / 2.0   # 0=위, 1=아래
+
+# 2. 위치 필터 (4 Hz Butterworth lowpass)
+hip_y_filtered = lowpass(hip_y, fc=4.0)
+
+# 3. 속도 (아래 방향 = 양수)
+velocity = gradient(hip_y_filtered, dt=1/fps)
+velocity_f = lowpass(velocity, fc=8.0)
+
+# 4. 가속도
+acceleration = gradient(velocity_f, dt=1/fps)
+acceleration_f = lowpass(acceleration, fc=6.0)
+
+# 5. 특징량
+max_velocity = velocity_f.max()
+max_abs_acc  = abs(acceleration_f).max()
+hip_drop     = hip_y_filtered.max() - hip_y_filtered.min()
+```
+
+### 임계값
+
+Validation set에서 grid search로 결정:
+- `vel_threshold = 0.0354` (normalized units/s)
+- `acc_threshold = 0.3545` (normalized units/s²)
+
+판정: `max_velocity > vel_threshold AND max_abs_acc > acc_threshold` → physics가 낙상으로 확인
+
+### Rescue 로직
+
+```
+Stage 1 확률:
+  ≥ 0.55  → FALL   (Stage 1 확신, physics 미사용)
+  [0.50, 0.55)  → physics가 결정  ← Rescue zone
+  < 0.50  → NO-FALL
+```
+
+**기존 AND 로직과의 중요한 차이:**
+- **기존 (AND):** `Stage1=1 AND physics=1` — physics가 Stage 1의 감지를 삭제할 수 있음
+- **신규 (Rescue):** physics는 Stage 1이 놓친(MISS) 것만 구제할 수 있음
+
+## 데이터셋 준비
+
+### YOLO 키포인트 추출
+
+```python
+MODEL = YOLO("yolo11n-pose.pt")
+# conf=0.1 — 낙상 자세를 위한 낮은 임계값
+results = MODEL(batch, conf=0.1)
+
+# 가장 확신도 높은 사람 선택
+person_idx = keypoints.conf.sum(dim=1).argmax()
+
+# 정규화
+xy_norm = xy_pixels / [image_width, image_height]  # [0, 1] 범위
+```
+
+### Zero-frame 보간
+
+```python
+def interpolate_zero_frames(kps):
+    # Forward fill: 마지막으로 검출된 프레임 사용
+    for i in range(len(kps)):
+        if frame_is_zero(kps[i]):
+            kps[i] = last_valid_frame
+    # Backward fill: 시작 부분의 zero 채우기
+    ...
+```
+
+**결과:** 낙상 시퀀스의 zero frame 14.5% → **0%**
+
+### 슬라이딩 윈도우
+
+```
+Trial (F 프레임) → 윈도우:
+  [0:30], [15:45], [30:60], ...
+
+윈도우 크기 T=30 (19 FPS 기준 ~1.58초)
+Stride      S=15 (~0.79초)
+```
+
+## 파일별 역할
+
+| 파일 | 설명 |
+|---|---|
+| `stgcn/graph.py` | 17관절 COCO 스켈레톤, 인접 행렬 A(3,17,17) |
+| `stgcn/model.py` | ST-GCN 9 blocks, learnable attention |
+| `stgcn/physics.py` | Butterworth 필터, 임계값 fitting, grid search |
+| `stgcn/two_stage.py` | TwoStageDetector, Rescue 로직, tune_thresholds() |
+| `prepare_cv_dataset.py` | YOLO 추출 + 보간 + 윈도잉 |
+| `train_two_stage.py` | 전체 파이프라인: split → train → physics fit → evaluate |
+
+---
+
+<a name="uzbek"></a>
+# 🇺🇿 O'zbekcha
+
+## Umumiy ko'rinish
+
+```
+Input: kamera kadrlari (Camera1, ~19 FPS)
+         │
+         ▼
+  ┌─────────────────┐
+  │  YOLO11n-pose   │  conf=0.1, batch_size=8
+  │  (keypoint det) │
+  └────────┬────────┘
+           │  (F, 17, 3) — frame, joint, [x, y, conf]
+           ▼
+  ┌─────────────────┐
+  │ Zero-frame fill │  forward-fill → backward-fill
+  │ (interpolation) │
+  └────────┬────────┘
+           │
+           ▼
+  ┌─────────────────┐
+  │ Sliding window  │  T=30, stride=15
+  └────────┬────────┘
+           │  (N, 30, 17, 3)
+           ▼
+  ┌─────────────────┐
+  │   ST-GCN        │  Stage 1
+  │   (9 blocks)    │
+  └────────┬────────┘
+           │  fall probability p
+           ▼
+  ┌───────────────────────────────────┐
+  │        Physics Rescue             │  Stage 2
+  │  p >= 0.55  → FALL               │
+  │  0.50 <= p < 0.55 → physics?     │
+  │  p < 0.50   → NO-FALL            │
+  └───────────────────────────────────┘
+```
+
+## ST-GCN (Spatial Temporal Graph Convolutional Network)
+
+**Asosiy manba:** Yan et al., "Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition", AAAI 2018.
+
+### Skeleton grafik
+
+17 ta COCO keypoint (YOLO11n-pose chiqishi):
+
+```
+0: nose          5: left_shoulder    11: left_hip
+1: left_eye      6: right_shoulder   12: right_hip
+2: right_eye     7: left_elbow       13: left_knee
+3: left_ear      8: right_elbow      14: right_knee
+4: right_ear     9: left_wrist       15: left_ankle
+                10: right_wrist      16: right_ankle
+```
+
+**Adjacency matrix A** — shape (3, 17, 17), 3 ta subset:
+- `A[0]` — self-link (har joint o'zi bilan)
+- `A[1]` — centripetal (yelkalar, sonlar → markazga)
+- `A[2]` — centrifugal (markazdan → qo'l, oyoq uchlari)
+
+Center node: `11` (left_hip, BFS root)
+
+### Arxitektura
+
+```
+Input: (N, C=3, T=30, V=17, M=1)
+
+Block 1-3:   SpatialGCN(3→64)  + TemporalConv(64, stride=1)
+Block 4-6:   SpatialGCN(64→128) + TemporalConv(128, stride=2 block4)
+Block 7-9:   SpatialGCN(128→256) + TemporalConv(256, stride=2 block7)
+
+GlobalAvgPool → Dropout(0.5) → Linear(256→2)
+
+Output: (N, 2) logits  →  softmax  →  fall probability
+```
+
+Har bir STGCNBlock:
+```
+SpatialGCN:
+  x → einsum(A, x) → BatchNorm → ReLU
+  + learnable attention mask on A
+
+TemporalConv:
+  Conv2d(C, C, kernel=(9,1), padding=(4,0)) → BatchNorm → ReLU
+  + residual connection (1x1 conv if channels change)
+```
+
+### Training sozlamalari
+
+| Parametr | Qiymat |
+|---|---|
+| Epochs | 60 |
+| Batch size | 32 |
+| Optimizer | Adam (lr=1e-3, weight_decay=1e-4) |
+| Scheduler | CosineAnnealingLR (T_max=60) |
+| Dropout | 0.5 |
+| Class imbalance | WeightedRandomSampler (FALL:NO-FALL = 1:~6) |
+| Augmentation | Horizontal flip (p=0.5) + Gaussian noise (σ=0.01) |
+| Best model | val fall F1 asosida saqlanadi |
+
+## Physics Filter (Stage 2)
+
+### Hisoblash
+
+```python
+# 1. Mid-hip Y koordinatini olish (COCO index 11, 12)
+hip_y = (seq[:, 11, 1] + seq[:, 12, 1]) / 2.0   # 0=top, 1=bottom
+
+# 2. Position filter (4 Hz Butterworth lowpass)
+hip_y_filtered = lowpass(hip_y, fc=4.0)
+
+# 3. Velocity (downward = positive)
+velocity = gradient(hip_y_filtered, dt=1/fps)
+velocity_f = lowpass(velocity, fc=8.0)
+
+# 4. Acceleration
+acceleration = gradient(velocity_f, dt=1/fps)
+acceleration_f = lowpass(acceleration, fc=6.0)
+
+# 5. Features
+max_velocity = velocity_f.max()
+max_abs_acc  = abs(acceleration_f).max()
+hip_drop     = hip_y_filtered.max() - hip_y_filtered.min()
+```
+
+### Thresholdlar
+
+Validation setida grid-search orqali topiladi:
+- `vel_threshold = 0.0354` (normalized units/s)
+- `acc_threshold = 0.3545` (normalized units/s²)
+
+Qaror: `max_velocity > vel_threshold AND max_abs_acc > acc_threshold` → physics confirms fall
+
+### Rescue mantiq
+
+```
+Stage 1 prob:
+  ≥ 0.55  → FALL   (Stage 1 ishonchli, physics tekmaydi)
+  [0.50, 0.55)  → physics qaror beradi  ← Rescue zone
+  < 0.50  → NO-FALL
+```
+
+**Muhim farq eski AND mantiqdan:**
+- **Eski (AND):** `Stage1=1 AND physics=1` — physics Stage 1 topganlarni o'chirishi mumkin
+- **Yangi (Rescue):** physics faqat Stage 1 MISS qilganlarni qutqarishi mumkin
+
+## Dataset tayyorlash
+
+### YOLO keypoint extraction
+
+```python
+MODEL = YOLO("yolo11n-pose.pt")
+# conf=0.1 — yiqilish posalari uchun past threshold
+results = MODEL(batch, conf=0.1)
+
+# eng ishonchli odamni olish
+person_idx = keypoints.conf.sum(dim=1).argmax()
+
+# normalizatsiya
+xy_norm = xy_pixels / [image_width, image_height]  # [0, 1] oralig'ida
+```
+
+### Zero-frame interpolation
+
+```python
+def interpolate_zero_frames(kps):
+    # Forward fill: oxirgi aniqlanganidan foydalanish
+    for i in range(len(kps)):
+        if frame_is_zero(kps[i]):
+            kps[i] = last_valid_frame
+    # Backward fill: boshidagi zero larni to'ldirish
+    ...
+```
+
+**Natija:** Fall sequencelarda zero frame 14.5% → **0%**
+
+### Sliding window
+
+```
+Trial (F frames) → windows:
+  [0:30], [15:45], [30:60], ...
+
+Window size T=30 (~1.58 sekund at 19 FPS)
+Stride     S=15 (~0.79 sekund)
+```
+
+## Fayl manbalar
+
+| Fayl | Tavsif |
+|---|---|
+| `stgcn/graph.py` | 17-joint COCO skeleton, adjacency matrix A(3,17,17) |
+| `stgcn/model.py` | ST-GCN 9 block, learnable attention |
+| `stgcn/physics.py` | Butterworth filter, threshold fitting, grid-search |
+| `stgcn/two_stage.py` | TwoStageDetector, Rescue mantiq, tune_thresholds() |
+| `prepare_cv_dataset.py` | YOLO extraction + interpolation + windowing |
+| `train_two_stage.py` | To'liq pipeline: split → train → physics fit → evaluate |

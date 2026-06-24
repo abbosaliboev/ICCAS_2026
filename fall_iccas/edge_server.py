@@ -293,7 +293,10 @@ def main():
     device  = "cuda" if torch.cuda.is_available() else "cpu"
     log.info(f"Device: {device}")
 
-    detector, train_fps = load_detector(exp_dir, device, tensorrt=False)
+    # ST-GCN must run on CPU when TensorRT is used — TRT and PyTorch CUDA
+    # allocators conflict on Jetson shared GPU memory (CUDACachingAllocator crash).
+    stgcn_device = "cpu" if args.tensorrt else device
+    detector, train_fps = load_detector(exp_dir, stgcn_device, tensorrt=False)
     yolo = load_yolo(args.tensorrt)
     log.info("Models loaded")
 
@@ -303,18 +306,29 @@ def main():
     Path(snap_dir).mkdir(parents=True, exist_ok=True)
     client   = BackendClient(args.backend, args.device_token)
 
-    # resolve camera source — use CAP_V4L2 for integer indices (needed on Jetson)
+    # resolve camera source — V4L2 for local indices, FFMPEG for RTSP/HTTP URLs
     src = int(args.source) if args.source.isdigit() else args.source
-    backend = cv2.CAP_V4L2 if isinstance(src, int) else cv2.CAP_ANY
-    cap = cv2.VideoCapture(src, backend)
-    if not cap.isOpened():
-        log.error(f"Cannot open source: {src}")
-        sys.exit(1)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  args.width)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
+    if isinstance(src, int):
+        backend = cv2.CAP_V4L2
+    elif isinstance(src, str) and src.startswith("rtsp"):
+        backend = cv2.CAP_FFMPEG
+    else:
+        backend = cv2.CAP_ANY
+    def open_cap():
+        c = cv2.VideoCapture(src, backend)
+        if backend == cv2.CAP_FFMPEG:
+            c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        c.set(cv2.CAP_PROP_FRAME_WIDTH,  args.width)
+        c.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
+        return c
 
-    buf           = deque(maxlen=WINDOW)
-    frame_no      = 0
+    cap = open_cap()
+    if not cap.isOpened():
+        log.warning(f"Cannot open source yet: {src} — will keep retrying...")
+
+    buf              = deque(maxlen=WINDOW)
+    frame_no         = 0
+    read_fail_count  = 0
     fps_disp      = 0.0   # overall loop FPS
     cam_fps       = 0.0   # camera frame delivery FPS
     yolo_fps      = 0.0   # YOLO inference FPS  (1 / inference_time)
@@ -332,13 +346,31 @@ def main():
     log.info("Edge server running. Ctrl+C to stop.")
 
     while True:
+        if not cap.isOpened():
+            read_fail_count += 1
+            if read_fail_count % 5 == 1:
+                log.warning(f"Camera not connected — retrying ({read_fail_count})...")
+                cap.release()
+                time.sleep(3.0)
+                cap = open_cap()
+            else:
+                time.sleep(1.0)
+            continue
+
         t_read0 = time.time()
         ret, frame = cap.read()
         t_read1 = time.time()
         if not ret:
-            log.warning("Frame read failed — retrying")
-            time.sleep(0.1)
+            read_fail_count += 1
+            if read_fail_count % 10 == 1:
+                log.warning(f"Frame read failed ({read_fail_count}x) — reconnecting...")
+                cap.release()
+                time.sleep(2.0)
+                cap = open_cap()
+            else:
+                time.sleep(0.1)
             continue
+        read_fail_count = 0
 
         # camera FPS: inverse of time blocked inside cap.read()
         read_dt = max(t_read1 - t_read0, 1e-6)
@@ -426,8 +458,13 @@ def main():
         if frame_no % 60 == 0:
             log.info(f"FPS — loop={fps_disp:.1f}  cam={cam_fps:.1f}  yolo={yolo_fps:.1f}  stgcn={stgcn_fps:.1f}")
 
-        # MJPEG publish
-        _, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+        # MJPEG publish — resize to 854x480 for fast streaming (source may be 2560x1440)
+        stream_w, stream_h = 854, 480
+        if w > stream_w:
+            small = cv2.resize(frame, (stream_w, stream_h), interpolation=cv2.INTER_LINEAR)
+        else:
+            small = frame
+        _, jpg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 70])
         with _frame_lock:
             _latest_jpg = jpg.tobytes()
 
