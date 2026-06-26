@@ -1216,10 +1216,12 @@ async function openDetail(eventId){
   showScreen('screen-detail');
   const videoWrap=document.getElementById('detail-video-wrap');
   const ssWrap=document.getElementById('detail-screenshot-wrap');
-  const ssImg=document.getElementById('detail-screenshot');
   const videoEl=document.getElementById('detail-video');
   // reset
-  videoWrap.style.display='none';ssWrap.style.display='none';
+  videoWrap.style.display='none';
+  ssWrap.classList.remove('ss-visible');
+  ssWrap.style.removeProperty('display');
+  ssWrap.innerHTML='<img id="detail-screenshot" alt="screenshot">';
   document.getElementById('detail-info').innerHTML=`<div class="spinner mt12"></div>`;
   document.getElementById('detail-emergency').innerHTML='';
 
@@ -1247,14 +1249,14 @@ async function openDetail(eventId){
     videoEl.load();
     videoWrap.style.display='';
   }
+  const ssImg2=document.getElementById('detail-screenshot');
   const ssUrl=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
-  ssImg.src=ssUrl;
-  ssImg.onload=()=>{ ssWrap.classList.add('ss-visible'); };
-  ssImg.onerror=()=>{
-    // show link so user can open image directly
+  ssImg2.onload=()=>{ ssWrap.classList.add('ss-visible'); };
+  ssImg2.onerror=()=>{
     ssWrap.classList.add('ss-visible');
-    ssWrap.innerHTML=`<a href="${ssUrl}" target="_blank" style="display:block;padding:14px;color:var(--accent);text-align:center;font-size:.9rem">📷 Rasmni ochish (tap here)</a>`;
+    ssWrap.innerHTML=`<a href="${ssUrl}" target="_blank" style="display:block;padding:14px;color:var(--accent);text-align:center;font-size:.9rem">📷 Rasmni ochish</a>`;
   };
+  ssImg2.src=ssUrl;
 
   document.getElementById('detail-info').innerHTML=`
     <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
