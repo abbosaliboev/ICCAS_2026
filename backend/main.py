@@ -191,6 +191,19 @@ def me(user=Depends(auth_user)):
     return user
 
 
+class ProfileReq(BaseModel):
+    display_name: str = ""
+    age: Optional[int] = None
+    phone: str = ""
+    address: str = ""
+
+@app.put("/api/users/me")
+def update_profile(body: ProfileReq, user=Depends(auth_user)):
+    db.update_user_profile(user["id"], body.display_name, body.age, body.phone, body.address)
+    updated = db.get_user_by_id(user["id"])
+    return updated
+
+
 @app.post("/api/users/link-guardian")
 def link_guardian(body: LinkGuardianReq, user=Depends(auth_user)):
     g = db.get_user_by_username(body.guardian_username)
