@@ -360,6 +360,7 @@ def main():
     lying_streak  = 0
     no_person_frames = 0
     current_event_id = None
+    smooth_bbox      = None   # EMA-smoothed [x1,y1,x2,y2] from YOLO boxes
 
     log.info("Edge server running. Ctrl+C to stop.")
 
@@ -413,17 +414,30 @@ def main():
 
         draw_skeleton(frame, kp, h, w)
 
-        # red bounding box around person when fall is active
-        if fall_active and person_visible:
-            vis_pts = (kp[kp[:, 2] > 0.2, :2] * np.array([w, h])).astype(int)
-            if len(vis_pts) >= 2:
-                x1, y1 = vis_pts[:, 0].min() - 15, vis_pts[:, 1].min() - 15
-                x2, y2 = vis_pts[:, 0].max() + 15, vis_pts[:, 1].max() + 15
-                x1, y1 = max(0, x1), max(0, y1)
-                x2, y2 = min(w, x2), min(h, y2)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
-                cv2.putText(frame, "FALL", (x1, y1 - 8),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
+        # update smoothed bounding box from YOLO result (only when person detected well)
+        boxes = results[0].boxes
+        if boxes is not None and len(boxes) > 0:
+            # pick most confident box
+            best = int(boxes.conf.argmax())
+            conf_val = float(boxes.conf[best])
+            if conf_val > 0.25:
+                bx = boxes.xyxy[best].cpu().numpy().astype(int)
+                # EMA smooth: blend toward new bbox
+                if smooth_bbox is None:
+                    smooth_bbox = bx.copy().astype(float)
+                else:
+                    smooth_bbox = 0.6 * smooth_bbox + 0.4 * bx
+
+        # draw red bounding box when fall active and we have a stable bbox
+        if fall_active and smooth_bbox is not None:
+            sx1, sy1, sx2, sy2 = smooth_bbox.astype(int)
+            pad = 12
+            sx1, sy1 = max(0, sx1 - pad), max(0, sy1 - pad)
+            sx2, sy2 = min(w, sx2 + pad), min(h, sy2 + pad)
+            cv2.rectangle(frame, (sx1, sy1), (sx2, sy2), (0, 0, 255), 3)
+            label_y = max(sy1 - 8, 20)
+            cv2.putText(frame, "FALL", (sx1, label_y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
 
         pred = 0
         if len(buf) == WINDOW and frame_no % STRIDE == 0:
@@ -439,11 +453,6 @@ def main():
                 pred = detector.predict_one(x_t.squeeze(0), seq)
                 t_stgcn1 = time.time()
                 stgcn_fps = 0.9 * stgcn_fps + 0.1 / max(t_stgcn1 - t_stgcn0, 1e-6)
-                # debug: log raw fall probability every 30 windows (~every 1.5s)
-                if frame_no % (STRIDE * 30) == 0 or pred == 1:
-                    _xd = x_t.squeeze(0).unsqueeze(0).to(detector.device)
-                    _prob = float(detector._stage1_probs(_xd)[0])
-                    log.info(f"prob={_prob:.3f}  pred={pred}  vis={n_vis}  h_span={h_span:.2f}")
 
             # personal standing baseline
             if not fall_active and is_standing(kp):
