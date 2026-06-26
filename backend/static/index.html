@@ -480,8 +480,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <span id="refresh-label" data-i18n="refresh">새로고침</span>
           <span id="refresh-spin" style="display:none">↻</span>
         </button>
-        <button class="btn btn-sm" id="call-btn" onclick="callContact()"
-          style="background:rgba(16,185,129,.18);color:var(--green);font-weight:700">
+        <button class="btn btn-danger btn-sm" id="call-btn" onclick="callContact()">
           📞 <span id="call-btn-label">119</span>
         </button>
       </div>
@@ -576,7 +575,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   <div class="topbar">
     <div style="width:32px"></div>
     <h1 data-i18n="reports">리포트</h1>
-    <button class="tb-icon" onclick="printReport()" style="font-size:1.2rem">🖨️</button>
+    <div style="width:32px"></div>
   </div>
   <div id="rpt-scroll" class="scroll" style="padding:16px">
     <div class="rpt-tabs">
@@ -1722,7 +1721,7 @@ function renderReport(){
     const hrs={};
     ev.forEach(e=>{const h=new Date(e.timestamp||e.created_at).getHours();hrs[h]=(hrs[h]||0)+1;});
     const peak=Object.entries(hrs).sort((a,b)=>b[1]-a[1])[0];
-    document.getElementById('rpt-peak').textContent=peak?peak[0]+'시':'—';
+    document.getElementById('rpt-peak').textContent=peak?(peak[0]+':00'):'—';
   } else document.getElementById('rpt-peak').textContent='—';
   document.getElementById('rpt-severe').textContent=ev.filter(e=>e.category==='severe').length||'0';
   if(ev.length){
