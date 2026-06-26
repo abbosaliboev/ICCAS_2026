@@ -170,6 +170,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .stream-ph-txt{font-size:.88rem;color:var(--muted);margin-bottom:14px}
 .stream-acts{display:flex;gap:8px;padding:8px 0 2px}
 .stream-acts .btn{font-size:.8rem;padding:10px;flex:1}
+@keyframes spin{to{transform:rotate(360deg)}}
+#refresh-spin{display:inline-block;font-size:1rem}
 
 /* ── HISTORY ─────────────────────────────────────────── */
 .events-wrap{padding:0 16px}
@@ -419,9 +421,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       </div>
       <span id="fall-badge" style="display:none"></span>
       <div class="stream-acts">
-        <button class="btn btn-ghost btn-sm" onclick="toggleHeatmap()" data-i18n="heatmap">위험구역</button>
-        <button class="btn btn-ghost btn-sm" onclick="refreshStream()" data-i18n="refresh">새로고침</button>
-        <button class="btn btn-ghost btn-sm" onclick="clearStream()" data-i18n="disconnect">해제</button>
+        <button class="btn btn-ghost btn-sm" id="refresh-btn" onclick="refreshStream()">
+          <span id="refresh-label" data-i18n="refresh">새로고침</span>
+          <span id="refresh-spin" style="display:none">↻</span>
+        </button>
       </div>
     </div>
 
@@ -434,6 +437,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         </div>
         <div style="font-size:2rem" id="status-icon">✅</div>
       </div>
+    </div>
+
+    <div class="card" id="contacts-card">
+      <div class="ctitle" data-i18n="contacts_lbl">긴급 연락처</div>
+      <div id="contacts-btns" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
     <div class="card" id="recent-card">
@@ -560,6 +568,21 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <div class="lang-btn" onclick="setLang('fr')"><span class="lang-flag">🇫🇷</span><span class="lang-name">Français</span></div>
           <div class="lang-btn" onclick="setLang('ru')"><span class="lang-flag">🇷🇺</span><span class="lang-name">Русский</span></div>
           <div class="lang-btn" onclick="setLang('zh')"><span class="lang-flag">🇨🇳</span><span class="lang-name">中文</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec mt12">
+      <div class="sec-lbl">📞 <span data-i18n="contacts_lbl">긴급 연락처</span></div>
+      <div class="card">
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px" data-i18n="contacts_desc">낙상 감지 시 빠르게 전화할 연락처를 추가하세요.</p>
+        <div id="contacts-list" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div style="flex:1">
+            <div class="fg" style="margin-bottom:8px"><label data-i18n="contact_name">이름</label><input id="new-contact-name" class="fi" type="text" placeholder="가족 / 119"></div>
+            <div class="fg"><label data-i18n="contact_phone">전화번호</label><input id="new-contact-phone" class="fi" type="tel" placeholder="010-1234-5678"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="width:auto;padding:10px 16px;margin-bottom:1px" onclick="addContact()" data-i18n="add_btn">추가</button>
         </div>
       </div>
     </div>
@@ -704,6 +727,8 @@ ko:{
   linked_msg:'보호자 연결 완료',link_fail:'연결 실패: 아이디를 확인하세요',
   login_fail:'로그인 실패',registered_msg:'등록 완료!',
   yes:'있음',no:'없음',recent_events:'최근 낙상 기록',zoom:'확대 보기',
+  contacts_lbl:'긴급 연락처',contacts_desc:'낙상 감지 시 빠르게 전화할 연락처를 추가하세요.',
+  contact_name:'이름',contact_phone:'전화번호',add_btn:'추가',call_btn:'전화',
   safe_zone_lbl:'안전 구역',safe_zone_desc:'침대 등 누워있는 공간을 지정하면 해당 구역에서는 낙상이 감지되지 않습니다.',
   sz_draw:'구역 그리기',sz_clear:'구역 삭제',sz_hint:'화면에서 안전 구역을 드래그하세요',
   sz_saved:'안전 구역이 저장되었습니다',sz_cleared:'구역이 삭제되었습니다',sz_active:'활성 구역',
@@ -745,6 +770,8 @@ en:{
   linked_msg:'Guardian linked',link_fail:'Failed: check username',
   login_fail:'Login failed',registered_msg:'Account created!',
   yes:'Yes',no:'No',recent_events:'Recent Falls',zoom:'Zoom In',
+  contacts_lbl:'Emergency Contacts',contacts_desc:'Add contacts to call quickly when a fall is detected.',
+  contact_name:'Name',contact_phone:'Phone',add_btn:'Add',call_btn:'Call',
   safe_zone_lbl:'Safe Zone',safe_zone_desc:'Define a bed or resting area where fall detection is disabled.',
   sz_draw:'Draw Zone',sz_clear:'Clear Zone',sz_hint:'Drag on the image to define the safe zone',
   sz_saved:'Safe zone saved',sz_cleared:'Zone cleared',sz_active:'Active zone',
@@ -938,7 +965,7 @@ function setLang(lang){
   applyI18n();
   // re-render dynamic content in every active screen
   if(document.getElementById('screen-dashboard').classList.contains('active')){
-    loadRecentEvents();
+    loadRecentEvents(); renderContactsDash();
     if(user){
       const badge=document.getElementById('dash-role-badge');
       if(badge) badge.textContent=user.role==='guardian'?t('role_guardian'):t('role_user');
@@ -995,7 +1022,7 @@ function switchTab(tab){
   showScreen(map[tab]);
   if(tab==='history') loadHistory();
   if(tab==='settings') loadSettings();
-  if(tab==='dashboard') loadRecentEvents();
+  if(tab==='dashboard'){ loadRecentEvents(); renderContactsDash(); }
 }
 
 // ── AUTH ───────────────────────────────────────────────
@@ -1107,8 +1134,85 @@ function applyInlineUrl(){
   api('POST','/api/devices',{device_token:localStorage.getItem('mg_device_token')||'edge-device-001',stream_url:url}).catch(()=>{});
 }
 function clearStream(){localStorage.removeItem('mg_stream_url');streamUrl='/api/stream/video';setStreamUrl(streamUrl);}
-function refreshStream(){_stopSSE();if(streamUrl) setTimeout(_startSSE,300);}
-function toggleHeatmap(){heatmapOn=!heatmapOn;toast(heatmapOn?'ON':'OFF');}
+function refreshStream(){
+  const lbl=document.getElementById('refresh-label');
+  const spin=document.getElementById('refresh-spin');
+  const btn=document.getElementById('refresh-btn');
+  lbl.style.display='none'; spin.style.display='';
+  btn.disabled=true;
+  spin.style.animation='spin 0.7s linear infinite';
+  _stopSSE();
+  setTimeout(()=>{
+    if(streamUrl) _startSSE();
+    setTimeout(()=>{
+      lbl.style.display=''; spin.style.display='none';
+      btn.disabled=false; spin.style.animation='';
+    },800);
+  },300);
+}
+
+// ── CONTACTS ───────────────────────────────────────────
+function getContacts(){
+  try{ return JSON.parse(localStorage.getItem('mg_contacts')||'[]'); }catch{ return []; }
+}
+function saveContacts(list){ localStorage.setItem('mg_contacts',JSON.stringify(list)); }
+
+function renderContactsDash(){
+  const list=getContacts();
+  const wrap=document.getElementById('contacts-btns');
+  const card=document.getElementById('contacts-card');
+  if(!list.length){ card.style.display='none'; return; }
+  card.style.display='';
+  wrap.innerHTML=list.map((c,i)=>`
+    <a href="tel:${c.phone}" style="display:flex;align-items:center;justify-content:space-between;
+       background:var(--card2);border-radius:var(--rs);padding:13px 16px;
+       text-decoration:none;border:1px solid var(--border)">
+      <div>
+        <div style="font-weight:700;font-size:.95rem;color:var(--text)">${c.name}</div>
+        <div style="font-size:.82rem;color:var(--muted)">${c.phone}</div>
+      </div>
+      <div style="background:var(--green);color:#fff;border-radius:50%;width:40px;height:40px;
+           display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">📞</div>
+    </a>`).join('');
+}
+
+function renderContactsSettings(){
+  const list=getContacts();
+  const wrap=document.getElementById('contacts-list');
+  if(!list.length){ wrap.innerHTML=`<div style="font-size:.82rem;color:var(--muted);margin-bottom:4px" data-i18n="no_records">없음</div>`; return; }
+  wrap.innerHTML=list.map((c,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;
+         padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:.9rem">${c.name}</div>
+        <div style="font-size:.82rem;color:var(--muted)">${c.phone}</div>
+      </div>
+      <button onclick="removeContact(${i})" style="background:none;border:none;color:var(--red);
+              font-size:1.1rem;cursor:pointer;padding:4px 8px">✕</button>
+    </div>`).join('');
+}
+
+function addContact(){
+  const name=document.getElementById('new-contact-name').value.trim();
+  const phone=document.getElementById('new-contact-phone').value.trim();
+  if(!name||!phone){ toast('이름과 전화번호를 입력하세요'); return; }
+  const list=getContacts();
+  list.push({name,phone});
+  saveContacts(list);
+  document.getElementById('new-contact-name').value='';
+  document.getElementById('new-contact-phone').value='';
+  renderContactsSettings();
+  renderContactsDash();
+  toast(t('saved_msg'));
+}
+
+function removeContact(i){
+  const list=getContacts();
+  list.splice(i,1);
+  saveContacts(list);
+  renderContactsSettings();
+  renderContactsDash();
+}
 
 async function loadRecentEvents(){
   const events=await api('GET','/api/fall-events');
@@ -1599,6 +1703,7 @@ function loadSettings(){
   document.getElementById('cfg-device-token').value=localStorage.getItem('mg_device_token')||'edge-device-001';
   applyI18n();
   szLoadSettings();
+  renderContactsSettings();
   if(user){
     document.getElementById('user-profile-info').innerHTML=`
       <div class="dr"><span class="dk">${t('name')}</span><span class="dv">${user.display_name||'-'}</span></div>
