@@ -27,6 +27,9 @@ def init_db():
         role        TEXT NOT NULL DEFAULT 'user',
         display_name TEXT,
         age         INTEGER,
+        height      INTEGER,
+        weight      INTEGER,
+        gender      TEXT,
         phone       TEXT,
         address     TEXT,
         guardian_id TEXT,
@@ -115,15 +118,16 @@ def get_user_by_id(user_id: str):
     return dict(row) if row else None
 
 
-def create_user(username, password, role, display_name, age, phone, address):
+def create_user(username, password, role, display_name, age, phone, address,
+                height=None, weight=None, gender=None):
     uid = str(uuid.uuid4())
     now = datetime.now().isoformat()
     conn = get_conn()
     try:
         conn.execute("""
-            INSERT INTO users (id,username,password,role,display_name,age,phone,address,guardian_id,created_at)
-            VALUES (?,?,?,?,?,?,?,?,NULL,?)
-        """, (uid, username, password, role, display_name, age, phone, address, now))
+            INSERT INTO users (id,username,password,role,display_name,age,height,weight,gender,phone,address,guardian_id,created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL,?)
+        """, (uid, username, password, role, display_name, age, height, weight, gender, phone, address, now))
         conn.commit()
         return uid
     except sqlite3.IntegrityError:
@@ -132,11 +136,12 @@ def create_user(username, password, role, display_name, age, phone, address):
         conn.close()
 
 
-def update_user_profile(user_id: str, display_name: str, age, phone: str, address: str):
+def update_user_profile(user_id: str, display_name: str, age, phone: str, address: str,
+                        height=None, weight=None, gender=None):
     conn = get_conn()
     conn.execute(
-        "UPDATE users SET display_name=?, age=?, phone=?, address=? WHERE id=?",
-        (display_name, age, phone, address, user_id)
+        "UPDATE users SET display_name=?, age=?, height=?, weight=?, gender=?, phone=?, address=? WHERE id=?",
+        (display_name, age, height, weight, gender, phone, address, user_id)
     )
     conn.commit()
     conn.close()

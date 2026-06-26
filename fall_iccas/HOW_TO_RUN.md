@@ -105,7 +105,16 @@ python edge_server.py \
 ```
 > First run: exports YOLO to `.engine` (~2 min). Subsequent runs: loads instantly.
 
-### 2-4. Full options (connect to backend on another machine)
+### 2-4. Camera type (Settings → Camera → Camera Type)
+
+| Camera placement | Setting | h_span threshold | Notes |
+|---|---|:---:|---|
+| Home camera — TV stand / wall | `front` (default) | 0.80 | Normal side-view skeleton |
+| CCTV — ceiling / top-down | `top` | 0.35 | Skeleton appears compressed from above |
+
+Set via **Settings → 📡 Camera → Camera Type** in the web app. Saved to `camera_config.json`.
+
+### 2-5. Full options (connect to backend on another machine)
 ```bash
 python edge_server.py \
   --source "rtsp://admin:PASSWORD@CAMERA_IP:554/stream1" \

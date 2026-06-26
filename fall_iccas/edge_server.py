@@ -362,6 +362,22 @@ def main():
     current_event_id = None
     smooth_bbox      = None   # EMA-smoothed [x1,y1,x2,y2] from YOLO boxes
 
+    # camera type config (front = normal, top = ceiling/CCTV)
+    cam_cfg_path = os.path.join(base, "camera_config.json")
+    def load_cam_config():
+        try:
+            if os.path.exists(cam_cfg_path):
+                with open(cam_cfg_path) as _f:
+                    return json.load(_f).get("camera_type", "front")
+        except Exception:
+            pass
+        return "front"
+    camera_type = load_cam_config()
+    last_cam_reload = 0.0
+    # top-down camera: person appears compressed vertically → lower h_span threshold
+    # front camera: normal threshold
+    log.info(f"Camera type: {camera_type}")
+
     # safe zone
     safe_zone_path   = os.path.join(base, "safe_zone.json")
     safe_zones       = []
@@ -427,6 +443,11 @@ def main():
 
         person_visible = float(kp[:, 2].max()) > 0.15
         no_person_frames = 0 if person_visible else no_person_frames + 1
+
+        # reload camera config every 30 s
+        if time.time() - last_cam_reload > 30:
+            camera_type = load_cam_config()
+            last_cam_reload = time.time()
 
         # reload safe zones every 10 s
         if time.time() - last_zone_reload > 10:
@@ -494,7 +515,9 @@ def main():
             n_vis  = int((kp[:, 2] > 0.15).sum())
             vis_kp = kp[kp[:, 2] > 0.15]
             h_span = float(vis_kp[:, 1].max() - vis_kp[:, 1].min()) if n_vis >= 4 else 0.0
-            if n_vis >= 9 and h_span <= 0.80:
+            # top-down camera: skeleton height span much smaller (person seen from above)
+            h_span_thresh = 0.35 if camera_type == "top" else 0.80
+            if n_vis >= 9 and h_span <= h_span_thresh:
                 t_stgcn0 = time.time()
                 pred = detector.predict_one(x_t.squeeze(0), seq)
                 t_stgcn1 = time.time()

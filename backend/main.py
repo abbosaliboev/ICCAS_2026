@@ -113,6 +113,9 @@ class RegisterReq(BaseModel):
     role:         str = "user"         # "user" | "guardian"
     display_name: str = ""
     age:          Optional[int] = None
+    height:       Optional[int] = None  # cm
+    weight:       Optional[int] = None  # kg
+    gender:       str = ""              # "M" | "F" | ""
     phone:        str = ""
     address:      str = ""
 
@@ -170,7 +173,8 @@ def login(body: LoginReq):
 @app.post("/api/auth/register", status_code=201)
 def register(body: RegisterReq):
     uid = db.create_user(body.username, body.password, body.role,
-                         body.display_name, body.age, body.phone, body.address)
+                         body.display_name, body.age, body.phone, body.address,
+                         body.height, body.weight, body.gender)
     if not uid:
         raise HTTPException(409, "이미 사용 중인 아이디입니다")
     token = db.create_session(uid)
@@ -194,12 +198,16 @@ def me(user=Depends(auth_user)):
 class ProfileReq(BaseModel):
     display_name: str = ""
     age: Optional[int] = None
+    height: Optional[int] = None
+    weight: Optional[int] = None
+    gender: str = ""
     phone: str = ""
     address: str = ""
 
 @app.put("/api/users/me")
 def update_profile(body: ProfileReq, user=Depends(auth_user)):
-    db.update_user_profile(user["id"], body.display_name, body.age, body.phone, body.address)
+    db.update_user_profile(user["id"], body.display_name, body.age, body.phone, body.address,
+                           body.height, body.weight, body.gender)
     updated = db.get_user_by_id(user["id"])
     return updated
 
@@ -513,6 +521,15 @@ def get_safe_zone(user=Depends(auth_user)):
 @app.post("/api/safe-zone")
 def set_safe_zone(body: SafeZoneReq, user=Depends(auth_user)):
     SAFE_ZONE_PATH.write_text(json.dumps({"zones": body.zones}, indent=2))
+    return {"ok": True}
+
+class CamTypeReq(BaseModel):
+    camera_type: str = "front"  # "front" | "top"
+
+@app.post("/api/safe-zone/camera-type")
+def set_camera_type(body: CamTypeReq, user=Depends(auth_user)):
+    cam_cfg_path = BASE.parent / "fall_iccas" / "camera_config.json"
+    cam_cfg_path.write_text(json.dumps({"camera_type": body.camera_type}))
     return {"ok": True}
 
 @app.delete("/api/safe-zone")
