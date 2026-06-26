@@ -1072,6 +1072,12 @@ function toggleAcc(btn){
   const open=btn.classList.toggle('open');
   btn.nextElementSibling.classList.toggle('open',open);
 }
+function closeOpenAcc(){
+  document.querySelectorAll('.acc-hd.open').forEach(hd=>{
+    hd.classList.remove('open');
+    hd.nextElementSibling.classList.remove('open');
+  });
+}
 
 function updateAccBadges(){
   // contact
@@ -1249,6 +1255,7 @@ function saveContact(){
   localStorage.setItem('mg_contact',JSON.stringify({name:name||phone, phone}));
   updateCallBtn();
   toast(t('saved_msg'),'ok');
+  closeOpenAcc();
 }
 
 function loadContactSettings(){
@@ -1432,6 +1439,7 @@ function szRedraw(){
 async function szSave(){
   await api('POST','/api/safe-zone',{zones:_szZones});
   toast(t('sz_saved'),'ok');
+  closeOpenAcc();
   const status=document.getElementById('sz-status');
   status.textContent=t('sz_active')+': 1';
   document.getElementById('sz-clear-btn').style.display='';
@@ -1444,6 +1452,7 @@ async function szClear(){
   document.getElementById('sz-status').textContent='';
   document.getElementById('sz-clear-btn').style.display='none';
   toast(t('sz_cleared'),'ok');
+  closeOpenAcc();
 }
 
 function openImgViewer(url){
@@ -1776,13 +1785,15 @@ async function saveDeviceConfig(){
   setStreamUrl(url);
   if(dtoken) await api('POST','/api/devices',{device_token:dtoken,stream_url:url});
   toast(t('saved_msg'),'ok');
+  closeOpenAcc();
 }
 
 async function linkGuardian(){
   const gid=document.getElementById('cfg-guardian-id').value.trim();
   if(!gid){toast(t('link_fail'),'err');return;}
   const res=await api('POST','/api/users/link-guardian',{guardian_username:gid});
-  toast(res&&res.ok?t('linked_msg'):t('link_fail'));
+  if(res&&res.ok){ toast(t('linked_msg'),'ok'); closeOpenAcc(); }
+  else toast(t('link_fail'),'err');
 }
 
 // ── UTILS ──────────────────────────────────────────────
