@@ -21,6 +21,52 @@
 
 ---
 
+## 0. Prerequisites & Dependencies
+
+**Python:** 3.10+ required
+
+**Edge device (Jetson):**
+```bash
+# PyTorch for Jetson — install from NVIDIA wheel (torch 2.5.0a0, JetPack 6.1)
+pip install torch-2.5.0a0+*.whl   # from /home/dalab/Desktop/edge_deploy_final_exp/
+
+# NumPy must be < 2.0 (torch 2.5.0a0 compiled against NumPy 1.x)
+pip install "numpy<2"
+
+# Other dependencies
+pip install ultralytics opencv-python scipy scikit-learn pandas matplotlib requests
+```
+
+**Training PC:**
+```bash
+pip install torch torchvision ultralytics opencv-python scipy scikit-learn pandas numpy matplotlib
+```
+
+**Backend server:**
+```bash
+cd backend && pip install -r requirements.txt
+# requirements.txt includes: fastapi, uvicorn, httpx, pydantic
+```
+
+**Verify GPU is working:**
+```bash
+python3 -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+# Expected: True  NVIDIA Jetson Orin Nano Super (or similar)
+```
+
+**Model files needed:**
+```
+fall_iccas/
+├── yolo11n-pose.pt              # YOLO weights (6.3 MB) — from ultralytics
+├── yolo11n-pose.engine          # TensorRT engine (8.8 MB) — auto-generated on first --tensorrt run
+└── experiments/subject1_2_3_4/
+    └── checkpoints/
+        ├── best_stgcn.pth       # ST-GCN weights (12.5 MB) — from training
+        └── two_stage_config.json  # tuned thresholds — from training
+```
+
+---
+
 ## 1. Backend server (PC / any machine)
 
 ```bash

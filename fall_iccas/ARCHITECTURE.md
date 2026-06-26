@@ -47,6 +47,31 @@ Input: camera frames (Camera1, ~19 FPS)
   └───────────────────────────────────┘
 ```
 
+## Why ST-GCN?
+
+Fall detection from skeleton sequences requires capturing both **spatial** (body joint relationships) and **temporal** (motion over time) patterns simultaneously.
+
+| Model | Spatial | Temporal | Graph structure | Our choice |
+|---|:---:|:---:|:---:|:---:|
+| LSTM / GRU | ✗ | ✓ | ✗ | Treats joints as flat vector, loses body topology |
+| TCN | ✗ | ✓ | ✗ | Same: no explicit joint connectivity |
+| **ST-GCN** | ✓ | ✓ | ✓ | Models skeleton as graph; centripetal/centrifugal edge partitioning captures biomechanics |
+| Transformer | ✓ | ✓ | ✗ | High parameter count; overkill for 17-joint, 30-frame input |
+
+ST-GCN is the natural fit: fall biomechanics follow skeletal connectivity (hip drops, limbs spread), which a flat-vector model cannot directly represent.
+
+## Model size & complexity
+
+| Metric | Value |
+|---|---|
+| Total parameters | 3,110,238 (~3.1 M) |
+| Trainable parameters | 3,102,435 |
+| Model file size | 12.5 MB (.pth) |
+| YOLO11n-pose (.pt) | 6.3 MB |
+| YOLO11n-pose (.engine, TRT) | 8.8 MB |
+| Input shape | (N, 3, 30, 17, 1) |
+| Output shape | (N, 2) |
+
 ## ST-GCN (Spatial Temporal Graph Convolutional Network)
 
 **Primary source:** Yan et al., "Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition", AAAI 2018.
@@ -248,6 +273,29 @@ Stride     S=15 (~0.79 seconds)
   └───────────────────────────────────┘
 ```
 
+## 왜 ST-GCN인가?
+
+낙상 감지는 **공간적**(관절 간 관계)과 **시간적**(동작 변화) 패턴을 동시에 포착해야 합니다.
+
+| 모델 | 공간 | 시간 | 그래프 구조 | 선택하지 않은 이유 |
+|---|:---:|:---:|:---:|---|
+| LSTM / GRU | ✗ | ✓ | ✗ | 관절을 flat vector로 처리 → 신체 위상 손실 |
+| TCN | ✗ | ✓ | ✗ | 동일: 관절 연결성 없음 |
+| **ST-GCN** | ✓ | ✓ | ✓ | 스켈레톤을 그래프로 모델링; 낙상 생체역학에 적합 |
+| Transformer | ✓ | ✓ | ✗ | 파라미터 과다; 17관절 30프레임에 과도함 |
+
+## 모델 크기 및 복잡도
+
+| 지표 | 값 |
+|---|---|
+| 전체 파라미터 수 | 3,110,238 (~3.1 M) |
+| 학습 가능 파라미터 | 3,102,435 |
+| 모델 파일 크기 | 12.5 MB (.pth) |
+| YOLO11n-pose (.pt) | 6.3 MB |
+| YOLO11n-pose (.engine, TRT) | 8.8 MB |
+| 입력 shape | (N, 3, 30, 17, 1) |
+| 출력 shape | (N, 2) |
+
 ## ST-GCN (Spatial Temporal Graph Convolutional Network)
 
 **주요 출처:** Yan et al., "Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition", AAAI 2018.
@@ -448,6 +496,29 @@ Input: kamera kadrlari (Camera1, ~19 FPS)
   │  p < 0.50   → NO-FALL            │
   └───────────────────────────────────┘
 ```
+
+## Nima uchun ST-GCN?
+
+Yiqilishni aniqlash uchun skeleton sequencelardan **fazoviy** (joint aloqalari) va **vaqtiy** (harakat o'zgarishi) naqshlarni bir vaqtda ushlash kerak.
+
+| Model | Fazoviy | Vaqtiy | Graf strukturasi | Tanlamagan sababimiz |
+|---|:---:|:---:|:---:|---|
+| LSTM / GRU | ✗ | ✓ | ✗ | Jointlarni tekis vektor sifatida ko'radi → tana topologiyasi yo'qoladi |
+| TCN | ✗ | ✓ | ✗ | Bir xil: joint ulanishlari yo'q |
+| **ST-GCN** | ✓ | ✓ | ✓ | Skeletni graf sifatida modellashtiradi; yiqilish biomexanikasiga mos |
+| Transformer | ✓ | ✓ | ✗ | Parametrlar haddan ko'p; 17-joint 30-frame uchun ortiqcha |
+
+## Model hajmi va murakkabligi
+
+| Ko'rsatkich | Qiymat |
+|---|---|
+| Jami parametrlar | 3,110,238 (~3.1 M) |
+| Train qilinadigan parametrlar | 3,102,435 |
+| Model fayl hajmi | 12.5 MB (.pth) |
+| YOLO11n-pose (.pt) | 6.3 MB |
+| YOLO11n-pose (.engine, TRT) | 8.8 MB |
+| Kirish shakli | (N, 3, 30, 17, 1) |
+| Chiqish shakli | (N, 2) |
 
 ## ST-GCN (Spatial Temporal Graph Convolutional Network)
 

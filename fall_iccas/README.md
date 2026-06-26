@@ -122,15 +122,23 @@ python edge_server.py \
 > Password special characters must be URL-encoded: `$` → `%24`
 > Full argument list: see [HOW_TO_RUN.md](HOW_TO_RUN.md)
 
-## Current results (Subject 1 only — subject-dependent)
+## Current results (Subject 1–4, subject-stratified split)
 
 | Model | Accuracy | Fall F1 | Precision | Recall |
 |---|---|---|---|---|
-| ST-GCN (Stage 1) | 98.8% | 0.960 | 0.96 | 0.96 |
-| ST-GCN + Physics Rescue | 98.8% | 0.960 | 0.96 | 0.96 |
+| ST-GCN (Stage 1) | 98.5% | 0.950 | 0.95 | 0.95 |
+| ST-GCN + Physics Rescue | 98.7% | **0.955** | 0.95 | 0.96 |
 
-> **Important:** These results were trained/tested on Subject 1 only (subject-dependent).
-> For a real evaluation, LOSO (Leave-One-Subject-Out) is required — after Subjects 2–17 are downloaded.
+> **Important:** Results are subject-dependent (trained/tested on Subjects 1–4 with stratified split).
+> For publication, LOSO (Leave-One-Subject-Out) across all 17 subjects is required.
+> See [RESULTS.md](RESULTS.md) for full run history and ablation.
+
+## Model size & complexity
+
+| Component | Params | Size |
+|---|---|---|
+| ST-GCN | 3.1 M | 12.5 MB (.pth) |
+| YOLO11n-pose | ~2.9 M | 6.3 MB (.pt) / 8.8 MB (.engine) |
 
 ## Key technical settings
 
@@ -138,13 +146,15 @@ python edge_server.py \
 |---|---|
 | YOLO model | yolo11n-pose.pt |
 | YOLO conf threshold | 0.1 (low, to detect fall poses) |
-| Window size | 30 frames |
-| Stride | 15 frames |
+| Window size | 30 frames (~1.6 s at 19 fps) |
+| Stride | 15 frames (~0.8 s) |
 | FPS | ~19 Hz |
 | ST-GCN channels | 64→64→64→128→128→128→256→256→256 |
-| Epochs | 60 |
-| Optimizer | Adam lr=1e-3, CosineAnnealingLR |
-| GPU | NVIDIA TITAN RTX 24GB |
+| ST-GCN blocks | 9 |
+| Optimizer | Adam lr=1e-3, weight_decay=1e-4 |
+| Scheduler | CosineAnnealingLR |
+| Training GPU | NVIDIA TITAN RTX 24GB |
+| Inference device | Jetson Orin Nano Super (TRT+CPU) |
 
 ## Problems solved
 
@@ -268,15 +278,23 @@ python edge_server.py \
 > 비밀번호 특수문자 URL 인코딩 필요: `$` → `%24`
 > 전체 인자 목록: [HOW_TO_RUN.md](HOW_TO_RUN.md) 참조
 
-## 현재 결과 (Subject 1만 — subject-dependent)
+## 현재 결과 (Subject 1–4, subject-stratified split)
 
 | 모델 | Accuracy | Fall F1 | Precision | Recall |
 |---|---|---|---|---|
-| ST-GCN (Stage 1) | 98.8% | 0.960 | 0.96 | 0.96 |
-| ST-GCN + Physics Rescue | 98.8% | 0.960 | 0.96 | 0.96 |
+| ST-GCN (Stage 1) | 98.5% | 0.950 | 0.95 | 0.95 |
+| ST-GCN + Physics Rescue | 98.7% | **0.955** | 0.95 | 0.96 |
 
-> **중요:** 이 결과는 Subject 1에서만 train/test한 것입니다 (subject-dependent).
-> 실제 평가를 위해서는 LOSO (Leave-One-Subject-Out)가 필요합니다 — Subject 2–17 다운로드 이후.
+> **중요:** Subject 1–4의 subject-dependent 결과입니다.
+> 논문 제출을 위해서는 전체 17명 대상 LOSO 평가가 필요합니다.
+> 전체 실행 기록은 [RESULTS.md](RESULTS.md) 참조.
+
+## 모델 크기 및 복잡도
+
+| 구성 요소 | 파라미터 수 | 크기 |
+|---|---|---|
+| ST-GCN | 3.1 M | 12.5 MB (.pth) |
+| YOLO11n-pose | ~2.9 M | 6.3 MB (.pt) / 8.8 MB (.engine) |
 
 ## 주요 기술 설정
 
@@ -284,13 +302,15 @@ python edge_server.py \
 |---|---|
 | YOLO 모델 | yolo11n-pose.pt |
 | YOLO conf 임계값 | 0.1 (낮음, 낙상 자세 감지를 위해) |
-| 윈도우 크기 | 30 프레임 |
-| Stride | 15 프레임 |
+| 윈도우 크기 | 30 프레임 (~1.6초 at 19fps) |
+| Stride | 15 프레임 (~0.8초) |
 | FPS | ~19 Hz |
 | ST-GCN 채널 | 64→64→64→128→128→128→256→256→256 |
-| Epochs | 60 |
-| Optimizer | Adam lr=1e-3, CosineAnnealingLR |
-| GPU | NVIDIA TITAN RTX 24GB |
+| ST-GCN 블록 수 | 9 |
+| Optimizer | Adam lr=1e-3, weight_decay=1e-4 |
+| Scheduler | CosineAnnealingLR |
+| 학습 GPU | NVIDIA TITAN RTX 24GB |
+| 추론 장치 | Jetson Orin Nano Super (TRT+CPU) |
 
 ## 해결한 문제들
 
@@ -414,15 +434,23 @@ python edge_server.py \
 > Paroldagi maxsus belgilar URL-encode qilinishi kerak: `$` → `%24`
 > Barcha argumentlar: [HOW_TO_RUN.md](HOW_TO_RUN.md) ga qarang
 
-## Hozirgi natijalar (Subject 1 only — subject-dependent)
+## Hozirgi natijalar (Subject 1–4, subject-stratified split)
 
 | Model | Accuracy | Fall F1 | Precision | Recall |
 |---|---|---|---|---|
-| ST-GCN (Stage 1) | 98.8% | 0.960 | 0.96 | 0.96 |
-| ST-GCN + Physics Rescue | 98.8% | 0.960 | 0.96 | 0.96 |
+| ST-GCN (Stage 1) | 98.5% | 0.950 | 0.95 | 0.95 |
+| ST-GCN + Physics Rescue | 98.7% | **0.955** | 0.95 | 0.96 |
 
-> **Muhim:** Bu natijalar Subject 1 da train/test qilingan (subject-dependent).
-> Haqiqiy baholash uchun LOSO (Leave-One-Subject-Out) kerak — Subject 2–17 yuklanganidan keyin.
+> **Muhim:** Subject 1–4 subject-dependent natijalari.
+> Nashr uchun barcha 17 subject bo'yicha LOSO baholash kerak.
+> To'liq tarix: [RESULTS.md](RESULTS.md) ga qarang.
+
+## Model hajmi va murakkabligi
+
+| Komponent | Parametrlar | Hajm |
+|---|---|---|
+| ST-GCN | 3.1 M | 12.5 MB (.pth) |
+| YOLO11n-pose | ~2.9 M | 6.3 MB (.pt) / 8.8 MB (.engine) |
 
 ## Muhim texnik sozlamalar
 
@@ -430,13 +458,15 @@ python edge_server.py \
 |---|---|
 | YOLO model | yolo11n-pose.pt |
 | YOLO conf threshold | 0.1 (past, yiqilish posalarini aniqlash uchun) |
-| Window size | 30 frame |
-| Stride | 15 frame |
+| Window size | 30 frame (~1.6s at 19fps) |
+| Stride | 15 frame (~0.8s) |
 | FPS | ~19 Hz |
 | ST-GCN channels | 64→64→64→128→128→128→256→256→256 |
-| Epochs | 60 |
-| Optimizer | Adam lr=1e-3, CosineAnnealingLR |
-| GPU | NVIDIA TITAN RTX 24GB |
+| ST-GCN bloklari | 9 |
+| Optimizer | Adam lr=1e-3, weight_decay=1e-4 |
+| Scheduler | CosineAnnealingLR |
+| Training GPU | NVIDIA TITAN RTX 24GB |
+| Inference qurilma | Jetson Orin Nano Super (TRT+CPU) |
 
 ## Hal qilingan muammolar
 
