@@ -198,6 +198,39 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 @keyframes spin{to{transform:rotate(360deg)}}
 #refresh-spin{display:inline-block;font-size:1rem}
 
+/* ── REPORT ──────────────────────────────────────────── */
+.rpt-tabs{display:flex;gap:6px;margin-bottom:16px}
+.rpt-tab{flex:1;padding:9px 4px;border-radius:99px;border:none;font-size:.82rem;
+  font-weight:600;cursor:pointer;background:var(--card2);color:var(--muted);
+  transition:background .15s,color .15s}
+.rpt-tab.on{background:var(--accent);color:#fff}
+.rpt-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.rpt-stat{background:var(--card);border-radius:var(--rs);padding:14px;border:1px solid var(--border)}
+.rpt-stat-val{font-size:1.7rem;font-weight:800;line-height:1;margin-bottom:4px}
+.rpt-stat-lbl{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.rpt-chart{background:var(--card);border-radius:var(--rs);padding:14px 14px 6px;
+  border:1px solid var(--border);margin-bottom:16px}
+.rpt-chart-title{font-size:.72rem;color:var(--muted);font-weight:600;
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:80px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar{width:100%;border-radius:4px 4px 0 0;background:var(--accent);opacity:.7;
+  min-height:3px;transition:height .3s}
+.bar.has-fall{opacity:1}
+.bar-lbl{font-size:.65rem;color:var(--muted);white-space:nowrap}
+.bar-val{font-size:.68rem;font-weight:700;color:var(--accent);min-height:14px}
+.rpt-export{display:flex;gap:8px;margin-bottom:16px}
+.rpt-export .btn{flex:1}
+/* print */
+@media print{
+  .topbar,.nav,#img-viewer,.rpt-tabs,.rpt-export,
+  .stream-acts,.scroll:not(#rpt-scroll){display:none!important}
+  #screen-reports{display:block!important;overflow:visible!important}
+  #rpt-scroll{overflow:visible!important;padding:0!important}
+  .rpt-stat{border:1px solid #ccc!important}
+  body{background:#fff!important;color:#000!important}
+}
+
 /* ── HISTORY ─────────────────────────────────────────── */
 .events-wrap{padding:0 16px}
 .event-swipe{position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
@@ -483,6 +516,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
       <span data-i18n="history">기록</span>
     </button>
+    <button class="nav-btn" onclick="switchTab('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      <span data-i18n="reports">리포트</span>
+    </button>
     <button class="nav-btn" onclick="switchTab('settings')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       <span data-i18n="settings">설정</span>
@@ -511,6 +548,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
       <span data-i18n="history">기록</span>
     </button>
+    <button class="nav-btn" onclick="switchTab('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      <span data-i18n="reports">리포트</span>
+    </button>
     <button class="nav-btn" onclick="switchTab('settings')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       <span data-i18n="settings">설정</span>
@@ -531,6 +572,58 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <span data-i18n="delete_selected">삭제</span>
     </button>
   </div>
+</div>
+
+<!-- REPORTS -->
+<div id="screen-reports" class="screen">
+  <div class="topbar">
+    <div style="width:32px"></div>
+    <h1 data-i18n="reports">리포트</h1>
+    <button class="tb-icon" onclick="printReport()" style="font-size:1.2rem">🖨️</button>
+  </div>
+  <div id="rpt-scroll" class="scroll" style="padding:16px">
+    <div class="rpt-tabs">
+      <button class="rpt-tab on" onclick="setRptPeriod('today',this)" data-i18n="rpt_today">오늘</button>
+      <button class="rpt-tab" onclick="setRptPeriod('week',this)" data-i18n="rpt_week">이번 주</button>
+      <button class="rpt-tab" onclick="setRptPeriod('month',this)" data-i18n="rpt_month">이번 달</button>
+      <button class="rpt-tab" onclick="setRptPeriod('all',this)" data-i18n="rpt_all">전체</button>
+    </div>
+    <div class="rpt-stats">
+      <div class="rpt-stat"><div class="rpt-stat-val" id="rpt-total">—</div><div class="rpt-stat-lbl" data-i18n="rpt_total">총 낙상</div></div>
+      <div class="rpt-stat"><div class="rpt-stat-val" id="rpt-peak">—</div><div class="rpt-stat-lbl" data-i18n="rpt_peak">위험 시간대</div></div>
+      <div class="rpt-stat"><div class="rpt-stat-val" id="rpt-severe">—</div><div class="rpt-stat-lbl" data-i18n="rpt_severe">중증</div></div>
+      <div class="rpt-stat"><div class="rpt-stat-val" id="rpt-last">—</div><div class="rpt-stat-lbl" data-i18n="rpt_last">마지막 발생</div></div>
+    </div>
+    <div class="rpt-chart">
+      <div class="rpt-chart-title" data-i18n="rpt_chart_lbl">일별 낙상 현황</div>
+      <div id="rpt-chart" class="bar-chart"></div>
+    </div>
+    <div class="rpt-export">
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="printReport()">🖨 PDF</button>
+    </div>
+    <div class="card">
+      <div class="ctitle" data-i18n="rpt_events">낙상 목록</div>
+      <div id="rpt-list"><div class="spinner mt12"></div></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span data-i18n="dashboard">대시보드</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      <span data-i18n="history">기록</span>
+    </button>
+    <button class="nav-btn active" onclick="switchTab('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      <span data-i18n="reports">리포트</span>
+    </button>
+    <button class="nav-btn" onclick="switchTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span data-i18n="settings">설정</span>
+    </button>
+  </nav>
 </div>
 
 <!-- DETAIL -->
@@ -637,6 +730,37 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         </div>
       </div>
 
+
+      <!-- Report Schedule -->
+      <div class="acc-row">
+        <button class="acc-hd" onclick="toggleAcc(this)">
+          <span class="acc-icon">📅</span>
+          <span class="acc-title" data-i18n="rpt_schedule">정기 보고서</span>
+          <span id="acc-badge-rpt" class="acc-badge">—</span>
+          <svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="acc-body">
+          <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px" data-i18n="rpt_schedule_desc">정기적으로 낙상 보고서를 이메일이나 SMS로 받아보세요.</p>
+          <div class="fg" style="margin-bottom:10px">
+            <label data-i18n="rpt_email">이메일</label>
+            <input id="cfg-rpt-email" class="fi" type="email" placeholder="example@email.com">
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label data-i18n="rpt_sms">SMS</label>
+            <input id="cfg-rpt-sms" class="fi" type="tel" data-i18n-ph="phone_ph">
+          </div>
+          <div class="fg" style="margin-bottom:16px">
+            <label data-i18n="rpt_freq">주기</label>
+            <select id="cfg-rpt-freq" class="fi" style="cursor:pointer">
+              <option value="daily" data-i18n="rpt_daily">매일</option>
+              <option value="weekly" selected data-i18n="rpt_weekly">매주</option>
+              <option value="monthly" data-i18n="rpt_monthly">매월</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="saveRptSchedule()"><span data-i18n="save_btn">저장</span></button>
+        </div>
+      </div>
+
       <!-- 4. Safe Zone -->
       <div class="acc-row">
         <button class="acc-hd" onclick="toggleAcc(this)">
@@ -715,6 +839,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
       <span data-i18n="history">기록</span>
     </button>
+    <button class="nav-btn" onclick="switchTab('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      <span data-i18n="reports">리포트</span>
+    </button>
     <button class="nav-btn active" onclick="switchTab('settings')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       <span data-i18n="settings">설정</span>
@@ -770,6 +898,12 @@ ko:{
   role_guardian:'보호자',role_guardian_desc:'알림 & 모니터링',
   guardian_id:'보호자 아이디',register_btn:'등록 완료',
   choose_role:'사용자 유형 선택',choose_role_sub:'서비스 이용 목적을 선택해 주세요',
+  reports:'리포트',rpt_today:'오늘',rpt_week:'이번 주',rpt_month:'이번 달',rpt_all:'전체',
+  rpt_total:'총 낙상 건수',rpt_peak:'위험 시간대',rpt_severe:'중증 낙상',rpt_last:'마지막 발생',
+  rpt_chart_lbl:'일별 낙상 현황',rpt_events:'낙상 목록',rpt_no_data:'기간 내 낙상 없음',
+  rpt_schedule:'정기 보고서',rpt_email:'이메일',rpt_sms:'SMS',rpt_freq:'주기',
+  rpt_daily:'매일',rpt_weekly:'매주',rpt_monthly:'매월',rpt_enabled:'활성화',
+  rpt_schedule_desc:'정기적으로 낙상 보고서를 이메일이나 SMS로 받아보세요.',
   appearance_lbl:'테마 & 언어',
   dashboard:'대시보드',history:'기록',settings:'설정',
   live:'실시간 모니터링',detecting:'감지 현황',status_normal:'정상',
@@ -816,6 +950,12 @@ en:{
   role_guardian:'Guardian',role_guardian_desc:'Alert & Monitoring',
   guardian_id:"Guardian's username",register_btn:'Create Account',
   choose_role:'Choose Role',choose_role_sub:'Select how you will use this service',
+  reports:'Reports',rpt_today:'Today',rpt_week:'This Week',rpt_month:'This Month',rpt_all:'All',
+  rpt_total:'Total Falls',rpt_peak:'Peak Hour',rpt_severe:'Severe',rpt_last:'Last Event',
+  rpt_chart_lbl:'Daily Falls',rpt_events:'Fall List',rpt_no_data:'No falls in period',
+  rpt_schedule:'Scheduled Reports',rpt_email:'Email',rpt_sms:'SMS',rpt_freq:'Frequency',
+  rpt_daily:'Daily',rpt_weekly:'Weekly',rpt_monthly:'Monthly',rpt_enabled:'Enable',
+  rpt_schedule_desc:'Receive fall reports regularly by email or SMS.',
   appearance_lbl:'Theme & Language',
   dashboard:'Dashboard',history:'History',settings:'Settings',
   live:'Live Monitor',detecting:'Detection Status',status_normal:'Normal',
@@ -1124,11 +1264,12 @@ function showScreen(id){
 
 function switchTab(tab){
   if(_selectMode) exitSelectMode();
-  const map={dashboard:'screen-dashboard',history:'screen-history',settings:'screen-settings'};
+  const map={dashboard:'screen-dashboard',history:'screen-history',settings:'screen-settings',reports:'screen-reports'};
   showScreen(map[tab]);
   if(tab==='history') loadHistory();
   if(tab==='settings') loadSettings();
   if(tab==='dashboard'){ loadRecentEvents(); renderContactsDash(); }
+  if(tab==='reports') loadReport();
 }
 
 // ── AUTH ───────────────────────────────────────────────
@@ -1279,6 +1420,19 @@ function saveContact(){
   updateCallBtn();
   toast(t('saved_msg'),'ok');
   closeOpenAcc();
+}
+
+function loadRptScheduleSettings(){
+  const s=JSON.parse(localStorage.getItem('mg_rpt_schedule')||'null');
+  if(!s) return;
+  const e=document.getElementById('cfg-rpt-email');
+  const p=document.getElementById('cfg-rpt-sms');
+  const f=document.getElementById('cfg-rpt-freq');
+  if(e) e.value=s.email||'';
+  if(p) p.value=s.sms||'';
+  if(f) f.value=s.freq||'weekly';
+  const badge=document.getElementById('acc-badge-rpt');
+  if(badge&&s.enabled){badge.textContent='✓';badge.className='acc-badge on';}
 }
 
 function loadContactSettings(){
@@ -1477,6 +1631,93 @@ async function szClear(){
   toast(t('sz_cleared'),'ok');
   closeOpenAcc();
 }
+
+// ── REPORTS ────────────────────────────────────────────
+let _rptPeriod='week', _rptEvents=[];
+
+function setRptPeriod(p,btn){
+  _rptPeriod=p;
+  document.querySelectorAll('.rpt-tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderReport();
+}
+
+function filterByPeriod(events,period){
+  const now=new Date();
+  return events.filter(e=>{
+    const d=new Date(e.timestamp||e.created_at);
+    if(period==='today') return d.toDateString()===now.toDateString();
+    if(period==='week'){const w=new Date(now);w.setDate(now.getDate()-7);return d>=w;}
+    if(period==='month'){const m=new Date(now);m.setMonth(now.getMonth()-1);return d>=m;}
+    return true;
+  });
+}
+
+async function loadReport(){
+  const all=await api('GET','/api/fall-events');
+  _rptEvents=all||[];
+  renderReport();
+}
+
+function renderReport(){
+  const ev=filterByPeriod(_rptEvents,_rptPeriod);
+  document.getElementById('rpt-total').textContent=ev.length||'0';
+  if(ev.length){
+    const hrs={};
+    ev.forEach(e=>{const h=new Date(e.timestamp||e.created_at).getHours();hrs[h]=(hrs[h]||0)+1;});
+    const peak=Object.entries(hrs).sort((a,b)=>b[1]-a[1])[0];
+    document.getElementById('rpt-peak').textContent=peak?peak[0]+'시':'—';
+  } else document.getElementById('rpt-peak').textContent='—';
+  document.getElementById('rpt-severe').textContent=ev.filter(e=>e.category==='severe').length||'0';
+  if(ev.length){
+    const last=new Date(ev[0].timestamp||ev[0].created_at);
+    const diff=Math.floor((Date.now()-last)/60000);
+    document.getElementById('rpt-last').textContent=diff<60?diff+'분':diff<1440?Math.floor(diff/60)+'h':Math.floor(diff/1440)+'d';
+  } else document.getElementById('rpt-last').textContent='—';
+
+  // 7-day bar chart
+  const chart=document.getElementById('rpt-chart');
+  const dayLabels=['일','월','화','수','목','금','토'];
+  const dayData=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const cnt=_rptEvents.filter(e=>new Date(e.timestamp||e.created_at).toDateString()===d.toDateString()).length;
+    dayData.push({label:dayLabels[d.getDay()],cnt});
+  }
+  const maxCnt=Math.max(...dayData.map(d=>d.cnt),1);
+  chart.innerHTML=dayData.map(d=>`<div class="bar-wrap"><div class="bar-val">${d.cnt||''}</div><div class="bar ${d.cnt?'has-fall':''}" style="height:${Math.round(d.cnt/maxCnt*100)}%;min-height:${d.cnt?'8':'3'}px"></div><div class="bar-lbl">${d.label}</div></div>`).join('');
+
+  // List
+  const list=document.getElementById('rpt-list');
+  if(!ev.length){list.innerHTML=`<div style="font-size:.85rem;color:var(--muted);padding:8px 0">${t('rpt_no_data')}</div>`;return;}
+  list.innerHTML=ev.map(e=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><div style="width:8px;height:8px;border-radius:50%;background:${e.category==='severe'?'var(--red)':'var(--orange)'};flex-shrink:0"></div><div style="flex:1"><div style="font-size:.88rem;font-weight:600">${fmtTs(e.timestamp)}</div><div style="font-size:.78rem;color:var(--muted)">${catLabel(e.category)}</div></div><div style="font-size:.78rem;color:${e.is_acknowledged?'var(--green)':'var(--orange)'}">${e.is_acknowledged?'✓':'●'}</div></div>`).join('');
+}
+
+function exportCSV(){
+  const ev=filterByPeriod(_rptEvents,_rptPeriod);
+  const hdr='Time,Category,Acknowledged\n';
+  const rows=ev.map(e=>`"${fmtTs(e.timestamp||e.created_at)}","${e.category||'severe'}","${e.is_acknowledged?'Yes':'No'}"`).join('\n');
+  const blob=new Blob(['\uFEFF'+hdr+rows],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`fall_report_${_rptPeriod}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+function printReport(){window.print();}
+
+function saveRptSchedule(){
+  const email=document.getElementById('cfg-rpt-email').value.trim();
+  const sms=document.getElementById('cfg-rpt-sms').value.trim();
+  const freq=document.getElementById('cfg-rpt-freq').value;
+  if(!email&&!sms){toast('이메일 또는 SMS를 입력하세요','err');return;}
+  localStorage.setItem('mg_rpt_schedule',JSON.stringify({email,sms,freq,enabled:true}));
+  const badge=document.getElementById('acc-badge-rpt');
+  if(badge){badge.textContent='✓';badge.className='acc-badge on';}
+  toast(t('saved_msg'),'ok');closeOpenAcc();
+}
+
+
 
 function openImgViewer(url){
   const v=document.getElementById('img-viewer');
@@ -1790,6 +2031,7 @@ function loadSettings(){
   applyI18n();
   updateAccBadges();
   renderContactsSettings();
+  loadRptScheduleSettings();
   if(user){
     const dn=document.getElementById('cfg-display-name');
     const ag=document.getElementById('cfg-age');
