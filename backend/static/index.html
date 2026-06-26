@@ -587,6 +587,22 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       </div>
     </div>
 
+    <div class="sec mt12">
+      <div class="sec-lbl">🛏 <span data-i18n="safe_zone_lbl">안전 구역</span></div>
+      <div class="card">
+        <p style="font-size:.83rem;color:var(--muted);margin-bottom:12px" data-i18n="safe_zone_desc">침대 등 누워있는 공간을 지정하면 해당 구역에서는 낙상이 감지되지 않습니다.</p>
+        <div id="sz-canvas-wrap" style="display:none;position:relative;margin-bottom:12px;border-radius:var(--rs);overflow:hidden;background:#000">
+          <img id="sz-snapshot" style="width:100%;display:block;user-select:none;-webkit-user-select:none">
+          <canvas id="sz-canvas" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none"></canvas>
+        </div>
+        <div id="sz-status" style="font-size:.82rem;color:var(--muted);margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="szLoadSnapshot()" data-i18n="sz_draw">구역 그리기</button>
+          <button class="btn btn-ghost btn-sm" id="sz-clear-btn" onclick="szClear()" style="display:none" data-i18n="sz_clear">구역 삭제</button>
+        </div>
+      </div>
+    </div>
+
     <div class="sec mt12" style="margin-bottom:24px">
       <div class="sec-lbl" data-i18n="app_info_lbl">앱 정보</div>
       <div class="card">
@@ -688,6 +704,9 @@ ko:{
   linked_msg:'보호자 연결 완료',link_fail:'연결 실패: 아이디를 확인하세요',
   login_fail:'로그인 실패',registered_msg:'등록 완료!',
   yes:'있음',no:'없음',recent_events:'최근 낙상 기록',zoom:'확대 보기',
+  safe_zone_lbl:'안전 구역',safe_zone_desc:'침대 등 누워있는 공간을 지정하면 해당 구역에서는 낙상이 감지되지 않습니다.',
+  sz_draw:'구역 그리기',sz_clear:'구역 삭제',sz_hint:'화면에서 안전 구역을 드래그하세요',
+  sz_saved:'안전 구역이 저장되었습니다',sz_cleared:'구역이 삭제되었습니다',sz_active:'활성 구역',
   sel_n:'{0}개 선택됨',
 },
 en:{
@@ -726,6 +745,9 @@ en:{
   linked_msg:'Guardian linked',link_fail:'Failed: check username',
   login_fail:'Login failed',registered_msg:'Account created!',
   yes:'Yes',no:'No',recent_events:'Recent Falls',zoom:'Zoom In',
+  safe_zone_lbl:'Safe Zone',safe_zone_desc:'Define a bed or resting area where fall detection is disabled.',
+  sz_draw:'Draw Zone',sz_clear:'Clear Zone',sz_hint:'Drag on the image to define the safe zone',
+  sz_saved:'Safe zone saved',sz_cleared:'Zone cleared',sz_active:'Active zone',
   sel_n:'{0} selected',
 },
 es:{
@@ -1158,6 +1180,114 @@ function guardianAck(){
 }
 function call119(){toast(t('call_119'));window.location.href='tel:119';}
 
+// ── SAFE ZONE ──────────────────────────────────────────
+let _szZones=[], _szDrawing=false, _szStart=null, _szCurr=null;
+
+async function szLoadSettings(){
+  const data=await api('GET','/api/safe-zone');
+  _szZones=(data&&data.zones)||[];
+  const status=document.getElementById('sz-status');
+  const clearBtn=document.getElementById('sz-clear-btn');
+  if(_szZones.length){
+    status.textContent=t('sz_active')+': '+_szZones.length;
+    clearBtn.style.display='';
+  } else {
+    status.textContent='';
+    clearBtn.style.display='none';
+  }
+}
+
+async function szLoadSnapshot(){
+  const wrap=document.getElementById('sz-canvas-wrap');
+  const img=document.getElementById('sz-snapshot');
+  const canvas=document.getElementById('sz-canvas');
+  wrap.style.display='block';
+  document.getElementById('sz-status').textContent=t('sz_hint');
+  img.src='/api/stream/snapshot?t='+Date.now();
+  img.onload=()=>{
+    canvas.width=img.naturalWidth;
+    canvas.height=img.naturalHeight;
+    szRedraw();
+  };
+  _szDrawing=false;
+
+  const getPos=(e)=>{
+    const r=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/r.width, scaleY=canvas.height/r.height;
+    const src=e.touches?e.touches[0]:e;
+    return {x:(src.clientX-r.left)*scaleX, y:(src.clientY-r.top)*scaleY};
+  };
+
+  canvas.onmousedown=canvas.ontouchstart=(e)=>{
+    e.preventDefault();
+    _szStart=getPos(e); _szCurr=null; _szDrawing=true;
+  };
+  canvas.onmousemove=canvas.ontouchmove=(e)=>{
+    if(!_szDrawing) return; e.preventDefault();
+    _szCurr=getPos(e); szRedraw();
+  };
+  canvas.onmouseup=canvas.ontouchend=(e)=>{
+    e.preventDefault();
+    if(!_szDrawing||!_szStart||!_szCurr) return;
+    _szDrawing=false;
+    const W=canvas.width, H=canvas.height;
+    const x1=Math.min(_szStart.x,_szCurr.x)/W;
+    const y1=Math.min(_szStart.y,_szCurr.y)/H;
+    const x2=Math.max(_szStart.x,_szCurr.x)/W;
+    const y2=Math.max(_szStart.y,_szCurr.y)/H;
+    if((x2-x1)<0.02||(y2-y1)<0.02) return;
+    _szZones=[{name:'safe',x1,y1,x2,y2}];
+    szRedraw();
+    szSave();
+  };
+}
+
+function szRedraw(){
+  const canvas=document.getElementById('sz-canvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  // existing zones
+  _szZones.forEach(z=>{
+    ctx.fillStyle='rgba(0,200,80,0.18)';
+    ctx.fillRect(z.x1*W,z.y1*H,(z.x2-z.x1)*W,(z.y2-z.y1)*H);
+    ctx.strokeStyle='rgba(0,220,80,0.9)';
+    ctx.lineWidth=2;
+    ctx.strokeRect(z.x1*W,z.y1*H,(z.x2-z.x1)*W,(z.y2-z.y1)*H);
+    ctx.fillStyle='rgba(0,220,80,0.9)';
+    ctx.font='13px sans-serif';
+    ctx.fillText('SAFE ZONE',z.x1*W+6,z.y1*H+18);
+  });
+  // current drag preview
+  if(_szDrawing&&_szStart&&_szCurr){
+    const x=Math.min(_szStart.x,_szCurr.x), y=Math.min(_szStart.y,_szCurr.y);
+    const w=Math.abs(_szCurr.x-_szStart.x), h=Math.abs(_szCurr.y-_szStart.y);
+    ctx.fillStyle='rgba(0,200,80,0.15)';
+    ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle='#00c850';
+    ctx.lineWidth=2; ctx.setLineDash([6,4]);
+    ctx.strokeRect(x,y,w,h);
+    ctx.setLineDash([]);
+  }
+}
+
+async function szSave(){
+  await api('POST','/api/safe-zone',{zones:_szZones});
+  toast(t('sz_saved'));
+  const status=document.getElementById('sz-status');
+  status.textContent=t('sz_active')+': 1';
+  document.getElementById('sz-clear-btn').style.display='';
+}
+
+async function szClear(){
+  await api('DELETE','/api/safe-zone');
+  _szZones=[];
+  document.getElementById('sz-canvas-wrap').style.display='none';
+  document.getElementById('sz-status').textContent='';
+  document.getElementById('sz-clear-btn').style.display='none';
+  toast(t('sz_cleared'));
+}
+
 function openImgViewer(url){
   const v=document.getElementById('img-viewer');
   document.getElementById('img-viewer-img').src=url;
@@ -1468,6 +1598,7 @@ function loadSettings(){
   document.getElementById('cfg-stream-url').value=streamUrl;
   document.getElementById('cfg-device-token').value=localStorage.getItem('mg_device_token')||'edge-device-001';
   applyI18n();
+  szLoadSettings();
   if(user){
     document.getElementById('user-profile-info').innerHTML=`
       <div class="dr"><span class="dk">${t('name')}</span><span class="dv">${user.display_name||'-'}</span></div>

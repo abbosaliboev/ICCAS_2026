@@ -362,6 +362,22 @@ def main():
     current_event_id = None
     smooth_bbox      = None   # EMA-smoothed [x1,y1,x2,y2] from YOLO boxes
 
+    # safe zone
+    safe_zone_path   = os.path.join(base, "safe_zone.json")
+    safe_zones       = []
+    last_zone_reload = 0.0
+
+    def load_safe_zones():
+        try:
+            if os.path.exists(safe_zone_path):
+                with open(safe_zone_path) as _f:
+                    return json.load(_f).get("zones", [])
+        except Exception:
+            pass
+        return []
+
+    safe_zones = load_safe_zones()
+    log.info(f"Safe zones loaded: {len(safe_zones)}")
     log.info("Edge server running. Ctrl+C to stop.")
 
     while True:
@@ -412,7 +428,37 @@ def main():
         person_visible = float(kp[:, 2].max()) > 0.15
         no_person_frames = 0 if person_visible else no_person_frames + 1
 
+        # reload safe zones every 10 s
+        if time.time() - last_zone_reload > 10:
+            safe_zones = load_safe_zones()
+            last_zone_reload = time.time()
+
+        # check if mid-hip is inside a safe zone
+        in_safe_zone = False
+        if safe_zones and person_visible:
+            hip_x = float((kp[11, 0] + kp[12, 0]) / 2)
+            hip_y = float((kp[11, 1] + kp[12, 1]) / 2)
+            for _z in safe_zones:
+                if _z["x1"] <= hip_x <= _z["x2"] and _z["y1"] <= hip_y <= _z["y2"]:
+                    in_safe_zone = True
+                    break
+
         draw_skeleton(frame, kp, h, w)
+
+        # draw safe zone overlay (green semi-transparent)
+        if safe_zones:
+            _overlay = frame.copy()
+            for _z in safe_zones:
+                zx1, zy1 = int(_z["x1"]*w), int(_z["y1"]*h)
+                zx2, zy2 = int(_z["x2"]*w), int(_z["y2"]*h)
+                cv2.rectangle(_overlay, (zx1, zy1), (zx2, zy2), (0, 200, 80), -1)
+            cv2.addWeighted(_overlay, 0.12, frame, 0.88, 0, frame)
+            for _z in safe_zones:
+                zx1, zy1 = int(_z["x1"]*w), int(_z["y1"]*h)
+                zx2, zy2 = int(_z["x2"]*w), int(_z["y2"]*h)
+                cv2.rectangle(frame, (zx1, zy1), (zx2, zy2), (0, 200, 80), 2)
+                cv2.putText(frame, "SAFE ZONE", (zx1+4, zy1+18),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 200, 80), 1, cv2.LINE_AA)
 
         # update smoothed bounding box from YOLO result (only when person detected well)
         boxes = results[0].boxes
@@ -458,7 +504,7 @@ def main():
             if not fall_active and is_standing(kp):
                 baseline_hip = 0.88 * baseline_hip + 0.12 * float(kp[[11,12],1].mean()) if baseline_hip > 0 else float(kp[[11,12],1].mean())
 
-            if pred == 1:
+            if pred == 1 and not in_safe_zone:
                 fall_streak += 1
             else:
                 if not fall_active:
@@ -474,6 +520,16 @@ def main():
                 log.info("FALL DETECTED — alert active")
                 ss_path = os.path.join(snap_dir, f"{event_id}.jpg")
                 ss_frame = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
+                # draw bbox on screenshot (fall_active just set, bbox not yet on frame)
+                if smooth_bbox is not None:
+                    _sx = 1280 / w; _sy = 720 / h
+                    _bx1 = max(0,    int(smooth_bbox[0]*_sx) - 12)
+                    _by1 = max(0,    int(smooth_bbox[1]*_sy) - 12)
+                    _bx2 = min(1280, int(smooth_bbox[2]*_sx) + 12)
+                    _by2 = min(720,  int(smooth_bbox[3]*_sy) + 12)
+                    cv2.rectangle(ss_frame, (_bx1, _by1), (_bx2, _by2), (0, 0, 255), 3)
+                    cv2.putText(ss_frame, "FALL", (_bx1, max(_by1-8, 20)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
                 cv2.imwrite(ss_path, ss_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
                 threading.Thread(target=client.upload_screenshot, args=(event_id, ss_path), daemon=True).start()
 
