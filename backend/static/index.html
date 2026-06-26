@@ -1246,19 +1246,8 @@ async function openDetail(eventId){
     videoEl.load();
     videoWrap.style.display='';
   }
-  ssImg.style.display='none';
   ssWrap.style.display='block';
-  ssImg.alt='screenshot';
-  ssImg.onload=()=>{ssImg.style.display='block';};
-  ssImg.onerror=()=>{
-    if(ssImg._retried){ssImg.style.display='none';return;}
-    ssImg._retried=true;
-    setTimeout(()=>{
-      ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
-    },3000);
-  };
-  ssImg._retried=false;
-  ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}`;
+  ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
 
   document.getElementById('detail-info').innerHTML=`
     <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
