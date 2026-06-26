@@ -451,12 +451,17 @@ def main():
             else:
                 stand_streak = 0
 
-        # ── overlay: loop / camera / YOLO / ST-GCN FPS ───────────────────────
+        # ── overlay: two lines — pipeline FPS + model latency ────────────────
         cv2.putText(frame,
-            f"loop={fps_disp:.0f}fps  cam={cam_fps:.0f}fps  yolo={yolo_fps:.0f}fps  stgcn={stgcn_fps:.0f}fps  [{device}]",
+            f"RTSP={cam_fps:.0f}fps  loop={fps_disp:.0f}fps  [{device}]",
+            (10, h-28), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (150, 150, 150), 1, cv2.LINE_AA)
+        stgcn_ms = (1000.0 / stgcn_fps) if stgcn_fps > 0 else 0.0
+        yolo_ms  = (1000.0 / yolo_fps)  if yolo_fps  > 0 else 0.0
+        cv2.putText(frame,
+            f"YOLO={yolo_fps:.0f}fps({yolo_ms:.0f}ms)  ST-GCN+Phys={stgcn_fps:.0f}fps({stgcn_ms:.0f}ms)",
             (10, h-10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (150, 150, 150), 1, cv2.LINE_AA)
         if frame_no % 60 == 0:
-            log.info(f"FPS — loop={fps_disp:.1f}  cam={cam_fps:.1f}  yolo={yolo_fps:.1f}  stgcn={stgcn_fps:.1f}")
+            log.info(f"FPS — rtsp={cam_fps:.1f}  loop={fps_disp:.1f}  yolo={yolo_fps:.1f}({yolo_ms:.1f}ms)  stgcn={stgcn_fps:.1f}({stgcn_ms:.1f}ms)")
 
         # MJPEG publish — resize to 854x480 for fast streaming (source may be 2560x1440)
         stream_w, stream_h = 854, 480
