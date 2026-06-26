@@ -11,7 +11,7 @@ Default: http://0.0.0.0:8000
 Web app: http://localhost:8000/app
 """
 
-import os, json, uuid, shutil
+import os, json, uuid, shutil, base64
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -30,6 +30,7 @@ import db
 BASE   = Path(__file__).parent
 CLIPS  = BASE / "storage" / "clips"
 THUMBS = BASE / "storage" / "thumbnails"
+RISK_ZONES_FILE = BASE / "storage" / "risk_zones.json"
 CLIPS.mkdir(parents=True, exist_ok=True)
 THUMBS.mkdir(parents=True, exist_ok=True)
 
@@ -463,17 +464,300 @@ async def stream_sse():
     )
 
 
-# ── heatmap (stub — returns static data) ─────────────────────────────────────
+# ── living-room risk zones ────────────────────────────────────────────────────
+
+def default_living_room_risk_zones():
+    return {
+        "room": "living_room",
+        "source": "default_template",
+        "basis": "CDC/NHS home fall-prevention guidance: rugs, cluttered pathways, furniture transfer areas, cords, and thresholds are common modifiable trip/fall hazards.",
+        "zones": [
+            {
+                "id": "rug_edge",
+                "rank": 1,
+                "label": "Rug / Carpet Edge",
+                "label_ko": "러그/카펫 경계",
+                "risk": 0.92,
+                "x": 0.18,
+                "y": 0.60,
+                "w": 0.64,
+                "h": 0.25,
+                "reason": "Loose rugs and floor-surface changes are common trip hazards.",
+            },
+            {
+                "id": "sofa_transfer",
+                "rank": 2,
+                "label": "Sofa / Chair Transfer",
+                "label_ko": "소파/의자 앞",
+                "risk": 0.86,
+                "x": 0.03,
+                "y": 0.33,
+                "w": 0.25,
+                "h": 0.45,
+                "reason": "Standing up, sitting down, and turning near furniture can destabilize balance.",
+            },
+            {
+                "id": "walking_path",
+                "rank": 3,
+                "label": "Main Walking Path",
+                "label_ko": "중앙 동선",
+                "risk": 0.78,
+                "x": 0.34,
+                "y": 0.36,
+                "w": 0.34,
+                "h": 0.43,
+                "reason": "Cluttered or narrow paths force detours around furniture.",
+            },
+            {
+                "id": "cable_tv",
+                "rank": 4,
+                "label": "Cable / TV Stand",
+                "label_ko": "전선/TV장 주변",
+                "risk": 0.72,
+                "x": 0.68,
+                "y": 0.36,
+                "w": 0.27,
+                "h": 0.35,
+                "reason": "Cords and low furniture near the wall can cause trips.",
+            },
+            {
+                "id": "doorway_threshold",
+                "rank": 5,
+                "label": "Doorway / Threshold",
+                "label_ko": "문턱/입구",
+                "risk": 0.66,
+                "x": 0.00,
+                "y": 0.08,
+                "w": 0.20,
+                "h": 0.27,
+                "reason": "Thresholds and lighting changes increase trip risk.",
+            },
+        ]
+    }
+
+
+def _sanitize_risk_zones(data: dict, source: str):
+    zones = []
+    for i, z in enumerate((data or {}).get("zones", [])[:6], start=1):
+        try:
+            x = max(0.0, min(1.0, float(z.get("x", 0))))
+            y = max(0.0, min(1.0, float(z.get("y", 0))))
+            w = max(0.04, min(1.0 - x, float(z.get("w", 0.2))))
+            h = max(0.04, min(1.0 - y, float(z.get("h", 0.2))))
+            risk = max(0.0, min(1.0, float(z.get("risk", 0.7))))
+        except Exception:
+            continue
+        zones.append({
+            "id": str(z.get("id") or f"gpt_zone_{i}"),
+            "rank": int(z.get("rank") or i),
+            "label": str(z.get("label") or f"Risk Zone {i}")[:48],
+            "label_ko": str(z.get("label_ko") or z.get("label") or f"위험구역 {i}")[:48],
+            "risk": risk,
+            "x": x,
+            "y": y,
+            "w": w,
+            "h": h,
+            "reason": str(z.get("reason") or "")[:220],
+        })
+    return {
+        "room": "living_room",
+        "source": source,
+        "analyzed_at": datetime.now().isoformat(),
+        "basis": str((data or {}).get("basis") or "Camera snapshot analysis"),
+        "zones": zones,
+    }
+
+
+def _load_saved_risk_zones():
+    if not RISK_ZONES_FILE.exists():
+        return None
+    try:
+        return json.loads(RISK_ZONES_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _save_risk_zones(data: dict):
+    RISK_ZONES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    RISK_ZONES_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
 
 @app.get("/api/heatmap")
 def heatmap(user=Depends(auth_user)):
-    return {
-        "zones": [
-            {"label": "거실", "risk": 0.72, "x": 0.3, "y": 0.4},
-            {"label": "화장실", "risk": 0.88, "x": 0.7, "y": 0.2},
-            {"label": "침실", "risk": 0.45, "x": 0.5, "y": 0.7},
-        ]
+    return _load_saved_risk_zones() or default_living_room_risk_zones()
+
+
+@app.post("/api/heatmap/analyze")
+async def analyze_heatmap(user=Depends(auth_user)):
+    """Analyze one current camera snapshot with a vision model, then cache coordinates."""
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if not gemini_key and not openai_key:
+        data = default_living_room_risk_zones()
+        data["source"] = "default_template_no_ai_key"
+        _save_risk_zones(data)
+        return {"ok": True, "used_ai": False, **data}
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(8.0)) as client:
+            snap = await client.get(EDGE_SNAPSHOT_URL)
+            snap.raise_for_status()
+    except Exception:
+        raise HTTPException(503, "Camera snapshot unavailable")
+
+    image_b64 = base64.b64encode(snap.content).decode("ascii")
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "basis": {"type": "string"},
+            "zones": {
+                "type": "array",
+                "maxItems": 5,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "id": {"type": "string"},
+                        "rank": {"type": "integer"},
+                        "label": {"type": "string"},
+                        "label_ko": {"type": "string"},
+                        "risk": {"type": "number"},
+                        "x": {"type": "number"},
+                        "y": {"type": "number"},
+                        "w": {"type": "number"},
+                        "h": {"type": "number"},
+                        "reason": {"type": "string"},
+                    },
+                    "required": ["id", "rank", "label", "label_ko", "risk", "x", "y", "w", "h", "reason"],
+                },
+            },
+        },
+        "required": ["basis", "zones"],
     }
+    prompt = (
+        "Analyze this fixed living-room camera snapshot for older-adult fall hazards. "
+        "Return up to five rectangular risk zones using normalized coordinates x,y,w,h in 0..1 relative to the image. "
+        "Prioritize visible hazards such as rug/carpet edges, cluttered walking paths, cords, low furniture, sofa/chair transfer areas, "
+        "door thresholds, slippery-looking floor transitions, and poorly lit or narrow routes. "
+        "If a hazard is uncertain, keep the rectangle conservative and explain briefly. Do not identify people."
+    )
+    if gemini_key:
+        gemini_schema = json.loads(json.dumps(schema))
+        def _strip_unsupported_schema_keys(obj):
+            if isinstance(obj, dict):
+                obj.pop("additionalProperties", None)
+                for v in obj.values():
+                    _strip_unsupported_schema_keys(v)
+            elif isinstance(obj, list):
+                for v in obj:
+                    _strip_unsupported_schema_keys(v)
+        _strip_unsupported_schema_keys(gemini_schema)
+        gemini_model = os.environ.get("GEMINI_RISK_MODEL", "gemini-2.5-flash")
+        gemini_payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": prompt},
+                        {"inline_data": {"mime_type": "image/jpeg", "data": image_b64}},
+                    ],
+                }
+            ],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "responseSchema": gemini_schema,
+                "temperature": 0.2,
+            }
+        }
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+                res = await client.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent",
+                    params={"key": gemini_key},
+                    headers={"Content-Type": "application/json"},
+                    json=gemini_payload,
+                )
+                res.raise_for_status()
+                raw = res.json()
+            parts = raw.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+            text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+            parsed = json.loads(text)
+            data = _sanitize_risk_zones(parsed, "gemini_snapshot")
+            if data["zones"]:
+                _save_risk_zones(data)
+                return {"ok": True, "used_ai": True, **data}
+        except httpx.HTTPStatusError as exc:
+            gemini_error = exc.response.text[:240] if exc.response is not None else "Gemini HTTP error"
+        except Exception as exc:
+            gemini_error = exc.__class__.__name__
+        else:
+            gemini_error = "Gemini returned no zones"
+
+        if not openai_key:
+            data = default_living_room_risk_zones()
+            data["source"] = "default_template_gemini_error"
+            data["error"] = gemini_error
+            _save_risk_zones(data)
+            return {"ok": True, "used_ai": False, **data}
+
+    payload = {
+        "model": os.environ.get("OPENAI_RISK_MODEL", "gpt-4.1-mini"),
+        "input": [{
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": prompt},
+                {"type": "input_image", "image_url": f"data:image/jpeg;base64,{image_b64}"},
+            ],
+        }],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "living_room_risk_zones",
+                "schema": schema,
+                "strict": True,
+            }
+        },
+    }
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            res = await client.post(
+                "https://api.openai.com/v1/responses",
+                headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                json=payload,
+            )
+            res.raise_for_status()
+            raw = res.json()
+    except Exception as exc:
+        data = default_living_room_risk_zones()
+        data["source"] = "default_template_openai_error"
+        data["error"] = str(exc)[:240]
+        _save_risk_zones(data)
+        return {"ok": True, "used_ai": False, **data}
+
+    text = raw.get("output_text")
+    if not text:
+        chunks = []
+        for item in raw.get("output", []):
+            for c in item.get("content", []):
+                if c.get("type") in ("output_text", "text"):
+                    chunks.append(c.get("text", ""))
+        text = "".join(chunks)
+    try:
+        parsed = json.loads(text)
+    except Exception:
+        data = default_living_room_risk_zones()
+        data["source"] = "default_template_parse_error"
+        _save_risk_zones(data)
+        return {"ok": True, "used_ai": False, **data}
+
+    data = _sanitize_risk_zones(parsed, "openai_snapshot")
+    if not data["zones"]:
+        data = default_living_room_risk_zones()
+        data["source"] = "default_template_empty_ai_result"
+        return {"ok": True, "used_ai": False, **data}
+    _save_risk_zones(data)
+    return {"ok": True, "used_ai": True, **data}
 
 
 # ── startup ───────────────────────────────────────────────────────────────────

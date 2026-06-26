@@ -309,7 +309,7 @@ def main():
     # resolve camera source — V4L2 for local indices, FFMPEG for RTSP/HTTP URLs
     src = int(args.source) if args.source.isdigit() else args.source
     if isinstance(src, int):
-        backend = cv2.CAP_V4L2
+        backend = cv2.CAP_DSHOW if os.name == "nt" else cv2.CAP_V4L2
     elif isinstance(src, str) and src.startswith("rtsp"):
         backend = cv2.CAP_FFMPEG
     else:

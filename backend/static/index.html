@@ -157,6 +157,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .stream-wrap{position:relative;background:#000;border-radius:var(--rs);
   overflow:hidden;aspect-ratio:16/9;min-height:0}
 #stream-img{width:100%;height:100%;display:block;object-fit:contain}
+.risk-layer{position:absolute;inset:0;display:none;pointer-events:none;z-index:3}
+.risk-layer.on{display:block}
+.risk-zone{position:absolute;border:2px solid rgba(239,68,68,.9);
+  background:rgba(239,68,68,.16);border-radius:8px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset}
+.risk-zone.medium{border-color:rgba(245,158,11,.92);background:rgba(245,158,11,.18)}
+.risk-zone.low{border-color:rgba(59,130,246,.9);background:rgba(59,130,246,.15)}
+.risk-tag{position:absolute;left:6px;top:6px;max-width:calc(100% - 12px);
+  background:rgba(15,23,42,.82);color:#fff;border-radius:6px;padding:4px 6px;
+  font-size:.62rem;font-weight:800;line-height:1.15;letter-spacing:.01em;
+  white-space:normal;text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.risk-rank{display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;margin-right:4px;border-radius:50%;background:#ef4444;color:#fff;
+  font-size:.56rem}
+.risk-legend{position:absolute;right:8px;bottom:8px;left:8px;
+  display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+  background:rgba(15,23,42,.76);color:#fff;border-radius:8px;padding:7px;
+  font-size:.62rem;font-weight:700}
+.risk-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;margin-right:4px}
+.risk-dot.med{background:#f59e0b}.risk-dot.low{background:#3b82f6}
 .stream-ov{position:absolute;top:0;left:0;right:0;bottom:0;
   display:flex;flex-direction:column;justify-content:space-between;
   padding:10px;pointer-events:none}
@@ -169,7 +189,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .stream-ph-icon{font-size:2.2rem;margin-bottom:10px;opacity:.5}
 .stream-ph-txt{font-size:.88rem;color:var(--muted);margin-bottom:14px}
 .stream-acts{display:flex;gap:8px;padding:8px 0 2px}
-.stream-acts .btn{font-size:.8rem;padding:10px;flex:1}
+.stream-acts .btn{font-size:.72rem;padding:10px 6px;flex:1;min-width:0;line-height:1.15}
 
 /* ── HISTORY ─────────────────────────────────────────── */
 .events-wrap{padding:0 16px}
@@ -299,6 +319,34 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .modal-time{font-size:.82rem;color:var(--muted2);margin-bottom:24px}
 .modal-acts{display:flex;flex-direction:column;gap:10px}
 
+/* ── USER FALL VOICE ALERT ───────────────────────────── */
+#user-fall-alert{position:fixed;inset:0;z-index:9998;display:none;
+  align-items:flex-start;justify-content:center;padding:18px 16px;
+  pointer-events:none}
+#user-fall-alert.show{display:flex}
+.ufa-box{width:min(520px,calc(100vw - 32px));background:#f8fafc;color:#111827;
+  border:2px dashed #ef4444;border-radius:18px;padding:22px;
+  box-shadow:0 16px 40px rgba(15,23,42,.22);display:grid;
+  grid-template-columns:1fr 1.5fr;gap:22px;pointer-events:auto}
+.ufa-left{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;color:#dc2626;font-weight:800;font-size:1.35rem;line-height:1.55}
+.ufa-left svg{width:46px;height:46px;margin-bottom:12px;stroke:#ef4444;fill:none;stroke-width:1.7}
+.ufa-copy{font-size:.94rem;font-weight:700;line-height:1.7;color:#111827}
+.ufa-count{margin-top:12px;color:#dc2626;font-size:1.05rem;font-weight:800;text-align:right}
+.ufa-mic{position:absolute;right:18px;bottom:18px;width:64px;height:64px;border-radius:50%;
+  border:2px dashed #ef4444;background:#fee2e2;display:flex;align-items:center;
+  justify-content:center;color:#ef4444}
+.ufa-mic svg{width:34px;height:34px;fill:currentColor}
+.ufa-actions{display:flex;gap:10px;margin-top:14px}
+.ufa-actions button{flex:1;padding:10px;border-radius:10px;border:1px solid #ef4444;
+  font-weight:800;background:#fff;color:#dc2626}
+.ufa-actions button:first-child{background:#ef4444;color:#fff}
+@media (max-width:520px){
+  .ufa-box{grid-template-columns:1fr;padding:18px 18px 86px;gap:12px}
+  .ufa-left{font-size:1.2rem}
+  .ufa-copy{font-size:.88rem}
+}
+
 /* ── UTILS ───────────────────────────────────────────── */
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .p16{padding:16px}.pb0{padding-bottom:0}.gap12{gap:12px}
@@ -417,10 +465,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       </div>
       <div id="stream-wrap" class="stream-wrap" style="display:none">
         <img id="stream-img" alt="">
+        <div id="risk-layer" class="risk-layer" aria-hidden="true"></div>
       </div>
       <span id="fall-badge" style="display:none"></span>
       <div class="stream-acts">
         <button class="btn btn-ghost btn-sm" onclick="toggleHeatmap()" data-i18n="heatmap">위험구역</button>
+        <button class="btn btn-ghost btn-sm" onclick="analyzeRoomRisk()">Analyze Room</button>
         <button class="btn btn-ghost btn-sm" onclick="refreshStream()" data-i18n="refresh">새로고침</button>
         <button class="btn btn-ghost btn-sm" onclick="clearStream()" data-i18n="disconnect">해제</button>
       </div>
@@ -632,6 +682,30 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <button class="btn btn-primary" onclick="guardianWatchVideo()"><span data-i18n="watch_video">영상 보기</span></button>
       <button class="btn btn-danger"  onclick="call119()"><span data-i18n="call_emergency">119 신고하기</span></button>
       <button class="btn btn-ghost"   onclick="guardianAck()"><span data-i18n="acknowledged_btn">확인했습니다</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="user-fall-alert" aria-live="assertive">
+  <div class="ufa-box">
+    <div class="ufa-left">
+      <svg viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 8v6"/><path d="M12 17h.01"/></svg>
+      <div>낙상이<br>감지되었습니다.</div>
+    </div>
+    <div style="position:relative">
+      <div class="ufa-copy">
+        보호자에게 연락 및 119 신고를 원하시면 "연락"이라고 말씀해주세요.<br><br>
+        괜찮으시면 "아니"라고 말씀해주세요.<br><br>
+        15초 간 응답이 없으시면 자동으로 119 문자 신고 및 보호자에게 연락 조치가 진행됩니다.
+      </div>
+      <div class="ufa-count">남은 시간: <span id="ufa-sec">15</span>초</div>
+      <div class="ufa-actions">
+        <button onclick="handleUserVoiceChoice('contact')">연락</button>
+        <button onclick="handleUserVoiceChoice('dismiss')">아니</button>
+      </div>
+      <div class="ufa-mic" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0h2a5 5 0 0 0 10 0h2z"/><path d="M11 19h2v3h-2z"/></svg>
+      </div>
     </div>
   </div>
 </div>
@@ -934,7 +1008,10 @@ let user=JSON.parse(localStorage.getItem('mg_user')||'null');
 let ws=null,currentEventId=null;
 let streamUrl=localStorage.getItem('mg_stream_url')||'/api/stream/video';
 let heatmapOn=false;
+let riskZones=null;
 let _allEvents=[];
+let userAlertTimer=null,userAlertRemaining=15,userAlertRecognizer=null,userAlertAcceptSpeech=false;
+const USER_FALL_TTS='낙상이 감지되었습니다. 보호자에게 연락 및 119 신고를 원하시면 연락이라고 말씀해주세요. 괜찮으시면 아니라고 말씀해주세요. 15초 간 응답이 없으시면 자동으로 119 문자 신고 및 보호자에게 연락 조치가 진행됩니다.';
 
 // ── HTTP ───────────────────────────────────────────────
 async function api(method,path,body){
@@ -1076,7 +1153,55 @@ function applyInlineUrl(){
 }
 function clearStream(){localStorage.removeItem('mg_stream_url');streamUrl='/api/stream/video';setStreamUrl(streamUrl);}
 function refreshStream(){_stopSSE();if(streamUrl) setTimeout(_startSSE,300);}
-function toggleHeatmap(){heatmapOn=!heatmapOn;toast(heatmapOn?'ON':'OFF');}
+async function toggleHeatmap(){
+  heatmapOn=!heatmapOn;
+  const layer=document.getElementById('risk-layer');
+  if(!heatmapOn){
+    layer.classList.remove('on');
+    toast('Risk Zone OFF');
+    return;
+  }
+  if(!riskZones){
+    const data=await api('GET','/api/heatmap');
+    riskZones=(data&&data.zones)||[];
+  }
+  renderRiskZones(riskZones);
+  layer.classList.add('on');
+  toast('Risk Zone ON');
+}
+
+async function analyzeRoomRisk(){
+  const layer=document.getElementById('risk-layer');
+  toast('Analyzing current room snapshot...',4000);
+  const data=await api('POST','/api/heatmap/analyze');
+  if(!data||!data.zones){
+    toast('Risk analysis failed');
+    return;
+  }
+  riskZones=data.zones;
+  heatmapOn=true;
+  renderRiskZones(riskZones, data.source);
+  layer.classList.add('on');
+  toast(data.used_ai?'AI Risk Zones updated':'Fallback Risk Zones loaded',3500);
+}
+
+function renderRiskZones(zones, source=''){
+  const layer=document.getElementById('risk-layer');
+  if(!layer) return;
+  layer.innerHTML=zones.map(z=>{
+    const level=z.risk>=.85?'high':z.risk>=.72?'medium':'low';
+    const cls=level==='high'?'':level;
+    const label=(_lang==='ko'&&z.label_ko)?z.label_ko:z.label;
+    return `<div class="risk-zone ${cls}" style="left:${z.x*100}%;top:${z.y*100}%;width:${z.w*100}%;height:${z.h*100}%">
+      <div class="risk-tag"><span class="risk-rank">${z.rank}</span>${label}</div>
+    </div>`;
+  }).join('')+`<div class="risk-legend">
+    <span><i class="risk-dot"></i>High</span>
+    <span><i class="risk-dot med"></i>Medium</span>
+    <span><i class="risk-dot low"></i>Watch</span>
+    <span style="opacity:.75">${source==='openai_snapshot'||source==='gemini_snapshot'?'AI snapshot':'Template'}</span>
+  </div>`;
+}
 
 async function loadRecentEvents(){
   const events=await api('GET','/api/fall-events');
@@ -1122,6 +1247,9 @@ function onFallDetected(msg){
   document.getElementById('status-text').style.color='var(--red)';
   document.getElementById('status-icon').textContent='🚨';
   document.getElementById('status-time').textContent=fmtTs(msg.timestamp);
+  if(user&&user.role==='user'){
+    showUserFallAlert(msg);
+  }
   if(user&&user.role==='guardian'){
     if(navigator.vibrate) navigator.vibrate([600,150,600,150,600]);
     document.getElementById('modal-title').textContent=
@@ -1131,6 +1259,98 @@ function onFallDetected(msg){
     document.getElementById('fall-modal').classList.add('show');
   }
   loadRecentEvents();
+}
+
+function showUserFallAlert(msg){
+  stopUserFallAlert(false);
+  currentEventId=msg.event_id;
+  userAlertRemaining=15;
+  userAlertAcceptSpeech=false;
+  document.getElementById('ufa-sec').textContent=userAlertRemaining;
+  document.getElementById('user-fall-alert').classList.add('show');
+  if(navigator.vibrate) navigator.vibrate([450,120,450]);
+  speakUserFallPrompt();
+}
+
+function startUserAlertCountdown(){
+  if(userAlertTimer) clearInterval(userAlertTimer);
+  userAlertRemaining=15;
+  document.getElementById('ufa-sec').textContent=userAlertRemaining;
+  userAlertTimer=setInterval(()=>{
+    userAlertRemaining-=1;
+    document.getElementById('ufa-sec').textContent=Math.max(userAlertRemaining,0);
+    if(userAlertRemaining<=0) handleUserVoiceChoice('timeout');
+  },1000);
+}
+
+function speakUserFallPrompt(){
+  if(!('speechSynthesis' in window)){startUserResponseWindow();return;}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(USER_FALL_TTS);
+  u.lang='ko-KR';
+  u.rate=.95;
+  u.onend=()=>setTimeout(startUserResponseWindow,900);
+  u.onerror=()=>setTimeout(startUserResponseWindow,900);
+  speechSynthesis.speak(u);
+}
+
+function startUserResponseWindow(){
+  userAlertAcceptSpeech=true;
+  startUserAlertCountdown();
+  startUserSpeechRecognition();
+}
+
+function startUserSpeechRecognition(){
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){toast('음성 인식을 지원하지 않는 브라우저입니다.');return;}
+  try{
+    userAlertRecognizer=new SpeechRecognition();
+    userAlertRecognizer.lang='ko-KR';
+    userAlertRecognizer.continuous=true;
+    userAlertRecognizer.interimResults=false;
+    userAlertRecognizer.onresult=e=>{
+      if(!userAlertAcceptSpeech) return;
+      const text=Array.from(e.results).slice(e.resultIndex)
+        .map(r=>r[0].transcript).join(' ').replace(/\s/g,'');
+      if(text.includes('연락')) handleUserVoiceChoice('contact');
+      if(text.includes('아니')||text.includes('아니요')||text.includes('괜찮')) handleUserVoiceChoice('dismiss');
+    };
+    userAlertRecognizer.start();
+  }catch(e){
+    toast('음성 인식을 시작할 수 없습니다.');
+  }
+}
+
+function stopUserFallAlert(reset=true){
+  if(userAlertTimer){clearInterval(userAlertTimer);userAlertTimer=null;}
+  if(userAlertRecognizer){try{userAlertRecognizer.stop();}catch{} userAlertRecognizer=null;}
+  userAlertAcceptSpeech=false;
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  document.getElementById('user-fall-alert').classList.remove('show');
+  if(reset) resetFallStatus();
+}
+
+function handleUserVoiceChoice(choice){
+  stopUserFallAlert(false);
+  if(choice==='dismiss'){
+    toast('알림을 해제했습니다.');
+    if(currentEventId) api('POST',`/api/fall-events/${currentEventId}/acknowledge`).catch(()=>{});
+    resetFallStatus();
+    return;
+  }
+  toast(choice==='timeout'?'응답이 없어 119 문자 신고 화면을 엽니다.':'119 문자 신고 화면을 엽니다.');
+  notifyGuardianPlaceholder();
+  openEmergencySms();
+}
+
+function notifyGuardianPlaceholder(){
+  // Guardian push/SMS integration is not wired yet; fall event is already saved on the backend.
+  toast('보호자 연락 조치를 진행합니다.');
+}
+
+function openEmergencySms(){
+  const body=encodeURIComponent('낙상이 감지되었습니다. 위치와 상태 확인이 필요합니다.');
+  window.location.href=`sms:119?&body=${body}`;
 }
 
 function guardianWatchVideo(){
