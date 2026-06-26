@@ -357,12 +357,19 @@ async def upload_screenshot(event_id: str, file: UploadFile = File(...), dev=Dep
 @app.get("/api/fall-events/{event_id}/screenshot")
 def get_screenshot(event_id: str, user=Depends(auth_media)):
     ev = db.get_fall_event(event_id)
-    if not ev or not ev.get("thumbnail_path"):
-        raise HTTPException(404, "No screenshot")
-    path = Path(ev["thumbnail_path"])
-    if not path.exists():
-        raise HTTPException(404, "File not found")
-    return FileResponse(str(path), media_type="image/jpeg")
+    if not ev:
+        raise HTTPException(404, "Event not found")
+    # Try DB path first
+    if ev.get("thumbnail_path"):
+        path = Path(ev["thumbnail_path"])
+        if path.exists():
+            return FileResponse(str(path), media_type="image/jpeg")
+    # Fallback: check computed path (handles race condition where DB not updated yet)
+    fallback = THUMBS / f"{event_id}_thumb.jpg"
+    if fallback.exists():
+        db.update_fall_event_thumbnail(event_id, str(fallback))
+        return FileResponse(str(fallback), media_type="image/jpeg")
+    raise HTTPException(404, "No screenshot")
 
 
 @app.get("/api/fall-events/{event_id}/emergency-report")
