@@ -116,7 +116,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 #toast.t-err{background:rgba(239,68,68,.93)}
 
 /* ── ACCORDION ───────────── */
-.acc{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.acc{background:var(--card);border-radius:var(--radius);border:1px solid var(--border)}
 .acc-row{border-bottom:1px solid var(--border)}
 .acc-row:last-child{border-bottom:none}
 .acc-hd{width:100%;display:flex;align-items:center;gap:10px;padding:17px 16px;
@@ -130,8 +130,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .acc-badge.on{background:rgba(16,185,129,.15);color:var(--green)}
 .acc-chevron{flex-shrink:0;transition:transform .22s;color:var(--muted);margin-left:2px}
 .acc-hd.open .acc-chevron{transform:rotate(180deg)}
-.acc-body{display:none;padding:0 16px 18px}
+.acc-body{display:none;padding:0 16px 18px;overflow:visible}
 .acc-body.open{display:block}
+/* first/last row rounded corners */
+.acc-row:first-child .acc-hd{border-radius:var(--radius) var(--radius) 0 0}
+.acc-row:last-child .acc-hd:not(.open){border-radius:0 0 var(--radius) var(--radius)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ── AUTH ────────────────────────────────────────────── */
@@ -560,7 +563,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <h1 data-i18n="settings">설정</h1>
     <button class="tb-btn cancel" onclick="doLogout()" data-i18n="logout">로그아웃</button>
   </div>
-  <div class="scroll p16 flex flex-col gap12">
+  <div class="scroll" style="padding:16px">
 
     <!-- Accordion -->
     <div class="acc">
