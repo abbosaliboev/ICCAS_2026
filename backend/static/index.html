@@ -106,12 +106,32 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── TOAST ───────────────────────────────────────────── */
-#toast{position:fixed;bottom:80px;left:50%;
+#toast{position:fixed;bottom:84px;left:50%;
   transform:translateX(-50%) translateY(16px);
-  background:var(--text);color:var(--bg);padding:10px 22px;border-radius:99px;
-  font-size:.86rem;font-weight:600;opacity:0;
-  transition:opacity .25s,transform .25s;z-index:9000;white-space:nowrap;
-  box-shadow:var(--shadow-sm)}
+  background:rgba(30,40,60,.92);color:#fff;padding:12px 24px;border-radius:99px;
+  font-size:.88rem;font-weight:600;opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s,background .2s;z-index:9200;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,.35);backdrop-filter:blur(8px)}
+#toast.t-ok{background:rgba(16,185,129,.93)}
+#toast.t-err{background:rgba(239,68,68,.93)}
+
+/* ── ACCORDION ───────────── */
+.acc{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
+.acc-row{border-bottom:1px solid var(--border)}
+.acc-row:last-child{border-bottom:none}
+.acc-hd{width:100%;display:flex;align-items:center;gap:10px;padding:17px 16px;
+  background:none;border:none;color:var(--text);font-size:.95rem;font-weight:600;
+  cursor:pointer;text-align:left;min-height:56px;-webkit-tap-highlight-color:transparent}
+.acc-hd:active{background:var(--card2)}
+.acc-icon{font-size:1.15rem;flex-shrink:0;width:24px;text-align:center}
+.acc-title{flex:1}
+.acc-badge{font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:99px;
+  background:var(--card2);color:var(--muted);white-space:nowrap;flex-shrink:0}
+.acc-badge.on{background:rgba(16,185,129,.15);color:var(--green)}
+.acc-chevron{flex-shrink:0;transition:transform .22s;color:var(--muted);margin-left:2px}
+.acc-hd.open .acc-chevron{transform:rotate(180deg)}
+.acc-body{display:none;padding:0 16px 18px}
+.acc-body.open{display:block}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ── AUTH ────────────────────────────────────────────── */
@@ -540,98 +560,125 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <h1 data-i18n="settings">설정</h1>
     <button class="tb-btn cancel" onclick="doLogout()" data-i18n="logout">로그아웃</button>
   </div>
-  <div class="scroll">
+  <div class="scroll p16 flex flex-col gap12">
 
-    <div class="sec">
-      <div class="sec-lbl" data-i18n="theme_lbl">테마</div>
-      <div class="card">
-        <div class="theme-grp">
-          <button class="theme-btn on" id="btn-dark" onclick="setTheme('dark')">
-            🌙 <span data-i18n="dark">다크</span>
-          </button>
-          <button class="theme-btn" id="btn-light" onclick="setTheme('light')">
-            ☀️ <span data-i18n="light">라이트</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Accordion -->
+    <div class="acc">
 
-    <div class="sec mt12">
-      <div class="sec-lbl" data-i18n="language">언어 / Language</div>
-      <div class="card">
-        <div class="lang-grid" id="lang-grid">
-          <div class="lang-btn on" onclick="setLang('ko')"><span class="lang-flag">🇰🇷</span><span class="lang-name">한국어</span></div>
-          <div class="lang-btn" onclick="setLang('en')"><span class="lang-flag">🇺🇸</span><span class="lang-name">English</span></div>
-          <div class="lang-btn" onclick="setLang('es')"><span class="lang-flag">🇪🇸</span><span class="lang-name">Español</span></div>
-          <div class="lang-btn" onclick="setLang('fr')"><span class="lang-flag">🇫🇷</span><span class="lang-name">Français</span></div>
-          <div class="lang-btn" onclick="setLang('ru')"><span class="lang-flag">🇷🇺</span><span class="lang-name">Русский</span></div>
-          <div class="lang-btn" onclick="setLang('zh')"><span class="lang-flag">🇨🇳</span><span class="lang-name">中文</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sec mt12">
-      <div class="sec-lbl">📞 <span data-i18n="contacts_lbl">긴급 연락처</span></div>
-      <div class="card">
-        <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px" data-i18n="contacts_desc">낙상 감지 시 빠르게 전화할 연락처를 추가하세요.</p>
-        <div class="fg" style="margin-bottom:10px">
-          <label data-i18n="contact_name">이름</label>
-          <input id="cfg-c-name" class="fi" type="text" data-i18n-ph="c_name_ph">
-        </div>
-        <div class="fg" style="margin-bottom:14px">
-          <label data-i18n="contact_phone">전화번호</label>
-          <input id="cfg-c-phone" class="fi" type="tel" data-i18n-ph="c_phone_ph">
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="saveContact()" data-i18n="save_btn">저장</button>
-      </div>
-    </div>
-
-    <div class="sec mt12">
-      <div class="sec-lbl" data-i18n="camera_lbl">카메라</div>
-      <div class="card">
-        <div class="fg"><label data-i18n="stream_url">스트림 URL</label><input id="cfg-stream-url" class="fi" type="url" placeholder="http://IP:8081/video"></div>
-        <div class="fg"><label data-i18n="device_token">디바이스 토큰</label><input id="cfg-device-token" class="fi" type="text" placeholder="edge-device-001"></div>
-        <button class="btn btn-primary btn-sm" onclick="saveDeviceConfig()"><span data-i18n="save_btn">저장</span></button>
-      </div>
-    </div>
-
-    <div class="sec mt12">
-      <div class="sec-lbl" data-i18n="account_lbl">계정</div>
-      <div class="card">
-        <div id="user-profile-info"></div>
-        <div id="guardian-link-wrap" class="mt12">
-          <div class="fg">
-            <label data-i18n="guardian_id">보호자 아이디</label>
-            <input id="cfg-guardian-id" class="fi" type="text">
+      <!-- 1. Appearance -->
+      <div class="acc-row">
+        <button class="acc-hd" onclick="toggleAcc(this)">
+          <span class="acc-icon">🎨</span>
+          <span class="acc-title" data-i18n="appearance_lbl">테마 & 언어</span>
+          <svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="acc-body">
+          <div class="theme-grp" style="margin-bottom:16px">
+            <button class="theme-btn on" id="btn-dark" onclick="setTheme('dark')">🌙 <span data-i18n="dark">다크</span></button>
+            <button class="theme-btn" id="btn-light" onclick="setTheme('light')">☀️ <span data-i18n="light">라이트</span></button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="linkGuardian()"><span data-i18n="link_btn">연결</span></button>
+          <div class="lang-grid" id="lang-grid">
+            <div class="lang-btn on" onclick="setLang('ko')"><span class="lang-flag">🇰🇷</span><span class="lang-name">한국어</span></div>
+            <div class="lang-btn" onclick="setLang('en')"><span class="lang-flag">🇺🇸</span><span class="lang-name">English</span></div>
+            <div class="lang-btn" onclick="setLang('es')"><span class="lang-flag">🇪🇸</span><span class="lang-name">Español</span></div>
+            <div class="lang-btn" onclick="setLang('fr')"><span class="lang-flag">🇫🇷</span><span class="lang-name">Français</span></div>
+            <div class="lang-btn" onclick="setLang('ru')"><span class="lang-flag">🇷🇺</span><span class="lang-name">Русский</span></div>
+            <div class="lang-btn" onclick="setLang('zh')"><span class="lang-flag">🇨🇳</span><span class="lang-name">中文</span></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="sec mt12">
-      <div class="sec-lbl">🛏 <span data-i18n="safe_zone_lbl">안전 구역</span></div>
-      <div class="card">
-        <p style="font-size:.83rem;color:var(--muted);margin-bottom:12px" data-i18n="safe_zone_desc">침대 등 누워있는 공간을 지정하면 해당 구역에서는 낙상이 감지되지 않습니다.</p>
-        <div id="sz-canvas-wrap" style="display:none;position:relative;margin-bottom:12px;border-radius:var(--rs);overflow:hidden;background:#000">
-          <img id="sz-snapshot" style="width:100%;display:block;user-select:none;-webkit-user-select:none">
-          <canvas id="sz-canvas" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none"></canvas>
-        </div>
-        <div id="sz-status" style="font-size:.82rem;color:var(--muted);margin-bottom:10px"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="szLoadSnapshot()" data-i18n="sz_draw">구역 그리기</button>
-          <button class="btn btn-ghost btn-sm" id="sz-clear-btn" onclick="szClear()" style="display:none" data-i18n="sz_clear">구역 삭제</button>
+      <!-- 2. Emergency Contact -->
+      <div class="acc-row">
+        <button class="acc-hd" onclick="toggleAcc(this)">
+          <span class="acc-icon">📞</span>
+          <span class="acc-title" data-i18n="contacts_lbl">긴급 연락처</span>
+          <span id="acc-badge-contact" class="acc-badge">—</span>
+          <svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="acc-body">
+          <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px" data-i18n="contacts_desc">낙상 감지 시 빠르게 전화할 연락처를 추가하세요.</p>
+          <div class="fg" style="margin-bottom:10px">
+            <label data-i18n="contact_name">이름</label>
+            <input id="cfg-c-name" class="fi" type="text" data-i18n-ph="c_name_ph">
+          </div>
+          <div class="fg" style="margin-bottom:16px">
+            <label data-i18n="contact_phone">전화번호</label>
+            <input id="cfg-c-phone" class="fi" type="tel" data-i18n-ph="c_phone_ph">
+          </div>
+          <button class="btn btn-primary" onclick="saveContact()" data-i18n="save_btn">저장</button>
         </div>
       </div>
-    </div>
 
-    <div class="sec mt12" style="margin-bottom:24px">
-      <div class="sec-lbl" data-i18n="app_info_lbl">앱 정보</div>
-      <div class="card">
-        <div class="dr"><span class="dk" data-i18n="ver_lbl">버전</span><span class="dv" id="app-version">1.3.0 (2026-06-26)</span></div>
-        <div class="dr"><span class="dk" data-i18n="model_lbl">모델</span><span class="dv">ST-GCN + Physics</span></div>
-        <div class="dr"><span class="dk" data-i18n="device_lbl">에지 디바이스</span><span class="dv">Jetson Orin NX</span></div>
+      <!-- 3. Camera -->
+      <div class="acc-row">
+        <button class="acc-hd" onclick="toggleAcc(this)">
+          <span class="acc-icon">📡</span>
+          <span class="acc-title" data-i18n="camera_lbl">카메라</span>
+          <span id="acc-badge-camera" class="acc-badge">—</span>
+          <svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="acc-body">
+          <div class="fg" style="margin-bottom:10px">
+            <label data-i18n="stream_url">스트림 URL</label>
+            <input id="cfg-stream-url" class="fi" type="url" placeholder="http://IP:8081/video">
+          </div>
+          <div class="fg" style="margin-bottom:16px">
+            <label data-i18n="device_token">디바이스 토큰</label>
+            <input id="cfg-device-token" class="fi" type="text" placeholder="edge-device-001">
+          </div>
+          <button class="btn btn-primary" onclick="saveDeviceConfig()"><span data-i18n="save_btn">저장</span></button>
+        </div>
       </div>
+
+      <!-- 4. Safe Zone -->
+      <div class="acc-row">
+        <button class="acc-hd" onclick="toggleAcc(this)">
+          <span class="acc-icon">🛏</span>
+          <span class="acc-title" data-i18n="safe_zone_lbl">안전 구역</span>
+          <span id="acc-badge-zone" class="acc-badge">—</span>
+          <svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="acc-body">
+          <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px" data-i18n="safe_zone_desc">침대 등 누워있는 공간을 지정하면 해당 구역에서는 낙상이 감지되지 않습니다.</p>
+          <div id="sz-canvas-wrap" style="display:none;position:relative;margin-bottom:12px;border-radius:var(--rs);overflow:hidden;background:#000">
+            <img id="sz-snapshot" style="width:100%;display:block;user-select:none;-webkit-user-select:none">
+            <canvas id="sz-canvas" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none"></canvas>
+          </div>
+          <div id="sz-status" style="font-size:.82rem;color:var(--muted);margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline" style="flex:1" onclick="szLoadSnapshot()" data-i18n="sz_draw">구역 그리기</button>
+            <button class="btn btn-ghost" id="sz-clear-btn" onclick="szClear()" style="display:none;flex:1" data-i18n="sz_clear">구역 삭제</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Account -->
+      <div class="acc-row">
+        <button class="acc-hd" onclick="toggleAcc(this)">
+          <span class="acc-icon">👤</span>
+          <span class="acc-title" data-i18n="account_lbl">계정</span>
+          <svg class="acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="acc-body">
+          <div id="user-profile-info" style="margin-bottom:14px"></div>
+          <div id="guardian-link-wrap">
+            <div class="fg" style="margin-bottom:10px">
+              <label data-i18n="guardian_id">보호자 아이디</label>
+              <input id="cfg-guardian-id" class="fi" type="text">
+            </div>
+            <button class="btn btn-outline" onclick="linkGuardian()"><span data-i18n="link_btn">연결</span></button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /acc -->
+
+    <!-- App info -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="dr"><span class="dk" data-i18n="ver_lbl">버전</span><span class="dv" id="app-version">1.3.0 (2026-06-26)</span></div>
+      <div class="dr"><span class="dk" data-i18n="model_lbl">모델</span><span class="dv">ST-GCN + Physics</span></div>
+      <div class="dr"><span class="dk" data-i18n="device_lbl">에지 디바이스</span><span class="dv">Jetson Orin NX</span></div>
     </div>
 
   </div>
@@ -699,6 +746,7 @@ ko:{
   role_guardian:'보호자',role_guardian_desc:'알림 & 모니터링',
   guardian_id:'보호자 아이디',register_btn:'등록 완료',
   choose_role:'사용자 유형 선택',choose_role_sub:'서비스 이용 목적을 선택해 주세요',
+  appearance_lbl:'테마 & 언어',
   dashboard:'대시보드',history:'기록',settings:'설정',
   live:'실시간 모니터링',detecting:'감지 현황',status_normal:'정상',
   waiting:'대기 중',stream_hint:'스트림 URL을 입력하세요',
@@ -743,6 +791,7 @@ en:{
   role_guardian:'Guardian',role_guardian_desc:'Alert & Monitoring',
   guardian_id:"Guardian's username",register_btn:'Create Account',
   choose_role:'Choose Role',choose_role_sub:'Select how you will use this service',
+  appearance_lbl:'Theme & Language',
   dashboard:'Dashboard',history:'History',settings:'Settings',
   live:'Live Monitor',detecting:'Detection Status',status_normal:'Normal',
   waiting:'Waiting...',stream_hint:'Enter edge device stream URL',
@@ -787,6 +836,7 @@ es:{
   role_guardian:'Guardián',role_guardian_desc:'Alertas y monitoreo',
   guardian_id:'Usuario guardián',register_btn:'Crear cuenta',
   choose_role:'Elegir rol',choose_role_sub:'Seleccione cómo usará el servicio',
+  appearance_lbl:'Tema e Idioma',
   dashboard:'Panel',history:'Historial',settings:'Ajustes',
   live:'Monitor en vivo',detecting:'Estado de detección',status_normal:'Normal',
   waiting:'Esperando...',stream_hint:'Ingrese la URL del stream',
@@ -825,6 +875,7 @@ fr:{
   role_guardian:'Gardien',role_guardian_desc:'Alertes et surveillance',
   guardian_id:'Identifiant gardien',register_btn:'Créer le compte',
   choose_role:'Choisir un rôle',choose_role_sub:'Sélectionnez comment utiliser le service',
+  appearance_lbl:'Thème & Langue',
   dashboard:'Tableau de bord',history:'Historique',settings:'Paramètres',
   live:'Surveillance live',detecting:'État de détection',status_normal:'Normal',
   waiting:'En attente...',stream_hint:"Entrez l'URL du flux vidéo",
@@ -863,6 +914,7 @@ ru:{
   role_guardian:'Опекун',role_guardian_desc:'Оповещения и мониторинг',
   guardian_id:'Логин опекуна',register_btn:'Создать аккаунт',
   choose_role:'Выбор роли',choose_role_sub:'Выберите способ использования сервиса',
+  appearance_lbl:'Тема и язык',
   dashboard:'Панель',history:'История',settings:'Настройки',
   live:'Мониторинг',detecting:'Статус обнаружения',status_normal:'Норма',
   waiting:'Ожидание...',stream_hint:'Введите URL потока устройства',
@@ -901,6 +953,7 @@ zh:{
   role_guardian:'监护人',role_guardian_desc:'警报与监控',
   guardian_id:'监护人用户名',register_btn:'创建账户',
   choose_role:'选择角色',choose_role_sub:'请选择您的服务使用目的',
+  appearance_lbl:'主题和语言',
   dashboard:'仪表板',history:'历史',settings:'设置',
   live:'实时监控',detecting:'检测状态',status_normal:'正常',
   waiting:'等待中...',stream_hint:'输入边缘设备流URL',
@@ -1004,10 +1057,30 @@ async function api(method,path,body){
   return r.json().catch(()=>null);
 }
 
-function toast(msg,ms=2500){
+function toast(msg, type='', ms=2600){
   const el=document.getElementById('toast');
-  el.textContent=msg;el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),ms);
+  el.textContent=msg;
+  el.className='show '+(type==='ok'?'t-ok':type==='err'?'t-err':'');
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>{el.className='';},ms);
+}
+
+function toggleAcc(btn){
+  const open=btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open',open);
+}
+
+function updateAccBadges(){
+  // contact
+  const c=getContact();
+  const cb=document.getElementById('acc-badge-contact');
+  if(cb){cb.textContent=c?c.name:'—';cb.className='acc-badge'+(c?' on':'');}
+  // camera
+  const url=localStorage.getItem('mg_stream_url');
+  const camb=document.getElementById('acc-badge-camera');
+  if(camb){camb.textContent=url?'✓':'—';camb.className='acc-badge'+(url?' on':'');}
+  // safe zone
+  szLoadSettings();
 }
 
 // ── SCREEN ROUTER ──────────────────────────────────────
@@ -1030,7 +1103,7 @@ function switchTab(tab){
 async function doLogin(){
   const username=document.getElementById('login-username').value.trim();
   const password=document.getElementById('login-password').value.trim();
-  if(!username||!password){toast(t('login_fail'));return;}
+  if(!username||!password){toast(t('login_fail'),'err');return;}
   const res=await fetch(API+'/api/auth/login',{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({username,password})
@@ -1062,7 +1135,7 @@ async function doRegister(){
     phone:document.getElementById('reg-phone').value.trim(),
     address:document.getElementById('reg-address').value.trim(),
   };
-  if(!body.username||!body.password){toast(t('login_fail'));return;}
+  if(!body.username||!body.password){toast(t('login_fail'),'err');return;}
   const res=await fetch(API+'/api/auth/register',{
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
   });
@@ -1080,7 +1153,7 @@ async function doRegister(){
   user=me;
   localStorage.setItem('mg_token',token);
   localStorage.setItem('mg_user',JSON.stringify(user));
-  toast(t('registered_msg'));
+  toast(t('registered_msg'),'ok');
   afterLogin();
 }
 
@@ -1172,7 +1245,7 @@ function saveContact(){
   if(!phone){ toast('전화번호를 입력하세요'); return; }
   localStorage.setItem('mg_contact',JSON.stringify({name:name||phone, phone}));
   updateCallBtn();
-  toast(t('saved_msg'));
+  toast(t('saved_msg'),'ok');
 }
 
 function loadContactSettings(){
@@ -1267,12 +1340,15 @@ async function szLoadSettings(){
   _szZones=(data&&data.zones)||[];
   const status=document.getElementById('sz-status');
   const clearBtn=document.getElementById('sz-clear-btn');
+  const badge=document.getElementById('acc-badge-zone');
   if(_szZones.length){
-    status.textContent=t('sz_active')+': '+_szZones.length;
-    clearBtn.style.display='';
+    if(status) status.textContent=t('sz_active')+': '+_szZones.length;
+    if(clearBtn) clearBtn.style.display='';
+    if(badge){badge.textContent='✓';badge.className='acc-badge on';}
   } else {
-    status.textContent='';
-    clearBtn.style.display='none';
+    if(status) status.textContent='';
+    if(clearBtn) clearBtn.style.display='none';
+    if(badge){badge.textContent='—';badge.className='acc-badge';}
   }
 }
 
@@ -1352,7 +1428,7 @@ function szRedraw(){
 
 async function szSave(){
   await api('POST','/api/safe-zone',{zones:_szZones});
-  toast(t('sz_saved'));
+  toast(t('sz_saved'),'ok');
   const status=document.getElementById('sz-status');
   status.textContent=t('sz_active')+': 1';
   document.getElementById('sz-clear-btn').style.display='';
@@ -1364,7 +1440,7 @@ async function szClear(){
   document.getElementById('sz-canvas-wrap').style.display='none';
   document.getElementById('sz-status').textContent='';
   document.getElementById('sz-clear-btn').style.display='none';
-  toast(t('sz_cleared'));
+  toast(t('sz_cleared'),'ok');
 }
 
 function openImgViewer(url){
@@ -1512,7 +1588,7 @@ async function openDetail(eventId){
 // ── DELETE ─────────────────────────────────────────────
 async function deleteEvent(id){
   const res=await api('DELETE',`/api/fall-events/${id}`);
-  if(res!==null){toast(t('deleted_msg'));loadHistory();}
+  if(res!==null){toast(t('deleted_msg'),'ok');loadHistory();}
 }
 
 // ── SAVE (single swipe) ────────────────────────────────
@@ -1529,7 +1605,7 @@ async function saveEvent(id){
   const a=document.createElement('a');
   a.href=url;a.download=`fall_${id.slice(0,8)}.${ext}`;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
-  toast(t('saved_msg'));
+  toast(t('saved_msg'),'ok');
 }
 
 // ── SELECT MODE ────────────────────────────────────────
@@ -1597,7 +1673,7 @@ async function deleteSelected(){
   if(!_selected.size) return;
   const ids=[..._selected];
   await Promise.all(ids.map(id=>api('DELETE',`/api/fall-events/${id}`)));
-  toast(t('deleted_msg'));
+  toast(t('deleted_msg'),'ok');
   exitSelectMode();
   loadHistory();
 }
@@ -1619,7 +1695,7 @@ async function saveSelected(){
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     await new Promise(r=>setTimeout(r,400));
   }
-  toast(t('saved_msg'));
+  toast(t('saved_msg'),'ok');
 }
 
 // ── SWIPE TO DELETE ────────────────────────────────────
@@ -1677,7 +1753,7 @@ function loadSettings(){
   document.getElementById('cfg-stream-url').value=streamUrl;
   document.getElementById('cfg-device-token').value=localStorage.getItem('mg_device_token')||'edge-device-001';
   applyI18n();
-  szLoadSettings();
+  updateAccBadges();
   renderContactsSettings();
   if(user){
     document.getElementById('user-profile-info').innerHTML=`
@@ -1696,12 +1772,12 @@ async function saveDeviceConfig(){
   localStorage.setItem('mg_device_token',dtoken);
   setStreamUrl(url);
   if(dtoken) await api('POST','/api/devices',{device_token:dtoken,stream_url:url});
-  toast(t('saved_msg'));
+  toast(t('saved_msg'),'ok');
 }
 
 async function linkGuardian(){
   const gid=document.getElementById('cfg-guardian-id').value.trim();
-  if(!gid){toast(t('link_fail'));return;}
+  if(!gid){toast(t('link_fail'),'err');return;}
   const res=await api('POST','/api/users/link-guardian',{guardian_username:gid});
   toast(res&&res.ok?t('linked_msg'):t('link_fail'));
 }
