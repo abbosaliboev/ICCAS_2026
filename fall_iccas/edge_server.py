@@ -452,7 +452,8 @@ def main():
                 client.post_fall(event_id, "severe", datetime.now().isoformat())
                 log.info("FALL DETECTED — alert active")
                 ss_path = os.path.join(snap_dir, f"{event_id}.jpg")
-                cv2.imwrite(ss_path, frame)
+                ss_frame = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
+                cv2.imwrite(ss_path, ss_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
                 threading.Thread(target=client.upload_screenshot, args=(event_id, ss_path), daemon=True).start()
 
         # auto-reset
