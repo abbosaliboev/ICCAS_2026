@@ -132,6 +132,16 @@ def create_user(username, password, role, display_name, age, phone, address):
         conn.close()
 
 
+def update_user_profile(user_id: str, display_name: str, age, phone: str, address: str):
+    conn = get_conn()
+    conn.execute(
+        "UPDATE users SET display_name=?, age=?, phone=?, address=? WHERE id=?",
+        (display_name, age, phone, address, user_id)
+    )
+    conn.commit()
+    conn.close()
+
+
 def link_guardian(user_id: str, guardian_id: str):
     conn = get_conn()
     conn.execute("UPDATE users SET guardian_id=? WHERE id=?", (guardian_id, user_id))
