@@ -1251,25 +1251,12 @@ async function openDetail(eventId){
   }
   const ssImg2=document.getElementById('detail-screenshot');
   const ssUrl=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
-  console.log('[SS] ssWrap element:', ssWrap);
-  console.log('[SS] ssImg2 element:', ssImg2);
-  console.log('[SS] ssWrap classList before:', [...ssWrap.classList]);
-  console.log('[SS] ssWrap computed display:', getComputedStyle(ssWrap).display);
-  console.log('[SS] ssUrl:', ssUrl);
-  ssImg2.onload=()=>{
-    console.log('[SS] onload fired! naturalWidth:', ssImg2.naturalWidth);
-    ssWrap.classList.add('ss-visible');
-    console.log('[SS] ssWrap classList after add:', [...ssWrap.classList]);
-    console.log('[SS] ssWrap computed display after:', getComputedStyle(ssWrap).display);
-  };
+  ssImg2.onload=()=>{ ssWrap.classList.add('ss-visible'); };
   ssImg2.onerror=()=>{
-    console.log('[SS] onerror fired!');
     ssWrap.classList.add('ss-visible');
     ssWrap.innerHTML=`<a href="${ssUrl}" target="_blank" style="display:block;padding:14px;color:var(--accent);text-align:center;font-size:.9rem">📷 Rasmni ochish</a>`;
   };
-  console.log('[SS] setting src...');
   ssImg2.src=ssUrl;
-  console.log('[SS] src set, complete:', ssImg2.complete);
 
   document.getElementById('detail-info').innerHTML=`
     <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
