@@ -221,15 +221,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .bar-val{font-size:.68rem;font-weight:700;color:var(--accent);min-height:14px}
 .rpt-export{display:flex;gap:8px;margin-bottom:16px}
 .rpt-export .btn{flex:1}
-/* print */
+/* print — only #pdf-template shown */
 @media print{
-  .topbar,.nav,#img-viewer,.rpt-tabs,.rpt-export,
-  .stream-acts,.scroll:not(#rpt-scroll){display:none!important}
-  #screen-reports{display:block!important;overflow:visible!important}
-  #rpt-scroll{overflow:visible!important;padding:0!important}
-  .rpt-stat{border:1px solid #ccc!important}
-  body{background:#fff!important;color:#000!important}
+  body > *:not(#pdf-template){display:none!important}
+  #pdf-template{display:block!important}
 }
+#pdf-template{display:none}
 
 /* ── HISTORY ─────────────────────────────────────────── */
 .events-wrap{padding:0 16px}
@@ -599,8 +596,18 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <div id="rpt-chart" class="bar-chart"></div>
     </div>
     <div class="rpt-export">
-      <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
-      <button class="btn btn-outline btn-sm" onclick="printReport()">🖨 PDF</button>
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        CSV
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="generatePDF()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        PDF
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="sendReportEmail()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Email
+      </button>
     </div>
     <div class="card">
       <div class="ctitle" data-i18n="rpt_events">낙상 목록</div>
@@ -880,6 +887,55 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)">✕</button>
   <img id="img-viewer-img" style="max-width:100%;max-height:100dvh;
     object-fit:contain;touch-action:pinch-zoom;user-select:none;-webkit-user-select:none">
+</div>
+
+<div id="pdf-template" style="font-family:Arial,sans-serif;padding:32px;max-width:720px;margin:auto;color:#111">
+  <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #2563eb;padding-bottom:16px;margin-bottom:24px">
+    <div>
+      <div style="font-size:22px;font-weight:800;color:#2563eb">🛡️ MobiCare</div>
+      <div style="font-size:13px;color:#666;margin-top:2px">Fall Detection Report</div>
+    </div>
+    <div style="text-align:right">
+      <div id="pdf-period" style="font-size:15px;font-weight:700"></div>
+      <div id="pdf-date" style="font-size:12px;color:#666"></div>
+      <div id="pdf-user" style="font-size:12px;color:#666"></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+    <div style="background:#f0f7ff;border-radius:10px;padding:14px;text-align:center">
+      <div id="pdf-total" style="font-size:28px;font-weight:800;color:#2563eb"></div>
+      <div style="font-size:11px;color:#555;margin-top:4px;font-weight:600">TOTAL FALLS</div>
+    </div>
+    <div style="background:#fff0f0;border-radius:10px;padding:14px;text-align:center">
+      <div id="pdf-severe" style="font-size:28px;font-weight:800;color:#dc2626"></div>
+      <div style="font-size:11px;color:#555;margin-top:4px;font-weight:600">SEVERE</div>
+    </div>
+    <div style="background:#fff7ed;border-radius:10px;padding:14px;text-align:center">
+      <div id="pdf-peak" style="font-size:22px;font-weight:800;color:#ea580c"></div>
+      <div style="font-size:11px;color:#555;margin-top:4px;font-weight:600">PEAK HOUR</div>
+    </div>
+    <div style="background:#f0fdf4;border-radius:10px;padding:14px;text-align:center">
+      <div id="pdf-ack" style="font-size:28px;font-weight:800;color:#16a34a"></div>
+      <div style="font-size:11px;color:#555;margin-top:4px;font-weight:600">CONFIRMED</div>
+    </div>
+  </div>
+  <div style="margin-bottom:24px">
+    <div style="font-size:13px;font-weight:700;color:#444;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Fall Events</div>
+    <table id="pdf-table" style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#f8fafc">
+          <th style="text-align:left;padding:8px 12px;border:1px solid #e2e8f0;font-weight:700">Date & Time</th>
+          <th style="text-align:left;padding:8px 12px;border:1px solid #e2e8f0;font-weight:700">Category</th>
+          <th style="text-align:left;padding:8px 12px;border:1px solid #e2e8f0;font-weight:700">Status</th>
+        </tr>
+      </thead>
+      <tbody id="pdf-tbody"></tbody>
+    </table>
+  </div>
+  <div style="border-top:1px solid #e2e8f0;padding-top:12px;font-size:11px;color:#888;display:flex;justify-content:space-between">
+    <span>Generated by MobiCare • Fall Detection System</span>
+    <span id="pdf-footer-date"></span>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -1704,7 +1760,52 @@ function exportCSV(){
   a.click();URL.revokeObjectURL(a.href);
 }
 
-function printReport(){window.print();}
+function _fillPdfTemplate(ev){
+  const periodMap={today:'Today',week:'This Week',month:'This Month',all:'All Time'};
+  const now=new Date();
+  document.getElementById('pdf-period').textContent='Report: '+( periodMap[_rptPeriod]||_rptPeriod );
+  document.getElementById('pdf-date').textContent=now.toLocaleDateString();
+  document.getElementById('pdf-user').textContent=user?(user.display_name||user.username):'';
+  document.getElementById('pdf-footer-date').textContent='Printed: '+now.toLocaleString();
+  document.getElementById('pdf-total').textContent=ev.length;
+  document.getElementById('pdf-severe').textContent=ev.filter(e=>e.category==='severe').length;
+  document.getElementById('pdf-ack').textContent=ev.filter(e=>e.is_acknowledged).length;
+  // peak hour
+  const hrs={};ev.forEach(e=>{const h=new Date(e.timestamp||e.created_at).getHours();hrs[h]=(hrs[h]||0)+1;});
+  const peak=Object.entries(hrs).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('pdf-peak').textContent=peak?(peak[0]+':00'):'—';
+  // table rows
+  document.getElementById('pdf-tbody').innerHTML=ev.map(e=>`
+    <tr>
+      <td style="padding:7px 12px;border:1px solid #e2e8f0">${fmtTs(e.timestamp||e.created_at)}</td>
+      <td style="padding:7px 12px;border:1px solid #e2e8f0;color:${e.category==='severe'?'#dc2626':'#ea580c'};font-weight:600">${catLabel(e.category)}</td>
+      <td style="padding:7px 12px;border:1px solid #e2e8f0;color:${e.is_acknowledged?'#16a34a':'#ca8a04'}">${e.is_acknowledged?'✓ Confirmed':'● Pending'}</td>
+    </tr>`).join('');
+}
+
+function generatePDF(){
+  const ev=filterByPeriod(_rptEvents,_rptPeriod);
+  _fillPdfTemplate(ev);
+  const tpl=document.getElementById('pdf-template');
+  tpl.style.display='block';
+  setTimeout(()=>{ window.print(); setTimeout(()=>{ tpl.style.display='none'; },500); },100);
+}
+
+function printReport(){ generatePDF(); }
+
+function sendReportEmail(){
+  const s=JSON.parse(localStorage.getItem('mg_rpt_schedule')||'{}');
+  const email=s.email||(user&&user.email)||'';
+  const ev=filterByPeriod(_rptEvents,_rptPeriod);
+  const subject=encodeURIComponent(`MobiCare Report — ${new Date().toLocaleDateString()}`);
+  let body=`MobiCare Fall Detection Report\n`;
+  body+=`Period: ${_rptPeriod}  |  Date: ${new Date().toLocaleString()}\n`;
+  body+=`Total Falls: ${ev.length}  |  Severe: ${ev.filter(e=>e.category==='severe').length}\n\n`;
+  body+=ev.map(e=>`• ${fmtTs(e.timestamp||e.created_at)} — ${catLabel(e.category)} ${e.is_acknowledged?'[Confirmed]':''}`).join('\n');
+  const mailto=`mailto:${email}?subject=${subject}&body=${encodeURIComponent(body)}`;
+  window.location.href=mailto;
+  toast('이메일 앱이 열립니다','ok');
+}
 
 function saveRptSchedule(){
   const email=document.getElementById('cfg-rpt-email').value.trim();
