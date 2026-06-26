@@ -61,6 +61,29 @@ Tuned thresholds:
 - `vel_threshold = 0.0354`
 - `acc_threshold = 0.3545`
 
+## Ablation study (Subject 1+2+3+4, test set n=675)
+
+What each component contributes:
+
+| Configuration | Fall F1 | Precision | Recall | FP | FN | Notes |
+|---|:---:|:---:|:---:|:---:|:---:|---|
+| ST-GCN alone (Stage 1) | 0.950 | 0.95 | 0.95 | 5 | 5 | Baseline |
+| Physics filter alone | — | — | — | — | — | Not standalone (needs Stage 1 score) |
+| ST-GCN + Physics AND (old) | ~0.864* | — | — | — | — | Physics vetoes correct detections |
+| **ST-GCN + Physics Rescue (new)** | **0.955** | **0.95** | **0.96** | **5** | **4** | Physics only adds, never removes |
+
+> *AND logic result from Run 2 (Subject 1 only). Cross-subject AND result not measured.
+> Physics Rescue contribution: rescued 1 FN → FN 5→4 (+1 recall, same precision).
+
+## Comparison with expected baselines (TODO)
+
+| Model | Expected Fall F1 | Status |
+|---|:---:|---|
+| LSTM (flat keypoints) | ~0.80–0.88 | ⬜ not yet implemented |
+| TCN (flat keypoints) | ~0.85–0.90 | ⬜ not yet implemented |
+| ST-GCN alone | **0.950** | ✅ done |
+| **ST-GCN + Physics Rescue** | **0.955** | ✅ done |
+
 ## Run history
 
 ### Run 7 — 2026-06-14 (Subject 1+2+3+4, subject-stratified split)
@@ -233,6 +256,28 @@ True FALL           4          95      (4 FN)
 **날짜:** 2026-06-11
 **Fall F1:** ST-GCN 0.960 → ST-GCN + Physics Rescue **0.960**
 
+## Ablation study (Subject 1+2+3+4, 테스트셋 n=675)
+
+각 구성 요소의 기여도:
+
+| 구성 | Fall F1 | Precision | Recall | FP | FN | 비고 |
+|---|:---:|:---:|:---:|:---:|:---:|---|
+| ST-GCN 단독 (Stage 1) | 0.950 | 0.95 | 0.95 | 5 | 5 | Baseline |
+| ST-GCN + Physics AND (구형) | ~0.864* | — | — | — | — | physics가 올바른 감지를 삭제 |
+| **ST-GCN + Physics Rescue (신형)** | **0.955** | **0.95** | **0.96** | **5** | **4** | physics가 추가만 함 |
+
+> *AND 로직 결과는 Run 2 (Subject 1 only) 기준.
+> Physics Rescue 기여: FN 1개 추가 감지 (5→4), precision 유지.
+
+## 기대 Baseline 비교 (TODO)
+
+| 모델 | 기대 Fall F1 | 상태 |
+|---|:---:|---|
+| LSTM (flat keypoints) | ~0.80–0.88 | ⬜ 미구현 |
+| TCN (flat keypoints) | ~0.85–0.90 | ⬜ 미구현 |
+| ST-GCN 단독 | **0.950** | ✅ 완료 |
+| **ST-GCN + Physics Rescue** | **0.955** | ✅ 완료 |
+
 ## 결과 기록
 
 ### Run 7 — 2026-06-14 (Subject 1+2+3+4, subject-stratified split)
@@ -352,6 +397,28 @@ Saqlangan joy: `experiments/subject1_2_3_4/`
 
 **Sana:** 2026-06-11
 **Fall F1:** ST-GCN 0.960 → ST-GCN + Physics Rescue **0.960**
+
+## Ablation study (Subject 1+2+3+4, test set n=675)
+
+Har bir komponent qo'shgan hissa:
+
+| Konfiguratsiya | Fall F1 | Precision | Recall | FP | FN | Izoh |
+|---|:---:|:---:|:---:|:---:|:---:|---|
+| ST-GCN yolg'iz (Stage 1) | 0.950 | 0.95 | 0.95 | 5 | 5 | Baseline |
+| ST-GCN + Physics AND (eski) | ~0.864* | — | — | — | — | Physics to'g'ri topganlarni o'chiradi |
+| **ST-GCN + Physics Rescue (yangi)** | **0.955** | **0.95** | **0.96** | **5** | **4** | Physics faqat qo'shadi |
+
+> *AND mantiq natijasi Run 2 (Subject 1 only) dan.
+> Physics Rescue hissasi: 1 ta FN qo'shimcha aniqladi (5→4), precision o'zgarmasdan.
+
+## Kutilgan Baseline taqqosi (TODO)
+
+| Model | Kutilgan Fall F1 | Holat |
+|---|:---:|---|
+| LSTM (flat keypoints) | ~0.80–0.88 | ⬜ amalga oshirilmagan |
+| TCN (flat keypoints) | ~0.85–0.90 | ⬜ amalga oshirilmagan |
+| ST-GCN yolg'iz | **0.950** | ✅ bajarilgan |
+| **ST-GCN + Physics Rescue** | **0.955** | ✅ bajarilgan |
 
 ## Natijalar tarixi
 

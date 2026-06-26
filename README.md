@@ -47,6 +47,7 @@ python train_two_stage.py      # train ST-GCN + physics filter
 | Architecture | [fall_iccas/ARCHITECTURE.md](./fall_iccas/ARCHITECTURE.md) |
 | Training Results | [fall_iccas/RESULTS.md](./fall_iccas/RESULTS.md) |
 | FPS Benchmark | [fall_iccas/FPS_BENCHMARK.md](./fall_iccas/FPS_BENCHMARK.md) |
+| Limitations | [fall_iccas/LIMITATIONS.md](./fall_iccas/LIMITATIONS.md) |
 | Abstract (Markdown) | [Docs/Poster/abstract.md](./Docs/Poster/abstract.md) |
 | Poster (PDF) | [Docs/Poster/4조 초록.pdf](./Docs/Poster/4조%20초록.pdf) |
 
