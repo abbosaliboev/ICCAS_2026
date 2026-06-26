@@ -480,8 +480,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <span id="refresh-label" data-i18n="refresh">새로고침</span>
           <span id="refresh-spin" style="display:none">↻</span>
         </button>
-        <button class="btn btn-danger btn-sm" id="call-btn" onclick="callContact()">
-          📞 <span id="call-btn-label">119</span>
+        <button class="btn btn-sm" id="call-btn" onclick="callContact()"
+          style="background:rgba(239,68,68,.13);color:var(--red);font-weight:700">
+          <span id="call-btn-label">119</span>
         </button>
       </div>
     </div>
@@ -1727,7 +1728,7 @@ function renderReport(){
   if(ev.length){
     const last=new Date(ev[0].timestamp||ev[0].created_at);
     const diff=Math.floor((Date.now()-last)/60000);
-    document.getElementById('rpt-last').textContent=diff<60?diff+'분':diff<1440?Math.floor(diff/60)+'h':Math.floor(diff/1440)+'d';
+    document.getElementById('rpt-last').textContent=diff<60?diff+'m':diff<1440?Math.floor(diff/60)+'h':Math.floor(diff/1440)+'d';
   } else document.getElementById('rpt-last').textContent='—';
 
   // 7-day bar chart
@@ -1787,7 +1788,9 @@ function generatePDF(){
   _fillPdfTemplate(ev);
   const tpl=document.getElementById('pdf-template');
   tpl.style.display='block';
-  setTimeout(()=>{ window.print(); setTimeout(()=>{ tpl.style.display='none'; },500); },100);
+  // must call synchronously from user gesture — setTimeout blocks on iOS Safari
+  window.print();
+  tpl.style.display='none';
 }
 
 function printReport(){ generatePDF(); }
