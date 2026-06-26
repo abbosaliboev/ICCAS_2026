@@ -155,7 +155,12 @@ class BackendClient:
         return False
 
     def upload_screenshot(self, event_id: str, img_path: str):
+        for attempt in range(3):
+            if os.path.exists(img_path):
+                break
+            time.sleep(0.5)
         if not os.path.exists(img_path):
+            log.warning(f"Screenshot file not found: {img_path}")
             return
         try:
             with open(img_path, "rb") as f:
@@ -167,8 +172,21 @@ class BackendClient:
                 )
             if r.status_code in (200, 201):
                 log.info(f"Screenshot uploaded for {event_id}")
+            else:
+                log.warning(f"Screenshot upload got {r.status_code}: {r.text[:100]}")
         except Exception as e:
             log.warning(f"Screenshot upload failed: {e}")
+
+    def resolve_fall(self, event_id: str):
+        try:
+            requests.post(
+                f"{self.base}/api/fall-events/{event_id}/resolve",
+                headers=self.headers,
+                timeout=5,
+            )
+            log.info(f"Fall resolved: {event_id}")
+        except Exception as e:
+            log.warning(f"Cannot send fall-resolve: {e}")
 
 
 # ── keypoint helpers (same as demo_webcam.py) ─────────────────────────────────
@@ -409,6 +427,11 @@ def main():
                 pred = detector.predict_one(x_t.squeeze(0), seq)
                 t_stgcn1 = time.time()
                 stgcn_fps = 0.9 * stgcn_fps + 0.1 / max(t_stgcn1 - t_stgcn0, 1e-6)
+                # debug: log raw fall probability every 30 windows (~every 1.5s)
+                if frame_no % (STRIDE * 30) == 0 or pred == 1:
+                    _xd = x_t.squeeze(0).unsqueeze(0).to(detector.device)
+                    _prob = float(detector._stage1_probs(_xd)[0])
+                    log.info(f"prob={_prob:.3f}  pred={pred}  vis={n_vis}  h_span={h_span:.2f}")
 
             # personal standing baseline
             if not fall_active and is_standing(kp):
@@ -440,6 +463,8 @@ def main():
                 stand_streak = 0
                 lying_streak = 0
                 log.info("Auto-reset: person left frame")
+                if current_event_id:
+                    threading.Thread(target=client.resolve_fall, args=(current_event_id,), daemon=True).start()
             elif is_standing(kp):
                 stand_streak += 1
                 if stand_streak >= args.stand_streak:
@@ -448,6 +473,8 @@ def main():
                     stand_streak = 0
                     lying_streak = 0
                     log.info("Auto-reset: person standing")
+                    if current_event_id:
+                        threading.Thread(target=client.resolve_fall, args=(current_event_id,), daemon=True).start()
             else:
                 stand_streak = 0
 
