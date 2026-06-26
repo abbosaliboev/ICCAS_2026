@@ -36,6 +36,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .screen{display:none;flex:1;flex-direction:column;overflow:hidden}
 .screen.active{display:flex;animation:scIn .2s ease}
 @keyframes scIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* status indicator */
+.s-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.s-dot.ok{background:var(--green);animation:pulse-ok 2.4s ease-in-out infinite}
+.s-dot.alert{background:var(--red);animation:pulse-alert .7s ease-in-out infinite}
+@keyframes pulse-ok{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.5)}60%{box-shadow:0 0 0 9px rgba(16,185,129,0)}}
+@keyframes pulse-alert{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.7)}50%{box-shadow:0 0 0 11px rgba(239,68,68,0)}}
 
 /* ── TOPBAR ─────────────────────────────────────────── */
 .topbar{display:flex;align-items:center;justify-content:space-between;
@@ -453,7 +459,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <div style="width:60px">
       <span id="dash-role-badge" class="ws-badge">실사용자</span>
     </div>
-    <h1>🛡️ Fall Guard</h1>
+    <h1>Fall Guard</h1>
     <div style="width:60px;text-align:right">
       <span id="ws-dot" class="ws-badge red" title="연결 상태">●</span>
     </div>
@@ -494,7 +500,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <div class="fw7" id="status-text" data-i18n="status_normal">정상</div>
           <div style="font-size:.85rem;color:var(--muted);margin-top:3px" id="status-time" data-i18n="waiting">대기 중</div>
         </div>
-        <div style="font-size:2rem" id="status-icon">✅</div>
+        <div id="status-icon"><div class="s-dot ok"></div></div>
       </div>
     </div>
 
@@ -1551,7 +1557,7 @@ function onFallDetected(msg){
   badge.innerHTML=`<span style="color:var(--red)">⚠️ ${t('fall_detected')}</span>`;
   document.getElementById('status-text').textContent=t('fall_detected');
   document.getElementById('status-text').style.color='var(--red)';
-  document.getElementById('status-icon').textContent='🚨';
+  document.getElementById('status-icon').innerHTML='<div class="s-dot alert"></div>';
   document.getElementById('status-time').textContent=fmtTs(msg.timestamp);
   if(user&&user.role==='guardian'){
     if(navigator.vibrate) navigator.vibrate([600,150,600,150,600]);
@@ -1786,11 +1792,14 @@ function _fillPdfTemplate(ev){
 function generatePDF(){
   const ev=filterByPeriod(_rptEvents,_rptPeriod);
   _fillPdfTemplate(ev);
-  const tpl=document.getElementById('pdf-template');
-  tpl.style.display='block';
-  // must call synchronously from user gesture — setTimeout blocks on iOS Safari
-  window.print();
-  tpl.style.display='none';
+  const tplHtml=document.getElementById('pdf-template').outerHTML.replace('display:none','display:block');
+  const css=`body{margin:0;font-family:Arial,sans-serif;background:#f8fafc}#pdf-template{display:block!important;max-width:760px;margin:32px auto;background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.08);padding:32px}table{border-collapse:collapse;width:100%}@media print{body{background:#fff}#pdf-template{box-shadow:none;margin:0;border-radius:0}.print-btn{display:none!important}}@media(max-width:600px){#pdf-template{margin:0;border-radius:0;padding:20px}}.print-btn{position:fixed;bottom:24px;right:24px;padding:12px 24px;background:#2563eb;color:#fff;border:none;border-radius:99px;font-size:.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(37,99,235,.4)}`;
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MobiCare Report</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body>${tplHtml}<button class="print-btn" onclick="window.print()">Print / Save PDF</button></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.target='_blank';a.rel='noopener';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),15000);
 }
 
 function printReport(){ generatePDF(); }
@@ -1842,7 +1851,7 @@ function resetFallStatus(){
   document.getElementById('fall-badge').innerHTML=`<span class="sdot blink"></span> ${t('status_normal')}`;
   document.getElementById('status-text').textContent=t('status_normal');
   document.getElementById('status-text').style.color='';
-  document.getElementById('status-icon').textContent='✅';
+  document.getElementById('status-icon').innerHTML='<div class="s-dot ok"></div>';
   document.getElementById('status-time').textContent=t('waiting');
 }
 
