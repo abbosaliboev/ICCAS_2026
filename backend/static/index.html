@@ -425,6 +425,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <span id="refresh-label" data-i18n="refresh">새로고침</span>
           <span id="refresh-spin" style="display:none">↻</span>
         </button>
+        <button class="btn btn-ghost btn-sm" id="call-btn" onclick="callContact()" style="color:var(--green)">
+          📞 <span id="call-btn-label">119</span>
+        </button>
       </div>
     </div>
 
@@ -437,11 +440,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         </div>
         <div style="font-size:2rem" id="status-icon">✅</div>
       </div>
-    </div>
-
-    <div class="card" id="contacts-card">
-      <div class="ctitle" data-i18n="contacts_lbl">긴급 연락처</div>
-      <div id="contacts-btns" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
     <div class="card" id="recent-card">
@@ -575,15 +573,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <div class="sec mt12">
       <div class="sec-lbl">📞 <span data-i18n="contacts_lbl">긴급 연락처</span></div>
       <div class="card">
-        <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px" data-i18n="contacts_desc">낙상 감지 시 빠르게 전화할 연락처를 추가하세요.</p>
-        <div id="contacts-list" style="margin-bottom:12px"></div>
-        <div style="display:flex;gap:8px;align-items:flex-end">
-          <div style="flex:1">
-            <div class="fg" style="margin-bottom:8px"><label data-i18n="contact_name">이름</label><input id="new-contact-name" class="fi" type="text" placeholder="가족 / 119"></div>
-            <div class="fg"><label data-i18n="contact_phone">전화번호</label><input id="new-contact-phone" class="fi" type="tel" placeholder="010-1234-5678"></div>
-          </div>
-          <button class="btn btn-primary btn-sm" style="width:auto;padding:10px 16px;margin-bottom:1px" onclick="addContact()" data-i18n="add_btn">추가</button>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px" data-i18n="contacts_desc">낙상 감지 시 빠르게 전화할 연락처를 추가하세요.</p>
+        <div class="fg" style="margin-bottom:10px">
+          <label data-i18n="contact_name">이름</label>
+          <input id="cfg-c-name" class="fi" type="text" data-i18n-ph="c_name_ph">
         </div>
+        <div class="fg" style="margin-bottom:14px">
+          <label data-i18n="contact_phone">전화번호</label>
+          <input id="cfg-c-phone" class="fi" type="tel" data-i18n-ph="c_phone_ph">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveContact()" data-i18n="save_btn">저장</button>
       </div>
     </div>
 
@@ -729,6 +728,7 @@ ko:{
   yes:'있음',no:'없음',recent_events:'최근 낙상 기록',zoom:'확대 보기',
   contacts_lbl:'긴급 연락처',contacts_desc:'낙상 감지 시 빠르게 전화할 연락처를 추가하세요.',
   contact_name:'이름',contact_phone:'전화번호',add_btn:'추가',call_btn:'전화',
+  c_name_ph:'가족 이름 (예: 홍길동)',c_phone_ph:'전화번호 (예: 010-1234-5678)',
   safe_zone_lbl:'안전 구역',safe_zone_desc:'침대 등 누워있는 공간을 지정하면 해당 구역에서는 낙상이 감지되지 않습니다.',
   sz_draw:'구역 그리기',sz_clear:'구역 삭제',sz_hint:'화면에서 안전 구역을 드래그하세요',
   sz_saved:'안전 구역이 저장되었습니다',sz_cleared:'구역이 삭제되었습니다',sz_active:'활성 구역',
@@ -770,8 +770,9 @@ en:{
   linked_msg:'Guardian linked',link_fail:'Failed: check username',
   login_fail:'Login failed',registered_msg:'Account created!',
   yes:'Yes',no:'No',recent_events:'Recent Falls',zoom:'Zoom In',
-  contacts_lbl:'Emergency Contacts',contacts_desc:'Add contacts to call quickly when a fall is detected.',
+  contacts_lbl:'Emergency Contact',contacts_desc:'Add a contact to call quickly when a fall is detected.',
   contact_name:'Name',contact_phone:'Phone',add_btn:'Add',call_btn:'Call',
+  c_name_ph:'e.g. Family',c_phone_ph:'e.g. 010-1234-5678',
   safe_zone_lbl:'Safe Zone',safe_zone_desc:'Define a bed or resting area where fall detection is disabled.',
   sz_draw:'Draw Zone',sz_clear:'Clear Zone',sz_hint:'Drag on the image to define the safe zone',
   sz_saved:'Safe zone saved',sz_cleared:'Zone cleared',sz_active:'Active zone',
@@ -1151,68 +1152,42 @@ function refreshStream(){
   },300);
 }
 
-// ── CONTACTS ───────────────────────────────────────────
-function getContacts(){
-  try{ return JSON.parse(localStorage.getItem('mg_contacts')||'[]'); }catch{ return []; }
-}
-function saveContacts(list){ localStorage.setItem('mg_contacts',JSON.stringify(list)); }
+// ── CONTACT (single) ───────────────────────────────────
+function getContact(){ try{return JSON.parse(localStorage.getItem('mg_contact')||'null');}catch{return null;} }
 
-function renderContactsDash(){
-  const list=getContacts();
-  const wrap=document.getElementById('contacts-btns');
-  const card=document.getElementById('contacts-card');
-  if(!list.length){ card.style.display='none'; return; }
-  card.style.display='';
-  wrap.innerHTML=list.map((c,i)=>`
-    <a href="tel:${c.phone}" style="display:flex;align-items:center;justify-content:space-between;
-       background:var(--card2);border-radius:var(--rs);padding:13px 16px;
-       text-decoration:none;border:1px solid var(--border)">
-      <div>
-        <div style="font-weight:700;font-size:.95rem;color:var(--text)">${c.name}</div>
-        <div style="font-size:.82rem;color:var(--muted)">${c.phone}</div>
-      </div>
-      <div style="background:var(--green);color:#fff;border-radius:50%;width:40px;height:40px;
-           display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">📞</div>
-    </a>`).join('');
+function updateCallBtn(){
+  const c=getContact();
+  const lbl=document.getElementById('call-btn-label');
+  if(lbl) lbl.textContent=c?c.name:'119';
 }
 
-function renderContactsSettings(){
-  const list=getContacts();
-  const wrap=document.getElementById('contacts-list');
-  if(!list.length){ wrap.innerHTML=`<div style="font-size:.82rem;color:var(--muted);margin-bottom:4px" data-i18n="no_records">없음</div>`; return; }
-  wrap.innerHTML=list.map((c,i)=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;
-         padding:10px 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-weight:600;font-size:.9rem">${c.name}</div>
-        <div style="font-size:.82rem;color:var(--muted)">${c.phone}</div>
-      </div>
-      <button onclick="removeContact(${i})" style="background:none;border:none;color:var(--red);
-              font-size:1.1rem;cursor:pointer;padding:4px 8px">✕</button>
-    </div>`).join('');
+function callContact(){
+  const c=getContact();
+  window.location.href='tel:'+(c?c.phone:'119');
 }
 
-function addContact(){
-  const name=document.getElementById('new-contact-name').value.trim();
-  const phone=document.getElementById('new-contact-phone').value.trim();
-  if(!name||!phone){ toast('이름과 전화번호를 입력하세요'); return; }
-  const list=getContacts();
-  list.push({name,phone});
-  saveContacts(list);
-  document.getElementById('new-contact-name').value='';
-  document.getElementById('new-contact-phone').value='';
-  renderContactsSettings();
-  renderContactsDash();
+function saveContact(){
+  const name=document.getElementById('cfg-c-name').value.trim();
+  const phone=document.getElementById('cfg-c-phone').value.trim();
+  if(!phone){ toast('전화번호를 입력하세요'); return; }
+  localStorage.setItem('mg_contact',JSON.stringify({name:name||phone, phone}));
+  updateCallBtn();
   toast(t('saved_msg'));
 }
 
-function removeContact(i){
-  const list=getContacts();
-  list.splice(i,1);
-  saveContacts(list);
-  renderContactsSettings();
-  renderContactsDash();
+function loadContactSettings(){
+  const c=getContact();
+  const ni=document.getElementById('cfg-c-name');
+  const pi=document.getElementById('cfg-c-phone');
+  if(!ni||!pi) return;
+  ni.placeholder=t('c_name_ph');
+  pi.placeholder=t('c_phone_ph');
+  if(c){ ni.value=c.name; pi.value=c.phone; }
 }
+
+// legacy compat stubs
+function renderContactsDash(){ updateCallBtn(); }
+function renderContactsSettings(){ loadContactSettings(); }
 
 async function loadRecentEvents(){
   const events=await api('GET','/api/fall-events');
