@@ -445,7 +445,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         <option value="guardian" data-i18n="role_guardian">보호자</option>
       </select>
     </div>
-    <div class="fg"><label data-i18n="age">나이</label><input id="reg-age" class="fi" type="number" data-i18n-ph="age"></div>
+    <div class="fg"><label data-i18n="age">나이</label><input id="reg-age" class="fi" type="number" min="1" max="120" data-i18n-ph="age_ph"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="fg"><label data-i18n="height_lbl">키 (cm)</label><input id="reg-height" class="fi" type="number" min="100" max="220" placeholder="170"></div>
+      <div class="fg"><label data-i18n="weight_lbl">몸무게 (kg)</label><input id="reg-weight" class="fi" type="number" min="20" max="200" placeholder="65"></div>
+    </div>
+    <div class="fg">
+      <label data-i18n="gender_lbl">성별</label>
+      <select id="reg-gender" class="fi" style="cursor:pointer">
+        <option value="" data-i18n="gender_select">선택 안 함</option>
+        <option value="M" data-i18n="gender_m">남성</option>
+        <option value="F" data-i18n="gender_f">여성</option>
+      </select>
+    </div>
     <div class="fg"><label data-i18n="phone">전화번호</label><input id="reg-phone" class="fi" type="tel" placeholder="010-0000-0000"></div>
     <div class="fg"><label data-i18n="address">주소</label><input id="reg-address" class="fi" type="text" data-i18n-ph="address"></div>
     <div class="fg"><label data-i18n="guardian_id">보호자 아이디 <span style="color:var(--muted);font-size:.8rem" data-i18n="optional">(선택)</span></label><input id="reg-guardian" class="fi" type="text"></div>
@@ -736,9 +748,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);
             <label data-i18n="stream_url">스트림 URL</label>
             <input id="cfg-stream-url" class="fi" type="url" placeholder="http://IP:8081/video">
           </div>
-          <div class="fg" style="margin-bottom:16px">
+          <div class="fg" style="margin-bottom:10px">
             <label data-i18n="device_token">디바이스 토큰</label>
             <input id="cfg-device-token" class="fi" type="text" placeholder="edge-device-001">
+          </div>
+          <div class="fg" style="margin-bottom:16px">
+            <label data-i18n="cam_type_lbl">카메라 유형</label>
+            <select id="cfg-cam-type" class="fi" style="cursor:pointer">
+              <option value="front" data-i18n="cam_type_front">홈 카메라 (정면)</option>
+              <option value="top" data-i18n="cam_type_top">CCTV (천장/상단)</option>
+            </select>
           </div>
           <button class="btn btn-primary" onclick="saveDeviceConfig()"><span data-i18n="save_btn">저장</span></button>
         </div>
@@ -812,6 +831,24 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <div class="fg" style="margin-bottom:10px">
             <label data-i18n="age">나이</label>
             <input id="cfg-age" class="fi" type="number" min="1" max="120" data-i18n-ph="age_ph">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div class="fg" style="margin-bottom:0">
+              <label data-i18n="height_lbl">키 (cm)</label>
+              <input id="cfg-height" class="fi" type="number" min="100" max="220" placeholder="170">
+            </div>
+            <div class="fg" style="margin-bottom:0">
+              <label data-i18n="weight_lbl">몸무게 (kg)</label>
+              <input id="cfg-weight" class="fi" type="number" min="20" max="200" placeholder="65">
+            </div>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label data-i18n="gender_lbl">성별</label>
+            <select id="cfg-gender" class="fi" style="cursor:pointer">
+              <option value="" data-i18n="gender_select">선택 안 함</option>
+              <option value="M" data-i18n="gender_m">남성</option>
+              <option value="F" data-i18n="gender_f">여성</option>
+            </select>
           </div>
           <div class="fg" style="margin-bottom:10px">
             <label data-i18n="phone">전화번호</label>
@@ -1003,6 +1040,8 @@ ko:{
   yes:'있음',no:'없음',recent_events:'최근 낙상 기록',zoom:'확대 보기',
   contacts_lbl:'긴급 연락처',contacts_desc:'낙상 감지 시 빠르게 전화할 연락처를 추가하세요.',
   contact_name:'이름',contact_phone:'전화번호',add_btn:'추가',call_btn:'전화',
+  height_lbl:'키 (cm)',weight_lbl:'몸무게 (kg)',gender_lbl:'성별',gender_select:'선택 안 함',gender_m:'남성',gender_f:'여성',
+  cam_type_lbl:'카메라 유형',cam_type_top:'CCTV (천장/상단)',cam_type_front:'홈 카메라 (정면)',
   c_name_ph:'가족 이름 (예: 홍길동)',c_phone_ph:'전화번호 (예: 010-1234-5678)',
   name_ph:'홍길동',age_ph:'나이',phone_ph:'010-1234-5678',address_ph:'주소를 입력하세요',
   safe_zone_lbl:'안전 구역',safe_zone_desc:'침대 등 누워있는 공간을 지정하면 해당 구역에서는 낙상이 감지되지 않습니다.',
@@ -1055,6 +1094,8 @@ en:{
   yes:'Yes',no:'No',recent_events:'Recent Falls',zoom:'Zoom In',
   contacts_lbl:'Emergency Contact',contacts_desc:'Add a contact to call quickly when a fall is detected.',
   contact_name:'Name',contact_phone:'Phone',add_btn:'Add',call_btn:'Call',
+  height_lbl:'Height (cm)',weight_lbl:'Weight (kg)',gender_lbl:'Gender',gender_select:'Not specified',gender_m:'Male',gender_f:'Female',
+  cam_type_lbl:'Camera Type',cam_type_top:'CCTV (ceiling/top-down)',cam_type_front:'Home camera (front-facing)',
   c_name_ph:'e.g. Family',c_phone_ph:'e.g. 010-1234-5678',
   name_ph:'Full name',age_ph:'Age',phone_ph:'Phone number',address_ph:'Address',
   safe_zone_lbl:'Safe Zone',safe_zone_desc:'Define a bed or resting area where fall detection is disabled.',
@@ -1375,6 +1416,9 @@ async function doRegister(){
     role:document.getElementById('reg-role').value,
     display_name:document.getElementById('reg-name').value.trim(),
     age:parseInt(document.getElementById('reg-age').value)||null,
+    height:parseInt(document.getElementById('reg-height').value)||null,
+    weight:parseInt(document.getElementById('reg-weight').value)||null,
+    gender:document.getElementById('reg-gender').value||'',
     phone:document.getElementById('reg-phone').value.trim(),
     address:document.getElementById('reg-address').value.trim(),
   };
@@ -2158,6 +2202,8 @@ document.addEventListener('touchstart',e=>{
 function loadSettings(){
   document.getElementById('cfg-stream-url').value=streamUrl;
   document.getElementById('cfg-device-token').value=localStorage.getItem('mg_device_token')||'edge-device-001';
+  const ct=document.getElementById('cfg-cam-type');
+  if(ct) ct.value=localStorage.getItem('mg_cam_type')||'front';
   applyI18n();
   updateAccBadges();
   renderContactsSettings();
@@ -2179,6 +2225,9 @@ async function saveProfile(){
   const body={
     display_name: document.getElementById('cfg-display-name').value.trim(),
     age: parseInt(document.getElementById('cfg-age').value)||null,
+    height: parseInt(document.getElementById('cfg-height').value)||null,
+    weight: parseInt(document.getElementById('cfg-weight').value)||null,
+    gender: document.getElementById('cfg-gender').value||'',
     phone: document.getElementById('cfg-phone').value.trim(),
     address: document.getElementById('cfg-address').value.trim(),
   };
@@ -2190,10 +2239,14 @@ async function saveProfile(){
 async function saveDeviceConfig(){
   const url=document.getElementById('cfg-stream-url').value.trim();
   const dtoken=document.getElementById('cfg-device-token').value.trim();
+  const camType=document.getElementById('cfg-cam-type').value;
   streamUrl=url;localStorage.setItem('mg_stream_url',url);
   localStorage.setItem('mg_device_token',dtoken);
+  localStorage.setItem('mg_cam_type',camType);
   setStreamUrl(url);
   if(dtoken) await api('POST','/api/devices',{device_token:dtoken,stream_url:url});
+  // write camera type to edge server config file via backend
+  await api('POST','/api/safe-zone/camera-type',{camera_type:camType}).catch(()=>{});
   toast(t('saved_msg'),'ok');
   closeOpenAcc();
 }

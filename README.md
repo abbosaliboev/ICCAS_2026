@@ -43,6 +43,7 @@ python train_two_stage.py      # train ST-GCN + physics filter
 
 | Document | Link |
 |----------|------|
+| **All Features** | [fall_iccas/FEATURES.md](./fall_iccas/FEATURES.md) |
 | How to Run | [fall_iccas/HOW_TO_RUN.md](./fall_iccas/HOW_TO_RUN.md) |
 | Architecture | [fall_iccas/ARCHITECTURE.md](./fall_iccas/ARCHITECTURE.md) |
 | Training Results | [fall_iccas/RESULTS.md](./fall_iccas/RESULTS.md) |
