@@ -94,6 +94,34 @@ python train_two_stage.py
 ```
 Results are printed to the terminal; the model is saved to `checkpoints/`.
 
+### 3. Run the edge server
+
+**With USB/webcam (camera index 0):**
+```bash
+python edge_server.py
+```
+
+**With RTSP IP camera:**
+```bash
+python edge_server.py --source "rtsp://admin:PASSWORD@CAMERA_IP:554/stream1"
+```
+
+**With RTSP + TensorRT (recommended on Jetson — faster YOLO):**
+```bash
+python edge_server.py \
+  --source "rtsp://admin:PASSWORD@CAMERA_IP:554/stream1" \
+  --backend "http://PC_IP:8000" \
+  --tensorrt
+```
+
+| What | URL |
+|---|---|
+| MJPEG stream | `http://JETSON_IP:8081/video` |
+| Web app | `http://PC_IP:8000/app` |
+
+> Password special characters must be URL-encoded: `$` → `%24`
+> Full argument list: see [HOW_TO_RUN.md](HOW_TO_RUN.md)
+
 ## Current results (Subject 1 only — subject-dependent)
 
 | Model | Accuracy | Fall F1 | Precision | Recall |
@@ -212,6 +240,34 @@ python train_two_stage.py
 ```
 결과는 터미널에 출력되고, 모델은 `checkpoints/`에 저장됩니다.
 
+### 3. 엣지 서버 실행
+
+**USB/웹캠으로 (카메라 인덱스 0):**
+```bash
+python edge_server.py
+```
+
+**RTSP IP 카메라로:**
+```bash
+python edge_server.py --source "rtsp://admin:PASSWORD@CAMERA_IP:554/stream1"
+```
+
+**RTSP + TensorRT (Jetson 권장):**
+```bash
+python edge_server.py \
+  --source "rtsp://admin:PASSWORD@CAMERA_IP:554/stream1" \
+  --backend "http://PC_IP:8000" \
+  --tensorrt
+```
+
+| 내용 | URL |
+|---|---|
+| MJPEG 스트림 | `http://JETSON_IP:8081/video` |
+| 웹앱 | `http://PC_IP:8000/app` |
+
+> 비밀번호 특수문자 URL 인코딩 필요: `$` → `%24`
+> 전체 인자 목록: [HOW_TO_RUN.md](HOW_TO_RUN.md) 참조
+
 ## 현재 결과 (Subject 1만 — subject-dependent)
 
 | 모델 | Accuracy | Fall F1 | Precision | Recall |
@@ -329,6 +385,34 @@ python prepare_cv_dataset.py
 python train_two_stage.py
 ```
 Natijalar terminalga chiqadi, model `checkpoints/` ga saqlanadi.
+
+### 3. Edge server ishga tushirish
+
+**USB/webcam bilan (kamera 0-indeks):**
+```bash
+python edge_server.py
+```
+
+**RTSP IP kamera bilan:**
+```bash
+python edge_server.py --source "rtsp://admin:PAROL@KAMERA_IP:554/stream1"
+```
+
+**RTSP + TensorRT (Jetson da tavsiya):**
+```bash
+python edge_server.py \
+  --source "rtsp://admin:PAROL@KAMERA_IP:554/stream1" \
+  --backend "http://PC_IP:8000" \
+  --tensorrt
+```
+
+| Nima | URL |
+|---|---|
+| MJPEG stream | `http://JETSON_IP:8081/video` |
+| Web ilova | `http://PC_IP:8000/app` |
+
+> Paroldagi maxsus belgilar URL-encode qilinishi kerak: `$` → `%24`
+> Barcha argumentlar: [HOW_TO_RUN.md](HOW_TO_RUN.md) ga qarang
 
 ## Hozirgi natijalar (Subject 1 only — subject-dependent)
 

@@ -10,10 +10,43 @@
 
 ---
 
+## ⚡ Quick Start / 빠른 시작 / Tezkor Boshlash
+
+> Full guide → [fall_iccas/HOW_TO_RUN.md](./fall_iccas/HOW_TO_RUN.md)
+
+**1. Backend (PC)**
+```bash
+cd backend && python main.py
+# Web app: http://localhost:8000/app
+```
+
+**2. Edge server (Jetson — RTSP camera + TensorRT)**
+```bash
+cd fall_iccas
+python edge_server.py \
+  --source "rtsp://admin:PASSWORD@CAMERA_IP:554/stream1" \
+  --backend "http://PC_IP:8000" \
+  --tensorrt
+# MJPEG stream: http://JETSON_IP:8081/video
+```
+
+**3. Training (PC with GPU)**
+```bash
+cd fall_iccas
+python prepare_cv_dataset.py   # extract keypoints from UP-Fall images
+python train_two_stage.py      # train ST-GCN + physics filter
+```
+
+---
+
 ## 📄 Documents
 
 | Document | Link |
 |----------|------|
+| How to Run | [fall_iccas/HOW_TO_RUN.md](./fall_iccas/HOW_TO_RUN.md) |
+| Architecture | [fall_iccas/ARCHITECTURE.md](./fall_iccas/ARCHITECTURE.md) |
+| Training Results | [fall_iccas/RESULTS.md](./fall_iccas/RESULTS.md) |
+| FPS Benchmark | [fall_iccas/FPS_BENCHMARK.md](./fall_iccas/FPS_BENCHMARK.md) |
 | Abstract (Markdown) | [Docs/Poster/abstract.md](./Docs/Poster/abstract.md) |
 | Poster (PDF) | [Docs/Poster/4조 초록.pdf](./Docs/Poster/4조%20초록.pdf) |
 
