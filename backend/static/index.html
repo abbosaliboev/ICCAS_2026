@@ -633,6 +633,18 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<!-- IMAGE VIEWER -->
+<div id="img-viewer" onclick="closeImgViewer()" style="display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,.95);display:none;align-items:center;justify-content:center;
+  flex-direction:column;touch-action:pinch-zoom;-webkit-overflow-scrolling:touch">
+  <button onclick="closeImgViewer()" style="position:fixed;top:16px;right:16px;
+    background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.4rem;
+    width:40px;height:40px;border-radius:50%;cursor:pointer;z-index:10000;
+    display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)">✕</button>
+  <img id="img-viewer-img" style="max-width:100%;max-height:100dvh;
+    object-fit:contain;touch-action:pinch-zoom;user-select:none;-webkit-user-select:none">
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1144,6 +1156,18 @@ function guardianAck(){
   resetFallStatus();toast(t('acknowledge'));
 }
 function call119(){toast(t('call_119'));window.location.href='tel:119';}
+
+function openImgViewer(url){
+  const v=document.getElementById('img-viewer');
+  document.getElementById('img-viewer-img').src=url;
+  v.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeImgViewer(){
+  document.getElementById('img-viewer').style.display='none';
+  document.getElementById('img-viewer-img').src='';
+  document.body.style.overflow='';
+}
 async function ackEvent(){
   if(!currentEventId) return;
   await api('POST',`/api/fall-events/${currentEventId}/acknowledge`);
@@ -1244,8 +1268,18 @@ async function openDetail(eventId){
     videoWrap.style.display='';
   }
   const ssUrl=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
-  ssWrap.innerHTML=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
-    <img src="${ssUrl}" style="width:100%;height:auto;display:block;background:#111;border-radius:var(--rs)" onerror="this.style.display='none'">
+  ssWrap.innerHTML=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:0;position:relative">
+    <img src="${ssUrl}" style="width:100%;height:auto;display:block;background:#111;border-radius:var(--rs) var(--rs) 0 0" onerror="this.style.display='none'">
+    <button onclick="openImgViewer('${ssUrl}')"
+      style="width:100%;border:none;background:var(--card2);color:var(--accent);
+             padding:11px 16px;font-size:.88rem;font-weight:600;cursor:pointer;
+             display:flex;align-items:center;justify-content:center;gap:8px;
+             border-top:1px solid var(--border);border-radius:0 0 var(--rs) var(--rs)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+      </svg>
+      Kattalashtirish
+    </button>
   </div>`;
 
   document.getElementById('detail-info').innerHTML=`
