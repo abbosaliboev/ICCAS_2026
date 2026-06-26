@@ -513,9 +513,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <video id="detail-video" controls playsinline webkit-playsinline preload="metadata" style="width:100%;display:block;background:#111;min-height:180px"></video>
       <div id="detail-video-err" style="display:none;padding:16px;text-align:center"></div>
     </div>
-    <div id="detail-screenshot-wrap" class="card" style="display:none;padding:0;overflow:hidden">
-      <img id="detail-screenshot" alt="screenshot">
-    </div>
+    <div id="detail-screenshot-wrap"></div>
     <div class="card">
       <div class="ctitle" data-i18n="fall_info">낙상 정보</div>
       <div id="detail-info"></div>
@@ -1217,7 +1215,6 @@ async function openDetail(eventId){
   const videoEl=document.getElementById('detail-video');
   // reset
   videoWrap.style.display='none';
-  ssWrap.style.display='none';
   ssWrap.innerHTML='';
   document.getElementById('detail-info').innerHTML=`<div class="spinner mt12"></div>`;
   document.getElementById('detail-emergency').innerHTML='';
@@ -1247,16 +1244,10 @@ async function openDetail(eventId){
     videoWrap.style.display='';
   }
   const ssUrl=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
-  ssWrap.style.display='block';
-  ssWrap.innerHTML=`
-    <img src="${ssUrl}"
-         style="width:100%;height:auto;display:block;background:#111;border-radius:var(--rs)"
-         onerror="this.style.display='none'">
-    <a href="${ssUrl}" target="_blank"
-       style="display:block;padding:12px 16px;text-align:center;
-              color:var(--accent);font-size:.88rem;border-top:1px solid var(--border)">
-      📷 Rasmni to'liq ko'rish
-    </a>`;
+  ssWrap.innerHTML=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
+    <img src="${ssUrl}" style="width:100%;height:auto;display:block;background:#111;border-radius:var(--rs)" onerror="this.style.display='none'">
+    <a href="${ssUrl}" target="_blank" style="display:block;padding:12px 16px;text-align:center;color:var(--accent);font-size:.88rem;border-top:1px solid var(--border)">📷 Rasmni to'liq ko'rish</a>
+  </div>`;
 
   document.getElementById('detail-info').innerHTML=`
     <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
