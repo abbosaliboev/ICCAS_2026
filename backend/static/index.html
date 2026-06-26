@@ -1249,11 +1249,11 @@ async function openDetail(eventId){
     videoEl.load();
     videoWrap.style.display='';
   }
+  // show wrap BEFORE setting src — iOS Safari won't load images inside display:none
+  ssWrap.classList.add('ss-visible');
   const ssImg2=document.getElementById('detail-screenshot');
   const ssUrl=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
-  ssImg2.onload=()=>{ ssWrap.classList.add('ss-visible'); };
   ssImg2.onerror=()=>{
-    ssWrap.classList.add('ss-visible');
     ssWrap.innerHTML=`<a href="${ssUrl}" target="_blank" style="display:block;padding:14px;color:var(--accent);text-align:center;font-size:.9rem">📷 Rasmni ochish</a>`;
   };
   ssImg2.src=ssUrl;
