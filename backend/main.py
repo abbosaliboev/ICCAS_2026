@@ -311,6 +311,20 @@ def get_clip(event_id: str, user=Depends(auth_media)):
                         headers={"Content-Disposition": f'inline; filename="{event_id}.mp4"'})
 
 
+@app.post("/api/fall-events/{event_id}/resolve")
+async def resolve_fall(event_id: str, dev=Depends(auth_device)):
+    """Called by edge server when person stands up — broadcasts fall_resolved to frontend."""
+    ev = db.get_fall_event(event_id)
+    if ev and ev.get("user_id"):
+        user_id = ev["user_id"]
+        payload = {"type": "fall_resolved", "event_id": event_id}
+        await mgr.broadcast_to(user_id, payload)
+        target = db.get_user_by_id(user_id)
+        if target and target.get("guardian_id"):
+            await mgr.broadcast_to(target["guardian_id"], payload)
+    return {"ok": True}
+
+
 @app.post("/api/fall-events/{event_id}/acknowledge")
 def ack_event(event_id: str, user=Depends(auth_user)):
     db.acknowledge_fall_event(event_id)

@@ -1104,7 +1104,11 @@ function connectWS(){
   };
   ws.onmessage=evt=>{
     if(evt.data==='pong') return;
-    try{const m=JSON.parse(evt.data);if(m.type==='fall_detected') onFallDetected(m);}catch{}
+    try{
+      const m=JSON.parse(evt.data);
+      if(m.type==='fall_detected') onFallDetected(m);
+      else if(m.type==='fall_resolved') resetFallStatus();
+    }catch{}
   };
   ws.onclose=()=>{
     const d=document.getElementById('ws-dot');
@@ -1242,9 +1246,21 @@ async function openDetail(eventId){
     videoEl.load();
     videoWrap.style.display='';
   }
+  ssWrap.style.display='';
   if(ev.thumbnail_path){
+    ssImg.style.display='block';
+    ssImg.alt='screenshot';
+    ssImg.onerror=()=>{
+      // retry once after 2s (screenshot may still be uploading)
+      ssImg.onerror=()=>{ssImg.style.display='none';};
+      setTimeout(()=>{
+        ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
+      },2000);
+    };
     ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}`;
-    ssWrap.style.display='';
+  } else {
+    ssImg.style.display='none';
+    ssWrap.innerHTML+='<div style="padding:14px;color:var(--muted);font-size:.85rem;text-align:center">📷 Screenshot not available</div>';
   }
 
   document.getElementById('detail-info').innerHTML=`
