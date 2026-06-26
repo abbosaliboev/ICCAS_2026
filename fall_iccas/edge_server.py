@@ -413,6 +413,18 @@ def main():
 
         draw_skeleton(frame, kp, h, w)
 
+        # red bounding box around person when fall is active
+        if fall_active and person_visible:
+            vis_pts = (kp[kp[:, 2] > 0.2, :2] * np.array([w, h])).astype(int)
+            if len(vis_pts) >= 2:
+                x1, y1 = vis_pts[:, 0].min() - 15, vis_pts[:, 1].min() - 15
+                x2, y2 = vis_pts[:, 0].max() + 15, vis_pts[:, 1].max() + 15
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(w, x2), min(h, y2)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
+                cv2.putText(frame, "FALL", (x1, y1 - 8),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
+
         pred = 0
         if len(buf) == WINDOW and frame_no % STRIDE == 0:
             seq = ffill(np.stack(buf, axis=0))
