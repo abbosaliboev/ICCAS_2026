@@ -229,7 +229,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .dk{color:var(--muted);font-size:.85rem}
 .dv{font-weight:600;text-align:right}
 #detail-screenshot-wrap{display:none}
-#detail-screenshot-wrap img{width:100%;border-radius:var(--rs);display:block}
+#detail-screenshot-wrap.ss-visible{display:block}
+#detail-screenshot-wrap img{width:100%;height:auto;border-radius:var(--rs);display:block;background:#111}
 
 /* ── SETTINGS ────────────────────────────────────────── */
 .sec{padding:20px 16px 0}
@@ -1246,8 +1247,14 @@ async function openDetail(eventId){
     videoEl.load();
     videoWrap.style.display='';
   }
-  ssWrap.style.display='block';
-  ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
+  const ssUrl=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
+  ssImg.src=ssUrl;
+  ssImg.onload=()=>{ ssWrap.classList.add('ss-visible'); };
+  ssImg.onerror=()=>{
+    // show link so user can open image directly
+    ssWrap.classList.add('ss-visible');
+    ssWrap.innerHTML=`<a href="${ssUrl}" target="_blank" style="display:block;padding:14px;color:var(--accent);text-align:center;font-size:.9rem">📷 Rasmni ochish (tap here)</a>`;
+  };
 
   document.getElementById('detail-info').innerHTML=`
     <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
