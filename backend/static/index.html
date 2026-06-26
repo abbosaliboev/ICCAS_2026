@@ -456,11 +456,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 <!-- DASHBOARD -->
 <div id="screen-dashboard" class="screen">
   <div class="topbar">
-    <div style="width:60px">
-      <span id="dash-role-badge" class="ws-badge">실사용자</span>
+    <div style="min-width:0;flex:1">
+      <span id="dash-role-badge" class="ws-badge" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block"></span>
     </div>
-    <h1>Fall Guard</h1>
-    <div style="width:60px;text-align:right">
+    <h1 style="flex-shrink:0">Fall Guard</h1>
+    <div style="flex:1;text-align:right">
       <span id="ws-dot" class="ws-badge red" title="연결 상태">●</span>
     </div>
   </div>
@@ -498,7 +498,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <div class="flex ac jb">
         <div>
           <div class="fw7" id="status-text" data-i18n="status_normal">정상</div>
-          <div style="font-size:.85rem;color:var(--muted);margin-top:3px" id="status-time" data-i18n="waiting">대기 중</div>
+          <div style="font-size:.85rem;color:var(--muted);margin-top:3px" id="status-time"></div>
         </div>
         <div id="status-icon"><div class="s-dot ok"></div></div>
       </div>
@@ -835,11 +835,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 
     </div><!-- /acc -->
 
-    <!-- App info -->
-    <div class="card" style="margin-bottom:24px">
-      <div class="dr"><span class="dk" data-i18n="ver_lbl">버전</span><span class="dv" id="app-version">1.3.0 (2026-06-26)</span></div>
-      <div class="dr"><span class="dk" data-i18n="model_lbl">모델</span><span class="dv">ST-GCN + Physics</span></div>
-      <div class="dr"><span class="dk" data-i18n="device_lbl">에지 디바이스</span><span class="dv">Jetson Orin NX</span></div>
+    <!-- App info — read-only, distinct style -->
+    <div style="margin-bottom:24px;padding:14px 16px;background:var(--bg);border-radius:var(--rs);border:1px dashed var(--border)">
+      <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px" data-i18n="app_info_lbl">앱 정보</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="font-size:.78rem;color:var(--muted2)" data-i18n="ver_lbl">버전</div>
+        <div style="font-size:.78rem;font-weight:600;text-align:right" id="app-version">1.3.0 (2026-06-26)</div>
+        <div style="font-size:.78rem;color:var(--muted2)" data-i18n="model_lbl">모델</div>
+        <div style="font-size:.78rem;font-weight:600;text-align:right">ST-GCN + Physics</div>
+        <div style="font-size:.78rem;color:var(--muted2)" data-i18n="device_lbl">에지 디바이스</div>
+        <div style="font-size:.78rem;font-weight:600;text-align:right">Jetson Orin NX</div>
+      </div>
     </div>
 
   </div>
@@ -1330,7 +1336,7 @@ function switchTab(tab){
   showScreen(map[tab]);
   if(tab==='history') loadHistory();
   if(tab==='settings') loadSettings();
-  if(tab==='dashboard'){ loadRecentEvents(); renderContactsDash(); }
+  if(tab==='dashboard'){ loadRecentEvents(); renderContactsDash(); _startStatusClock(); }
   if(tab==='reports') loadReport();
 }
 
@@ -1358,6 +1364,7 @@ function afterLogin(){
   setupDashboard();
   showScreen('screen-dashboard');
   connectWS();
+  _startStatusClock();
 }
 
 async function doRegister(){
@@ -1558,6 +1565,7 @@ function onFallDetected(msg){
   document.getElementById('status-text').textContent=t('fall_detected');
   document.getElementById('status-text').style.color='var(--red)';
   document.getElementById('status-icon').innerHTML='<div class="s-dot alert"></div>';
+  clearInterval(_statusClockId);
   document.getElementById('status-time').textContent=fmtTs(msg.timestamp);
   if(user&&user.role==='guardian'){
     if(navigator.vibrate) navigator.vibrate([600,150,600,150,600]);
@@ -1852,7 +1860,16 @@ function resetFallStatus(){
   document.getElementById('status-text').textContent=t('status_normal');
   document.getElementById('status-text').style.color='';
   document.getElementById('status-icon').innerHTML='<div class="s-dot ok"></div>';
-  document.getElementById('status-time').textContent=t('waiting');
+  _startStatusClock();
+}
+
+let _statusClockId=null;
+function _startStatusClock(){
+  clearInterval(_statusClockId);
+  const el=document.getElementById('status-time');
+  if(!el) return;
+  const tick=()=>{ el.textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}); };
+  tick(); _statusClockId=setInterval(tick,1000);
 }
 
 // ── HISTORY ────────────────────────────────────────────
