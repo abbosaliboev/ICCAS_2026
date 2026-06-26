@@ -1249,14 +1249,19 @@ async function openDetail(eventId){
     videoEl.load();
     videoWrap.style.display='';
   }
-  // show wrap BEFORE setting src — iOS Safari won't load images inside display:none
-  ssWrap.classList.add('ss-visible');
-  const ssImg2=document.getElementById('detail-screenshot');
+  // show wrap with image + direct-open button
   const ssUrl=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
-  ssImg2.onerror=()=>{
-    ssWrap.innerHTML=`<a href="${ssUrl}" target="_blank" style="display:block;padding:14px;color:var(--accent);text-align:center;font-size:.9rem">📷 Rasmni ochish</a>`;
-  };
-  ssImg2.src=ssUrl;
+  ssWrap.classList.add('ss-visible');
+  ssWrap.innerHTML=`
+    <img id="detail-screenshot" alt="screenshot"
+         style="width:100%;height:auto;display:block;background:#111"
+         onerror="this.style.display='none'">
+    <a href="${ssUrl}" target="_blank"
+       style="display:block;padding:12px 16px;text-align:center;
+              color:var(--accent);font-size:.88rem;border-top:1px solid var(--border)">
+      📷 Rasmni to'liq ko'rish
+    </a>`;
+  document.getElementById('detail-screenshot').src=ssUrl;
 
   document.getElementById('detail-info').innerHTML=`
     <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
