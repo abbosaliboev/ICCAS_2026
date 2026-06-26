@@ -1246,14 +1246,13 @@ async function openDetail(eventId){
     videoEl.load();
     videoWrap.style.display='';
   }
-  ssWrap.style.display='';
   ssImg.style.display='none';
+  ssWrap.style.display='block';
   ssImg.alt='screenshot';
   ssImg.onload=()=>{ssImg.style.display='block';};
   ssImg.onerror=()=>{
     if(ssImg._retried){ssImg.style.display='none';return;}
     ssImg._retried=true;
-    // retry once after 3s — screenshot upload may still be in progress
     setTimeout(()=>{
       ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
     },3000);
