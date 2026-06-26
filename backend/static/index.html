@@ -687,7 +687,7 @@ ko:{
   saved_msg:'저장되었습니다',deleted_msg:'삭제되었습니다',
   linked_msg:'보호자 연결 완료',link_fail:'연결 실패: 아이디를 확인하세요',
   login_fail:'로그인 실패',registered_msg:'등록 완료!',
-  yes:'있음',no:'없음',recent_events:'최근 낙상 기록',
+  yes:'있음',no:'없음',recent_events:'최근 낙상 기록',zoom:'확대 보기',
   sel_n:'{0}개 선택됨',
 },
 en:{
@@ -725,7 +725,7 @@ en:{
   saved_msg:'Saved',deleted_msg:'Deleted',
   linked_msg:'Guardian linked',link_fail:'Failed: check username',
   login_fail:'Login failed',registered_msg:'Account created!',
-  yes:'Yes',no:'No',recent_events:'Recent Falls',
+  yes:'Yes',no:'No',recent_events:'Recent Falls',zoom:'Zoom In',
   sel_n:'{0} selected',
 },
 es:{
@@ -763,7 +763,7 @@ es:{
   saved_msg:'Guardado',deleted_msg:'Eliminado',
   linked_msg:'Guardián vinculado',link_fail:'Error: verifique el usuario',
   login_fail:'Error de inicio de sesión',registered_msg:'¡Cuenta creada!',
-  yes:'Sí',no:'No',recent_events:'Caídas recientes',
+  yes:'Sí',no:'No',recent_events:'Caídas recientes',zoom:'Ampliar',
   sel_n:'{0} seleccionados',
 },
 fr:{
@@ -801,7 +801,7 @@ fr:{
   saved_msg:'Enregistré',deleted_msg:'Supprimé',
   linked_msg:'Gardien lié',link_fail:'Échec: vérifiez le nom',
   login_fail:'Échec de connexion',registered_msg:'Compte créé !',
-  yes:'Oui',no:'Non',recent_events:'Chutes récentes',
+  yes:'Oui',no:'Non',recent_events:'Chutes récentes',zoom:'Agrandir',
   sel_n:'{0} sélectionnés',
 },
 ru:{
@@ -839,7 +839,7 @@ ru:{
   saved_msg:'Сохранено',deleted_msg:'Удалено',
   linked_msg:'Опекун привязан',link_fail:'Ошибка: проверьте логин',
   login_fail:'Ошибка входа',registered_msg:'Аккаунт создан!',
-  yes:'Да',no:'Нет',recent_events:'Последние падения',
+  yes:'Да',no:'Нет',recent_events:'Последние падения',zoom:'Увеличить',
   sel_n:'Выбрано: {0}',
 },
 zh:{
@@ -877,7 +877,7 @@ zh:{
   saved_msg:'已保存',deleted_msg:'已删除',
   linked_msg:'监护人已关联',link_fail:'关联失败：请检查用户名',
   login_fail:'登录失败',registered_msg:'账户已创建！',
-  yes:'有',no:'无',recent_events:'最近跌倒',
+  yes:'有',no:'无',recent_events:'最近跌倒',zoom:'放大查看',
   sel_n:'已选 {0} 项',
 }};
 
@@ -973,6 +973,7 @@ function switchTab(tab){
   showScreen(map[tab]);
   if(tab==='history') loadHistory();
   if(tab==='settings') loadSettings();
+  if(tab==='dashboard') loadRecentEvents();
 }
 
 // ── AUTH ───────────────────────────────────────────────
@@ -1278,7 +1279,7 @@ async function openDetail(eventId){
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
       </svg>
-      Kattalashtirish
+      ${t('zoom')}
     </button>
   </div>`;
 
