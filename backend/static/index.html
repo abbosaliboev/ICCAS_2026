@@ -446,11 +446,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       </div>
       <span id="fall-badge" style="display:none"></span>
       <div class="stream-acts">
-        <button class="btn btn-ghost btn-sm" id="refresh-btn" onclick="refreshStream()">
+        <button class="btn btn-outline btn-sm" id="refresh-btn" onclick="refreshStream()">
           <span id="refresh-label" data-i18n="refresh">새로고침</span>
           <span id="refresh-spin" style="display:none">↻</span>
         </button>
-        <button class="btn btn-ghost btn-sm" id="call-btn" onclick="callContact()" style="color:var(--green)">
+        <button class="btn btn-sm" id="call-btn" onclick="callContact()"
+          style="background:rgba(16,185,129,.18);color:var(--green);font-weight:700">
           📞 <span id="call-btn-label">119</span>
         </button>
       </div>
