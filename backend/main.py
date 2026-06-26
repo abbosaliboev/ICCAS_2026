@@ -484,6 +484,31 @@ async def stream_sse():
     )
 
 
+# ── safe zone ────────────────────────────────────────────────────────────────
+
+SAFE_ZONE_PATH = BASE.parent / "fall_iccas" / "safe_zone.json"
+
+class SafeZoneReq(BaseModel):
+    zones: list
+
+@app.get("/api/safe-zone")
+def get_safe_zone(user=Depends(auth_user)):
+    if not SAFE_ZONE_PATH.exists():
+        return {"zones": []}
+    return json.loads(SAFE_ZONE_PATH.read_text())
+
+@app.post("/api/safe-zone")
+def set_safe_zone(body: SafeZoneReq, user=Depends(auth_user)):
+    SAFE_ZONE_PATH.write_text(json.dumps({"zones": body.zones}, indent=2))
+    return {"ok": True}
+
+@app.delete("/api/safe-zone")
+def clear_safe_zone(user=Depends(auth_user)):
+    if SAFE_ZONE_PATH.exists():
+        SAFE_ZONE_PATH.unlink()
+    return {"ok": True}
+
+
 # ── heatmap (stub — returns static data) ─────────────────────────────────────
 
 @app.get("/api/heatmap")
