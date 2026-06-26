@@ -1247,21 +1247,19 @@ async function openDetail(eventId){
     videoWrap.style.display='';
   }
   ssWrap.style.display='';
-  if(ev.thumbnail_path){
-    ssImg.style.display='block';
-    ssImg.alt='screenshot';
-    ssImg.onerror=()=>{
-      // retry once after 2s (screenshot may still be uploading)
-      ssImg.onerror=()=>{ssImg.style.display='none';};
-      setTimeout(()=>{
-        ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
-      },2000);
-    };
-    ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}`;
-  } else {
-    ssImg.style.display='none';
-    ssWrap.innerHTML+='<div style="padding:14px;color:var(--muted);font-size:.85rem;text-align:center">📷 Screenshot not available</div>';
-  }
+  ssImg.style.display='none';
+  ssImg.alt='screenshot';
+  ssImg.onload=()=>{ssImg.style.display='block';};
+  ssImg.onerror=()=>{
+    if(ssImg._retried){ssImg.style.display='none';return;}
+    ssImg._retried=true;
+    // retry once after 3s — screenshot upload may still be in progress
+    setTimeout(()=>{
+      ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
+    },3000);
+  };
+  ssImg._retried=false;
+  ssImg.src=`/api/fall-events/${eventId}/screenshot?token=${token}`;
 
   document.getElementById('detail-info').innerHTML=`
     <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
