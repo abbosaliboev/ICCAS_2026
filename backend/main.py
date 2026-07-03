@@ -26,6 +26,7 @@ import httpx
 import uvicorn
 
 import db
+import sms
 
 BASE   = Path(__file__).parent
 CLIPS  = BASE / "storage" / "clips"
@@ -134,6 +135,49 @@ class LinkGuardianReq(BaseModel):
 
 
 # ── routes ────────────────────────────────────────────────────────────────────
+
+def _fall_sms_text(target: dict, category: str) -> str:
+    name = target.get("display_name") or "피보호자"
+    address = target.get("address") or "등록된 주소 없음"
+    label = "심각한 낙상" if category == "severe" else "낙상 의심"
+    now_str = datetime.now().strftime("%H:%M")
+    return (
+        f"[Fall Guard] {now_str} {name}님에게서 {label}이 감지되었습니다. "
+        f"위치: {address}. 앱에서 상태를 확인해주세요."
+    )
+
+
+async def _notify_guardian_sms(event_id: str, target: dict, category: str) -> dict:
+    guardian_id = target.get("guardian_id") if target else None
+    if not guardian_id:
+        result = {"ok": False, "mode": "error", "detail": "연결된 보호자가 없습니다."}
+        db.log_sms(event_id, "", "", result["mode"], result["ok"], result["detail"])
+        return result
+
+    guardian = db.get_user_by_id(guardian_id)
+    phone = (guardian or {}).get("phone", "")
+    message = _fall_sms_text(target, category)
+    result = await sms.send_sms(phone, message)
+    db.log_sms(
+        event_id,
+        phone,
+        message,
+        result.get("mode", "error"),
+        bool(result.get("ok")),
+        str(result.get("detail", "")),
+    )
+    return result
+
+
+def _can_access_event(user: dict, ev: dict, target: dict = None) -> bool:
+    if not ev:
+        return False
+    if ev.get("user_id") == user.get("id"):
+        return True
+    if user.get("role") == "guardian":
+        target = target or db.get_user_by_id(ev.get("user_id", "")) if ev.get("user_id") else None
+        return bool(target and target.get("guardian_id") == user.get("id"))
+    return False
 
 _NO_CACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
 
@@ -276,6 +320,8 @@ async def ingest_fall(body: FallEventReq, dev=Depends(auth_device)):
                 "monitored_user_id":   user_id,
                 "monitored_user_name": target.get("display_name", "피보호자"),
             })
+        if target and body.category == "severe":
+            await _notify_guardian_sms(body.event_id, target, body.category)
 
     return {"ok": True}
 
@@ -417,6 +463,30 @@ def emergency_report(event_id: str, user=Depends(auth_user)):
         "gps":       "위치 정보 없음",
         "has_video": bool(ev.get("video_path")),
     }
+
+
+@app.post("/api/fall-events/{event_id}/notify-guardian-sms")
+async def notify_guardian_sms(event_id: str, user=Depends(auth_user)):
+    ev = db.get_fall_event(event_id)
+    if not ev:
+        raise HTTPException(404, "이벤트를 찾을 수 없습니다")
+    target = db.get_user_by_id(ev.get("user_id", "")) if ev.get("user_id") else None
+    if not target:
+        raise HTTPException(404, "대상 사용자를 찾을 수 없습니다")
+    if not _can_access_event(user, ev, target):
+        raise HTTPException(403, "이 이벤트에 접근할 수 없습니다")
+    return await _notify_guardian_sms(event_id, target, ev.get("category", "severe"))
+
+
+@app.get("/api/fall-events/{event_id}/sms-logs")
+def fall_event_sms_logs(event_id: str, user=Depends(auth_user)):
+    ev = db.get_fall_event(event_id)
+    if not ev:
+        raise HTTPException(404, "이벤트를 찾을 수 없습니다")
+    target = db.get_user_by_id(ev.get("user_id", "")) if ev.get("user_id") else None
+    if not _can_access_event(user, ev, target):
+        raise HTTPException(403, "이 이벤트에 접근할 수 없습니다")
+    return db.get_sms_logs_for_event(event_id)
 
 
 # ── WebSocket ─────────────────────────────────────────────────────────────────

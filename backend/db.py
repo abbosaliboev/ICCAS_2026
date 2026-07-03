@@ -68,6 +68,17 @@ def init_db():
         user_id     TEXT NOT NULL,
         created_at  TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS sms_logs (
+        id          TEXT PRIMARY KEY,
+        event_id    TEXT,
+        to_phone    TEXT,
+        message     TEXT,
+        mode        TEXT,
+        ok          INTEGER,
+        detail      TEXT,
+        created_at  TEXT
+    );
     """)
 
     # demo users
@@ -302,6 +313,37 @@ def get_monitored_users(guardian_id: str):
     rows = conn.execute(
         "SELECT id,username,display_name,age,phone,address FROM users WHERE guardian_id=?",
         (guardian_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ── sms log helpers ──────────────────────────────────────────────────────────
+
+def log_sms(event_id: str, to_phone: str, message: str, mode: str, ok: bool, detail: str):
+    conn = get_conn()
+    conn.execute("""
+        INSERT INTO sms_logs (id,event_id,to_phone,message,mode,ok,detail,created_at)
+        VALUES (?,?,?,?,?,?,?,?)
+    """, (
+        str(uuid.uuid4()),
+        event_id,
+        to_phone,
+        message,
+        mode,
+        int(ok),
+        detail,
+        datetime.now().isoformat(),
+    ))
+    conn.commit()
+    conn.close()
+
+
+def get_sms_logs_for_event(event_id: str):
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT * FROM sms_logs WHERE event_id=? ORDER BY created_at DESC",
+        (event_id,),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
