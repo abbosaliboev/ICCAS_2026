@@ -438,6 +438,44 @@ async def websocket_endpoint(ws: WebSocket, token: str = ""):
         mgr.disconnect(ws, user_id)
 
 
+# ── speech transcription fallback ─────────────────────────────────────────────
+
+@app.post("/api/speech/transcribe")
+async def transcribe_speech(file: UploadFile = File(...), user=Depends(auth_user)):
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(503, "OPENAI_API_KEY is not configured")
+
+    audio = await file.read()
+    if not audio:
+        raise HTTPException(400, "Empty audio")
+
+    model = os.environ.get("OPENAI_TRANSCRIBE_MODEL", "whisper-1")
+    filename = file.filename or "speech.webm"
+    content_type = file.content_type or "audio/webm"
+    files = {
+        "file": (filename, audio, content_type),
+        "model": (None, model),
+        "language": (None, "ko"),
+    }
+    headers = {"Authorization": f"Bearer {api_key}"}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers=headers,
+                files=files,
+            )
+        if r.status_code >= 400:
+            raise HTTPException(r.status_code, r.text)
+        data = r.json()
+        return {"text": data.get("text", "")}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(502, f"Transcription failed: {exc}")
+
+
 # ── MJPEG stream proxy ────────────────────────────────────────────────────────
 # Edge server runs on the same machine at localhost:8081.
 # Proxying here lets the browser load the stream from the same origin (port 8000),

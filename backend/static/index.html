@@ -361,6 +361,195 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .modal-time{font-size:.82rem;color:var(--muted2);margin-bottom:24px}
 .modal-acts{display:flex;flex-direction:column;gap:10px}
 
+/* ── USER FALL VOICE ALERT ───────────────────────────── */
+#user-fall-alert{position:fixed;inset:0;background:rgba(8,14,26,.86);
+  z-index:9998;display:none;align-items:flex-start;justify-content:center;
+  padding:18px 16px;backdrop-filter:blur(8px);pointer-events:none}
+#user-fall-alert.show{display:flex}
+.ufa-box{width:min(560px,calc(100vw - 32px));background:var(--card);
+  border:1px solid rgba(239,68,68,.55);border-radius:18px;padding:22px;
+  box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.04) inset;
+  display:flex;flex-direction:column;gap:16px;pointer-events:auto}
+.ufa-title{display:flex;align-items:center;gap:10px;color:var(--red);
+  font-size:1.05rem;font-weight:800}
+.ufa-text{font-size:.94rem;line-height:1.65;color:var(--text2)}
+.ufa-count{display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:56px;border-radius:var(--rs);background:rgba(239,68,68,.12);
+  color:var(--red);font-weight:800}
+.ufa-count strong{font-size:1.8rem;line-height:1}
+.ufa-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── PRODUCT POLISH ─────────────────────────────────── */
+:root,[data-theme="dark"]{
+  --bg:#0f1115;--bg2:#f2f2f7;--card:rgba(255,255,255,.92);--card2:#f6f7f9;
+  --border:rgba(60,60,67,.17);--accent:#007aff;--accent2:#0067d9;
+  --red:#ff3b30;--green:#34c759;--orange:#ff9500;
+  --text:#111318;--text2:#3a3a3c;--muted:#6e6e73;--muted2:#8e8e93;
+  --radius:8px;--rs:8px;--shadow:0 10px 28px rgba(60,60,67,.12);
+  --shadow-sm:0 4px 16px rgba(60,60,67,.09);--sk-a:#e5e5ea;--sk-b:#f7f7fb;
+  --ios-blue:#007aff;--ios-green:#34c759;--ios-red:#ff3b30;--ios-fill:rgba(118,118,128,.12);
+}
+[data-theme="light"]{
+  --bg:#fff;--bg2:#f2f2f7;--card:rgba(255,255,255,.94);--card2:#f6f7f9;
+  --border:rgba(60,60,67,.17);--accent:#007aff;--accent2:#0067d9;
+  --red:#ff3b30;--green:#34c759;--orange:#ff9500;
+  --text:#111318;--text2:#3a3a3c;--muted:#6e6e73;--muted2:#8e8e93;
+  --shadow:0 10px 28px rgba(60,60,67,.1);--shadow-sm:0 4px 16px rgba(60,60,67,.08);
+}
+html,body{background:var(--bg2);letter-spacing:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif}
+.topbar{background:rgba(249,249,251,.82);box-shadow:none;border-bottom:1px solid rgba(60,60,67,.13);backdrop-filter:saturate(180%) blur(18px)}
+.app-topbar{min-height:64px;padding:10px 16px;display:grid;grid-template-columns:44px 1fr auto;align-items:center}
+.top-icon{width:40px;height:40px;border-radius:8px;background:linear-gradient(180deg,#16a085,#0b7f69);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 4px 12px rgba(0,122,255,.16)}
+.top-icon svg{width:23px;height:23px;stroke-width:2.4}
+.brand-lockup{display:flex;align-items:center;gap:11px;min-width:0}
+.brand-mark{width:38px;height:38px;border-radius:8px;background:var(--accent);
+  color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-mark svg{width:22px;height:22px;stroke-width:2.4}
+.brand-lockup{justify-self:center;justify-content:center}
+.brand-lockup h1{font-size:1.08rem;text-align:center;line-height:1.1;font-weight:800}
+.brand-lockup .brand-mark,.brand-sub{display:none}
+.role-badge{max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:8px;padding:7px 10px;font-weight:800;background:rgba(0,122,255,.1);color:#0067d9}
+.dashboard-shell{padding:14px 16px 100px;display:flex;flex-direction:column;gap:12px;background:var(--bg2)}
+.dashboard-hero{display:flex;justify-content:space-between;align-items:center;gap:14px;
+  padding:14px 16px;background:#17201d;color:#fff;border-radius:8px;box-shadow:var(--shadow)}
+.hero-kicker{font-size:.68rem;font-weight:800;letter-spacing:.12em;color:#9ed8cd}
+.hero-title{font-size:1.28rem;font-weight:800;margin-top:4px}
+.hero-desc{font-size:.82rem;line-height:1.45;color:#dbe8e3;margin-top:6px;max-width:460px}
+.hero-status{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;
+  border-radius:999px;background:rgba(255,255,255,.09);font-size:.78rem;white-space:nowrap}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--muted2);display:inline-block;opacity:.7}
+.guardian-mode .dashboard-hero{background:#172033}
+.guardian-mode .hero-kicker{color:#c7d2fe}
+.dashboard-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,.9fr);gap:12px;align-items:start}
+.card{border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.85) inset,0 8px 22px rgba(60,60,67,.08);background:var(--card);border:1px solid rgba(60,60,67,.12);backdrop-filter:saturate(160%) blur(14px)}
+.monitor-card{padding:12px;overflow:hidden}
+.monitor-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.panel-title{font-size:1.05rem;font-weight:800;color:var(--text)}
+.monitor-chip{display:inline-flex;align-items:center;justify-content:center;height:26px;padding:0 10px;
+  border-radius:8px;background:var(--ios-green);color:#fff;font-size:.7rem;font-weight:900;box-shadow:0 4px 12px rgba(52,199,89,.22)}
+.monitor-chip::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff;margin-right:6px}
+.stream-wrap,.stream-ph{border-radius:8px;aspect-ratio:16/9}
+.stream-wrap{border:1px solid #111;background:#050706;overflow:hidden}
+#stream-img{background:#050706}
+.stream-overlay{position:absolute;left:10px;right:10px;bottom:10px;display:flex;justify-content:space-between;gap:8px;
+  color:#fff;font-size:.66rem;font-weight:800;letter-spacing:.06em;pointer-events:none}
+.stream-overlay span{padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.48);backdrop-filter:blur(8px)}
+.stream-ph{border:1px dashed var(--border);background:linear-gradient(135deg,#f5f5f7,#e8eef1)}
+.stream-url-row{display:flex;gap:10px;width:min(100%,520px);margin:0 auto 8px}
+.stream-url-row .fi{padding:11px 12px;font-size:.85rem}
+.stream-url-row .btn{width:auto;white-space:nowrap}
+.stream-default{font-size:.72rem;color:var(--muted)}
+.stream-acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:12px}
+.stream-acts .btn{min-height:42px}
+.emergency-action,.emergency-call{background:rgba(255,59,48,.1)!important;color:var(--red)!important}
+.side-stack{display:flex;flex-direction:column;gap:14px}
+.status-panel{padding:18px}
+.status-main{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.status-copy{border-top:1px solid var(--border);margin-top:14px;padding-top:12px;text-align:center;font-size:.84rem;color:var(--muted)}
+.status-main #status-icon,#status-icon{width:72px;height:72px;border-radius:50%;background:rgba(20,143,103,.12);
+  display:flex;align-items:center;justify-content:center}
+.status-label,#status-text{font-size:2rem;font-weight:900;line-height:1.05;color:#0a7a5a}
+.status-time{font-size:.82rem;color:var(--muted);margin-top:5px}
+.status-panel.alert{border-color:rgba(220,63,69,.45);background:#fff5f5}
+.status-panel.alert .status-main #status-icon{background:rgba(220,63,69,.13)}
+.action-panel{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.action-panel .ctitle{grid-column:1/-1}
+.emergency-call{min-height:92px;font-size:2.15rem;border:1px solid rgba(255,59,48,.26);border-radius:8px;background:linear-gradient(180deg,#fff,#fff4f3)!important}
+.action-panel .btn-ghost{min-height:92px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.72);color:#1c1c1e}
+.guardian-panel{display:flex;flex-direction:column;gap:10px}
+.guardian-mode .dashboard-grid{grid-template-columns:1fr}
+.guardian-mode .side-stack{display:contents}
+.guardian-mode #guardian-panel{order:1}
+.guardian-mode .monitor-card{order:2}
+.guardian-mode .status-panel{order:3}
+.guardian-mode #recent-card{order:4}
+.guardian-mode .action-panel{order:5}
+.guardian-mode .role-badge{background:rgba(0,122,255,.16);color:#0057b8}
+.guardian-mode .action-panel .emergency-call{background:var(--ios-green)!important;color:#fff!important;border-color:rgba(52,199,89,.28);font-size:1.2rem}
+.guardian-mode .action-panel .btn-ghost{background:var(--ios-blue);color:#fff;border-color:var(--ios-blue)}
+.guardian-person{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;
+  border-radius:8px;border:1px solid var(--border);background:rgba(242,242,247,.8)}
+.guardian-person-name{font-weight:800;color:var(--text)}
+.guardian-person-meta{font-size:.78rem;color:var(--muted);margin-top:2px}
+.guardian-person-badge{font-size:.66rem;font-weight:900;letter-spacing:.08em;color:#0067d9;background:rgba(0,122,255,.12);
+  border-radius:999px;padding:5px 7px;white-space:nowrap}
+.metric-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.metric-tile{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;box-shadow:var(--shadow-sm);opacity:.5}
+.metric-tile span{display:block;color:var(--muted);font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.metric-tile strong{display:block;margin-top:6px;font-size:.9rem;color:var(--text)}
+.nav{background:rgba(249,249,251,.82);box-shadow:none;border-top:1px solid rgba(60,60,67,.13);backdrop-filter:saturate(180%) blur(18px);padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.nav-btn.active::after{height:3px;border-radius:0 0 6px 6px}
+.btn{border-radius:8px;font-weight:800;letter-spacing:0;box-shadow:none;transition:transform .12s ease,background .18s ease,opacity .18s ease}
+.btn:active{transform:scale(.985)}
+.btn-primary{background:var(--ios-blue)!important;color:#fff!important;border-color:var(--ios-blue)!important}
+.btn-outline,.btn-ghost{background:var(--ios-fill);border-color:transparent;color:var(--accent)}
+.btn-danger{background:var(--ios-red)!important;color:#fff!important}
+.fi,select,textarea{border-radius:8px!important;border-color:rgba(60,60,67,.18)!important;background:rgba(255,255,255,.88)!important;box-shadow:0 1px 0 rgba(255,255,255,.85) inset}
+.fi:focus,select:focus,textarea:focus{border-color:rgba(0,122,255,.55)!important;box-shadow:0 0 0 3px rgba(0,122,255,.14)!important;outline:none}
+.event-item{background:transparent}
+.rpt-stat,.rpt-chart{box-shadow:var(--shadow-sm)}
+#fall-modal,.modal-box,#user-fall-alert,.ufa-box{border-radius:8px}
+
+/* ── CUPERTINO POLISH ───────────────────────────────── */
+html,body{background:#f4f4f7}
+.topbar{background:rgba(251,251,253,.9);border-bottom:1px solid rgba(60,60,67,.1);
+  backdrop-filter:saturate(180%) blur(22px)}
+.top-icon{background:#0a84ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 8px 18px rgba(10,132,255,.2)}
+.dashboard-shell{background:linear-gradient(180deg,#fafafd 0%,#f2f2f7 42%,#f2f2f7 100%);
+  padding:14px 14px 100px}
+.dashboard-shell .ctitle{font-size:.86rem;font-weight:800;color:#3a3a3c;letter-spacing:0;text-transform:none}
+.card{background:rgba(255,255,255,.96);border:1px solid rgba(60,60,67,.1);
+  box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 10px 26px rgba(40,40,48,.075)}
+.guardian-panel{padding:16px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(250,251,255,.95))}
+.guardian-person{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:12px;padding:12px;
+  background:linear-gradient(180deg,#f7f8fc,#f0f2f7);border-color:rgba(60,60,67,.1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
+.guardian-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#d8f5eb,#bcebdc);color:#087a5a}
+.guardian-avatar svg{width:29px;height:29px;stroke-width:2.2}
+.guardian-person-name{font-size:1.05rem;font-weight:900;color:#111318;line-height:1.15}
+.guardian-person-meta{font-size:.78rem;color:#6e6e73;margin-top:4px}
+.guardian-person-badge{padding:6px 8px;background:rgba(0,122,255,.12);color:#005ecb}
+.monitor-chip{height:28px;background:#30d158;box-shadow:0 7px 16px rgba(48,209,88,.22)}
+.monitor-tools{display:flex;align-items:center;gap:8px}
+.refresh-icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid rgba(60,60,67,.12);
+  background:rgba(255,255,255,.82);color:#0a84ff;display:flex;align-items:center;justify-content:center;padding:0;
+  box-shadow:0 4px 12px rgba(10,132,255,.08)}
+.refresh-icon-btn svg{width:17px;height:17px;stroke-width:2.4}
+.refresh-icon-btn #refresh-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.refresh-icon-btn #refresh-spin{font-size:1rem;color:#0a84ff}
+.stream-wrap{box-shadow:0 10px 24px rgba(0,0,0,.14)}
+.status-main #status-icon,#status-icon{background:linear-gradient(180deg,rgba(48,209,88,.16),rgba(48,209,88,.09));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
+.status-label,#status-text{color:#087a51}
+.emergency-call{box-shadow:0 8px 20px rgba(255,59,48,.08)}
+.guardian-mode .action-panel .emergency-call{background:#30d158!important;color:#fff!important;
+  box-shadow:0 10px 22px rgba(48,209,88,.16)}
+.guardian-mode .action-panel .btn-ghost{background:#0a84ff;color:#fff;border-color:#0a84ff;
+  box-shadow:0 10px 22px rgba(10,132,255,.14)}
+.guardian-mode #guardian-panel #status-card{padding:12px;margin-top:2px;background:linear-gradient(180deg,#f7f8fc,#f1f5f9);
+  border:1px solid rgba(60,60,67,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
+.guardian-mode #guardian-panel #status-card .ctitle{margin-bottom:8px}
+.guardian-mode #guardian-panel #status-card .status-main{align-items:center}
+.guardian-mode #guardian-panel #status-card #status-icon{width:48px;height:48px}
+.guardian-mode #guardian-panel #status-card #status-text{font-size:1.55rem}
+.guardian-mode #guardian-panel #status-card .status-copy{display:none}
+.metric-tile{background:rgba(255,255,255,.8);border-color:rgba(60,60,67,.1);box-shadow:none}
+.nav{background:rgba(251,251,253,.9);border-top:1px solid rgba(60,60,67,.1);
+  backdrop-filter:saturate(180%) blur(22px)}
+@media (max-width:860px){
+  .dashboard-grid{grid-template-columns:1fr}
+  .metric-strip{grid-template-columns:1fr}
+  .dashboard-hero{align-items:flex-start;flex-direction:column}
+  .hero-status{width:100%;justify-content:center}
+}
+@media (max-width:520px){
+  .dashboard-shell{padding-left:12px;padding-right:12px}
+  .action-panel{grid-template-columns:1fr 1fr}
+  .emergency-call,.action-panel .btn-ghost{min-height:82px}
+}
+
 /* ── UTILS ───────────────────────────────────────────── */
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .p16{padding:16px}.pb0{padding-bottom:0}.gap12{gap:12px}
@@ -396,6 +585,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         <label class="form-label" data-i18n="password">비밀번호</label>
         <input id="login-password" class="fi" type="password" autocomplete="current-password" data-i18n-ph="password">
       </div>
+      <label style="display:flex;gap:9px;align-items:flex-start;margin:0 0 14px;font-size:.82rem;color:var(--muted);line-height:1.45">
+        <input id="login-voice-consent" type="checkbox" checked style="margin-top:3px;accent-color:var(--accent)">
+        <span>낙상 감지 시 TTS 음성 안내와 STT 음성 응답 사용에 동의합니다.</span>
+      </label>
       <button class="btn btn-primary" onclick="doLogin()"><span data-i18n="login">로그인</span></button>
       <div class="auth-link mt12">
         <span data-i18n="no_account">계정이 없으신가요?</span>
@@ -461,25 +654,44 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <div class="fg"><label data-i18n="phone">전화번호</label><input id="reg-phone" class="fi" type="tel" placeholder="010-0000-0000"></div>
     <div class="fg"><label data-i18n="address">주소</label><input id="reg-address" class="fi" type="text" data-i18n-ph="address"></div>
     <div class="fg"><label data-i18n="guardian_id">보호자 아이디 <span style="color:var(--muted);font-size:.8rem" data-i18n="optional">(선택)</span></label><input id="reg-guardian" class="fi" type="text"></div>
+    <label style="display:flex;gap:9px;align-items:flex-start;margin:0 0 14px;font-size:.82rem;color:var(--muted);line-height:1.45">
+      <input id="reg-voice-consent" type="checkbox" checked style="margin-top:3px;accent-color:var(--accent)">
+      <span>낙상 감지 시 TTS 음성 안내와 STT 음성 응답 사용에 동의합니다.</span>
+    </label>
     <button class="btn btn-primary mt8" onclick="doRegister()"><span data-i18n="register_btn">등록 완료</span></button>
   </div>
 </div>
 
 <!-- DASHBOARD -->
 <div id="screen-dashboard" class="screen">
-  <div class="topbar">
-    <div style="min-width:0;flex:1">
-      <span id="dash-role-badge" class="ws-badge" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block"></span>
+  <div class="topbar app-topbar">
+    <div class="top-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-5"/></svg>
     </div>
-    <h1 style="flex-shrink:0">Fall Guard</h1>
-    <div style="flex:1"></div>
+    <div class="brand-lockup">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-5"/></svg>
+      </div>
+      <div>
+        <h1>Fall Guard</h1>
+        <div class="brand-sub">MobiCare Edge AI</div>
+      </div>
+    </div>
+    <span id="dash-role-badge" class="ws-badge role-badge"></span>
   </div>
-  <div class="scroll p16 flex flex-col gap12">
-
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+  <div class="scroll dashboard-shell">
+    <div class="dashboard-grid">
+    <div class="card monitor-card">
+      <div class="monitor-head">
         <div class="ctitle" style="margin-bottom:0" data-i18n="live">실시간 모니터링</div>
-        <span id="ws-dot" title="WebSocket" style="width:7px;height:7px;border-radius:50%;background:var(--muted2);display:inline-block;opacity:.5;transition:background .3s,opacity .3s"></span>
+        <div class="monitor-tools">
+          <button class="refresh-icon-btn" id="refresh-btn" onclick="refreshStream()" aria-label="새로고침">
+            <svg id="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+            <span id="refresh-label" data-i18n="refresh">새로고침</span>
+            <span id="refresh-spin" style="display:none">↻</span>
+          </button>
+          <span class="monitor-chip">LIVE</span>
+        </div>
       </div>
       <div id="stream-ph" class="stream-ph">
         <div class="stream-ph-icon">📷</div>
@@ -494,33 +706,46 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         <img id="stream-img" alt="">
       </div>
       <span id="fall-badge" style="display:none"></span>
-      <div class="stream-acts">
-        <button class="btn btn-outline btn-sm" id="refresh-btn" onclick="refreshStream()">
-          <span id="refresh-label" data-i18n="refresh">새로고침</span>
-          <span id="refresh-spin" style="display:none">↻</span>
-        </button>
-        <button class="btn btn-sm" id="call-btn" onclick="callContact()"
-          style="background:rgba(239,68,68,.13);color:var(--red);font-weight:700">
-          <span id="call-btn-label">119</span>
-        </button>
-      </div>
     </div>
 
-    <div class="card" id="status-card">
+    <aside class="side-stack">
+    <div class="card status-panel" id="status-card">
       <div class="ctitle" data-i18n="detecting">감지 현황</div>
-      <div class="flex ac jb">
+      <div class="status-main">
         <div>
           <div class="fw7" id="status-text" data-i18n="status_normal">정상</div>
           <div style="font-size:.85rem;color:var(--muted);margin-top:3px" id="status-time"></div>
         </div>
         <div id="status-icon"><div class="s-dot ok"></div></div>
       </div>
+      <div class="status-copy">모든 시스템이 정상입니다.</div>
+    </div>
+
+    <div class="card action-panel">
+      <div class="ctitle" id="action-title">응급 대응</div>
+      <button class="btn emergency-call" onclick="callContact()">
+        <span id="call-btn-label-large">119</span>
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="switchTab('history')">기록 확인</button>
+    </div>
+
+    <div class="card guardian-panel" id="guardian-panel" style="display:none">
+      <div class="ctitle">피보호자 현황</div>
+      <div id="guardian-target-list"><div class="text-muted" style="font-size:.85rem">연결된 피보호자 없음</div></div>
     </div>
 
     <div class="card" id="recent-card">
       <div class="ctitle" data-i18n="recent_events">최근 낙상 기록</div>
       <div id="recent-list"><div class="text-muted" style="font-size:.85rem" data-i18n="no_records">기록 없음</div></div>
     </div>
+    </aside>
+    </div>
+
+    <section class="metric-strip">
+      <div class="metric-tile"><span id="metric-one-label">Device</span><strong id="metric-one-value">Jetson Orin NX</strong></div>
+      <div class="metric-tile"><span id="metric-two-label">Model</span><strong id="metric-two-value">ST-GCN</strong></div>
+      <div class="metric-tile"><span id="metric-three-label">Alert</span><strong id="metric-three-value">Voice + SMS</strong></div>
+    </section>
 
   </div>
   <nav class="nav" id="nav-dash">
@@ -927,6 +1152,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<!-- USER FALL VOICE ALERT -->
+<div id="user-fall-alert">
+  <div class="ufa-box">
+    <div class="ufa-title">
+      <span>⚠</span>
+      <span data-i18n="fall_detected">낙상이 감지되었습니다</span>
+    </div>
+    <div class="ufa-text" id="ufa-message"></div>
+    <div class="ufa-count">
+      <span id="ufa-count-label">음성 안내 후 카운트다운</span>
+      <strong id="ufa-sec">15</strong>
+      <span>초</span>
+    </div>
+    <div class="ufa-actions">
+      <button class="btn btn-danger btn-sm" onclick="handleUserVoiceChoice('contact')">연락</button>
+      <button class="btn btn-ghost btn-sm" onclick="handleUserVoiceChoice('dismiss')">아니</button>
+    </div>
+  </div>
+</div>
+
 <!-- IMAGE VIEWER -->
 <div id="img-viewer" onclick="closeImgViewer()" style="display:none;position:fixed;inset:0;z-index:9999;
   background:rgba(0,0,0,.95);display:none;align-items:center;justify-content:center;
@@ -1323,6 +1568,11 @@ let ws=null,currentEventId=null;
 let streamUrl=localStorage.getItem('mg_stream_url')||'/api/stream/video';
 let heatmapOn=false;
 let _allEvents=[];
+const USER_FALL_PROMPT='낙상이 감지되었습니다. 보호자에게 연락 및 119 신고를 원하시면 "연락"이라고 말씀해주세요. 괜찮으시면 "아니"라고 말씀해주세요. 15초 간 응답이 없으시면 자동으로 119 문자 신고 및 보호자에게 연락 조치가 진행됩니다.';
+const TEST_EMERGENCY_SMS_NUMBER='01088490868';
+let userAlertTimer=null,userAlertRemaining=15,userAlertRecognizer=null,userAlertAcceptSpeech=false;
+let voiceReady=localStorage.getItem('mg_voice_ready')==='1';
+let whisperRecorder=null,whisperStream=null,whisperTimer=null;
 
 // ── HTTP ───────────────────────────────────────────────
 async function api(method,path,body){
@@ -1387,6 +1637,12 @@ async function doLogin(){
   const username=document.getElementById('login-username').value.trim();
   const password=document.getElementById('login-password').value.trim();
   if(!username||!password){toast(t('login_fail'),'err');return;}
+  const voiceConsent=document.getElementById('login-voice-consent')?.checked;
+  if(voiceConsent) activateVoiceFeatures(false);
+  else{
+    voiceReady=false;
+    localStorage.removeItem('mg_voice_ready');
+  }
   const res=await fetch(API+'/api/auth/login',{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({username,password})
@@ -1410,6 +1666,12 @@ function afterLogin(){
 }
 
 async function doRegister(){
+  const voiceConsent=document.getElementById('reg-voice-consent')?.checked;
+  if(voiceConsent) activateVoiceFeatures(false);
+  else{
+    voiceReady=false;
+    localStorage.removeItem('mg_voice_ready');
+  }
   const body={
     username:document.getElementById('reg-username').value.trim(),
     password:document.getElementById('reg-password').value.trim(),
@@ -1461,11 +1723,91 @@ function doLogout(){
 }
 
 // ── DASHBOARD ──────────────────────────────────────────
+function setDashText(id, text){
+  const el=document.getElementById(id);
+  if(el) el.textContent=text;
+}
+
+function placeDashboardCardsForRole(isGuardian){
+  const status=document.getElementById('status-card');
+  const guardianPanel=document.getElementById('guardian-panel');
+  const sideStack=document.querySelector('.side-stack');
+  const actionPanel=document.querySelector('.action-panel');
+  if(!status||!guardianPanel||!sideStack) return;
+  if(isGuardian){
+    if(status.parentElement!==guardianPanel) guardianPanel.appendChild(status);
+  }else if(status.parentElement!==sideStack){
+    sideStack.insertBefore(status, actionPanel||sideStack.firstChild);
+  }
+}
+
+async function loadGuardianTargets(){
+  const panel=document.getElementById('guardian-panel');
+  const list=document.getElementById('guardian-target-list');
+  if(!panel||!list||!user||user.role!=='guardian') return;
+  list.innerHTML=`<div class="text-muted" style="font-size:.85rem">불러오는 중...</div>`;
+  try{
+    const targets=await api('GET','/api/users/monitored');
+    if(!targets||!targets.length){
+      list.innerHTML=`<div class="text-muted" style="font-size:.85rem">연결된 피보호자 없음</div>`;
+      return;
+    }
+    list.innerHTML='';
+    targets.slice(0,4).forEach(target=>{
+      const row=document.createElement('div');
+      row.className='guardian-person';
+      const avatar=document.createElement('div');
+      avatar.className='guardian-avatar';
+      avatar.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>';
+      const info=document.createElement('div');
+      const name=document.createElement('div');
+      name.className='guardian-person-name';
+      name.textContent=target.display_name||target.username||'피보호자';
+      const meta=document.createElement('div');
+      meta.className='guardian-person-meta';
+      const parts=[];
+      if(target.age) parts.push(`${target.age}세`);
+      if(target.phone) parts.push(target.phone);
+      meta.textContent=parts.join(' · ')||'연락처 정보 없음';
+      const badge=document.createElement('span');
+      badge.className='guardian-person-badge';
+      badge.textContent='MONITOR';
+      info.append(name,meta);
+      row.append(avatar,info,badge);
+      list.appendChild(row);
+    });
+  }catch(e){
+    list.innerHTML=`<div class="text-muted" style="font-size:.85rem">피보호자 정보를 불러오지 못했습니다.</div>`;
+  }
+}
+
+function applyRoleDashboard(){
+  const isGuardian=user&&user.role==='guardian';
+  const screen=document.getElementById('screen-dashboard');
+  if(screen) screen.classList.toggle('guardian-mode',!!isGuardian);
+  setDashText('hero-kicker',isGuardian?'GUARDIAN COMMAND':'PERSONAL SAFETY');
+  setDashText('hero-title',isGuardian?'보호자 관제 화면':'실시간 낙상 감지');
+  setDashText('hero-desc',isGuardian?'피보호자의 낙상 알림, 실시간 화면, 최근 기록을 한 화면에서 확인합니다.':'내 공간의 안전 상태와 긴급 대응을 바로 확인합니다.');
+  setDashText('action-title',isGuardian?'보호자 조치':'응급 대응');
+  setDashText('metric-one-label',isGuardian?'Monitoring':'Device');
+  setDashText('metric-one-value',isGuardian?'피보호자 연결':'Jetson Orin NX');
+  setDashText('metric-two-label',isGuardian?'Response':'Model');
+  setDashText('metric-two-value',isGuardian?'알림 확인':'ST-GCN');
+  setDashText('metric-three-label',isGuardian?'Reports':'Alert');
+  setDashText('metric-three-value',isGuardian?'기록/리포트':'Voice + SMS');
+  const panel=document.getElementById('guardian-panel');
+  if(panel) panel.style.display=isGuardian?'':'none';
+  placeDashboardCardsForRole(isGuardian);
+  if(isGuardian) loadGuardianTargets();
+}
+
 function setupDashboard(){
   if(!user) return;
   const badge=document.getElementById('dash-role-badge');
   badge.textContent=user.role==='guardian'?t('role_guardian'):t('role_user');
+  applyRoleDashboard();
   setStreamUrl(streamUrl);
+  updateCallBtn();
   loadRecentEvents();
 }
 
@@ -1499,7 +1841,9 @@ function refreshStream(){
   const lbl=document.getElementById('refresh-label');
   const spin=document.getElementById('refresh-spin');
   const btn=document.getElementById('refresh-btn');
+  const icon=document.getElementById('refresh-icon');
   lbl.style.display='none'; spin.style.display='';
+  if(icon) icon.style.display='none';
   btn.disabled=true;
   spin.style.animation='spin 0.7s linear infinite';
   _stopSSE();
@@ -1507,6 +1851,7 @@ function refreshStream(){
     if(streamUrl) _startSSE();
     setTimeout(()=>{
       lbl.style.display=''; spin.style.display='none';
+      if(icon) icon.style.display='';
       btn.disabled=false; spin.style.animation='';
     },800);
   },300);
@@ -1519,6 +1864,8 @@ function updateCallBtn(){
   const c=getContact();
   const lbl=document.getElementById('call-btn-label');
   if(lbl) lbl.textContent=c?c.name:'119';
+  const big=document.getElementById('call-btn-label-large');
+  if(big) big.textContent=c?c.name:'119';
 }
 
 function callContact(){
@@ -1610,8 +1957,12 @@ function onFallDetected(msg){
   document.getElementById('status-text').textContent=t('fall_detected');
   document.getElementById('status-text').style.color='var(--red)';
   document.getElementById('status-icon').innerHTML='<div class="s-dot alert"></div>';
+  document.getElementById('status-card').classList.add('alert');
   clearInterval(_statusClockId);
   document.getElementById('status-time').textContent=fmtTs(msg.timestamp);
+  if(user&&user.role==='user'){
+    showUserFallAlert(msg);
+  }
   if(user&&user.role==='guardian'){
     if(navigator.vibrate) navigator.vibrate([600,150,600,150,600]);
     document.getElementById('modal-title').textContent=
@@ -1621,6 +1972,232 @@ function onFallDetected(msg){
     document.getElementById('fall-modal').classList.add('show');
   }
   loadRecentEvents();
+}
+
+function showUserFallAlert(msg){
+  stopUserFallAlert(false);
+  currentEventId=msg.event_id;
+  userAlertRemaining=15;
+  userAlertAcceptSpeech=false;
+  document.getElementById('ufa-message').textContent=USER_FALL_PROMPT;
+  document.getElementById('ufa-sec').textContent=userAlertRemaining;
+  document.getElementById('ufa-count-label').textContent=voiceReady?'음성 안내 후 카운트다운':'로그인/회원가입에서 음성 사용에 동의해야 합니다';
+  document.getElementById('user-fall-alert').classList.add('show');
+  if(navigator.vibrate) navigator.vibrate([450,120,450]);
+  if(voiceReady) speakUserFallPrompt();
+}
+
+function activateVoiceFeatures(fromAlert=false){
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const hasTts='speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  if(!hasTts){
+    toast('이 브라우저는 TTS를 지원하지 않습니다.','err');
+  }else{
+    speechSynthesis.cancel();
+    const test=new SpeechSynthesisUtterance('음성 안내가 켜졌습니다.');
+    test.lang='ko-KR';
+    test.rate=.95;
+    speechSynthesis.speak(test);
+    voiceReady=true;
+    localStorage.setItem('mg_voice_ready','1');
+  }
+  if(SpeechRecognition){
+    try{
+      const rec=new SpeechRecognition();
+      rec.lang='ko-KR';
+      rec.continuous=false;
+      rec.interimResults=false;
+      rec.onstart=()=>{
+        voiceReady=true;
+        localStorage.setItem('mg_voice_ready','1');
+        toast('음성 기능이 켜졌습니다.','ok');
+        try{rec.stop();}catch{}
+        if(fromAlert) setTimeout(speakUserFallPrompt,500);
+      };
+      rec.onerror=e=>{
+        toast(`마이크 권한을 확인하세요: ${e.error||'오류'}`,'err');
+        if(fromAlert&&hasTts) setTimeout(speakUserFallPrompt,500);
+      };
+      rec.start();
+    }catch(e){
+      toast('마이크 권한 요청을 시작할 수 없습니다.','err');
+      if(fromAlert&&hasTts) setTimeout(speakUserFallPrompt,500);
+    }
+  }else{
+    voiceReady=hasTts;
+    if(voiceReady) localStorage.setItem('mg_voice_ready','1');
+    toast('이 브라우저는 STT를 지원하지 않습니다.','err');
+    if(fromAlert&&hasTts) setTimeout(speakUserFallPrompt,500);
+  }
+}
+
+function speakUserFallPrompt(){
+  if(!('speechSynthesis' in window)){
+    startUserResponseWindow();
+    return;
+  }
+  speechSynthesis.cancel();
+  const utterance=new SpeechSynthesisUtterance(USER_FALL_PROMPT);
+  utterance.lang='ko-KR';
+  utterance.rate=.95;
+  const voices=speechSynthesis.getVoices();
+  const koVoice=voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith('ko'));
+  if(koVoice) utterance.voice=koVoice;
+  let finished=false;
+  const finish=()=>{
+    if(finished) return;
+    finished=true;
+    setTimeout(startUserResponseWindow,400);
+  };
+  utterance.onend=finish;
+  utterance.onerror=finish;
+  document.getElementById('ufa-count-label').textContent='음성 안내 중';
+  speechSynthesis.speak(utterance);
+  setTimeout(()=>{try{speechSynthesis.resume();}catch{}},200);
+  setTimeout(finish,Math.max(12000,USER_FALL_PROMPT.length*130));
+}
+
+function startUserResponseWindow(){
+  userAlertAcceptSpeech=true;
+  userAlertRemaining=15;
+  document.getElementById('ufa-sec').textContent=userAlertRemaining;
+  document.getElementById('ufa-count-label').textContent='응답 대기 중';
+  startUserSpeechRecognition();
+  startUserAlertCountdown();
+}
+
+function startUserAlertCountdown(){
+  if(userAlertTimer) clearInterval(userAlertTimer);
+  userAlertTimer=setInterval(()=>{
+    userAlertRemaining-=1;
+    document.getElementById('ufa-sec').textContent=Math.max(userAlertRemaining,0);
+    if(userAlertRemaining<=0) handleUserVoiceChoice('timeout');
+  },1000);
+}
+
+function startUserSpeechRecognition(){
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SpeechRecognition){
+    startWhisperRecognitionFallback();
+    return;
+  }
+  try{
+    if(userAlertRecognizer){try{userAlertRecognizer.stop();}catch{} userAlertRecognizer=null;}
+    userAlertRecognizer=new SpeechRecognition();
+    userAlertRecognizer.lang='ko-KR';
+    userAlertRecognizer.continuous=true;
+    userAlertRecognizer.interimResults=false;
+    userAlertRecognizer.onresult=e=>{
+      if(!userAlertAcceptSpeech) return;
+      const text=Array.from(e.results).slice(e.resultIndex)
+        .map(r=>r[0].transcript).join(' ').replace(/\s/g,'');
+      handleRecognizedUserSpeech(text);
+    };
+    userAlertRecognizer.onerror=e=>{
+      if(userAlertAcceptSpeech){
+        toast(`음성 인식 오류: ${e.error||'마이크 권한 확인'}`,'err');
+        if(e.error!=='not-allowed') startWhisperRecognitionFallback();
+      }
+    };
+    userAlertRecognizer.onend=()=>{
+      if(userAlertAcceptSpeech&&userAlertRemaining>0){
+        setTimeout(startUserSpeechRecognition,500);
+      }
+    };
+    userAlertRecognizer.start();
+  }catch(e){
+    startWhisperRecognitionFallback();
+  }
+}
+
+function handleRecognizedUserSpeech(text){
+  const normalized=(text||'').replace(/\s/g,'');
+  if(normalized.includes('연락')) handleUserVoiceChoice('contact');
+  if(normalized.includes('아니')||normalized.includes('아니요')||normalized.includes('괜찮')) handleUserVoiceChoice('dismiss');
+}
+
+async function startWhisperRecognitionFallback(){
+  if(!userAlertAcceptSpeech||whisperRecorder) return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){
+    toast('브라우저에서 음성 녹음을 지원하지 않습니다.','err');
+    return;
+  }
+  try{
+    whisperStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const chunks=[];
+    whisperRecorder=new MediaRecorder(whisperStream);
+    whisperRecorder.ondataavailable=e=>{if(e.data&&e.data.size) chunks.push(e.data);};
+    whisperRecorder.onstop=async()=>{
+      const blob=new Blob(chunks,{type:whisperRecorder.mimeType||'audio/webm'});
+      stopWhisperRecognitionFallback(false);
+      if(!userAlertAcceptSpeech||!blob.size) return;
+      const form=new FormData();
+      form.append('file',blob,'speech.webm');
+      try{
+        const r=await fetch('/api/speech/transcribe',{
+          method:'POST',
+          headers:{'Authorization':`Bearer ${token}`},
+          body:form
+        });
+        if(r.ok){
+          const data=await r.json();
+          handleRecognizedUserSpeech(data.text||'');
+        }else if(r.status===503){
+          toast('Whisper STT를 쓰려면 서버에 OPENAI_API_KEY가 필요합니다.','err');
+        }
+      }catch{}
+      if(userAlertAcceptSpeech&&userAlertRemaining>0) setTimeout(startWhisperRecognitionFallback,500);
+    };
+    whisperRecorder.start();
+    whisperTimer=setTimeout(()=>{try{whisperRecorder.stop();}catch{}},3500);
+  }catch(e){
+    toast('마이크 권한을 허용해야 음성 응답을 사용할 수 있습니다.','err');
+  }
+}
+
+function stopWhisperRecognitionFallback(stopRecorder=true){
+  if(whisperTimer){clearTimeout(whisperTimer);whisperTimer=null;}
+  if(stopRecorder&&whisperRecorder&&whisperRecorder.state!=='inactive'){
+    try{whisperRecorder.stop();}catch{}
+  }
+  whisperRecorder=null;
+  if(whisperStream){
+    whisperStream.getTracks().forEach(track=>track.stop());
+    whisperStream=null;
+  }
+}
+
+function stopUserFallAlert(reset=true){
+  if(userAlertTimer){clearInterval(userAlertTimer);userAlertTimer=null;}
+  if(userAlertRecognizer){try{userAlertRecognizer.stop();}catch{} userAlertRecognizer=null;}
+  stopWhisperRecognitionFallback();
+  userAlertAcceptSpeech=false;
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  document.getElementById('user-fall-alert').classList.remove('show');
+  if(reset) resetFallStatus();
+}
+
+function handleUserVoiceChoice(choice){
+  stopUserFallAlert(false);
+  if(choice==='dismiss'){
+    toast('알림을 해제했습니다.','ok');
+    if(currentEventId) api('POST',`/api/fall-events/${currentEventId}/acknowledge`).catch(()=>{});
+    resetFallStatus();
+    return;
+  }
+  toast(choice==='timeout'?'응답이 없어 문자 신고 화면을 엽니다.':'문자 신고 화면을 엽니다.');
+  notifyGuardianPlaceholder();
+  openEmergencySms();
+}
+
+function notifyGuardianPlaceholder(){
+  toast('보호자 연락 조치를 진행합니다.');
+}
+
+function openEmergencySms(){
+  const body=encodeURIComponent('낙상이 감지되었습니다. 위치와 상태 확인이 필요합니다.');
+  toast('브라우저 보안상 문자는 자동 발송되지 않고 작성 화면만 열립니다.');
+  window.location.href=`sms:${TEST_EMERGENCY_SMS_NUMBER}?body=${body}`;
 }
 
 function guardianWatchVideo(){
@@ -1901,10 +2478,12 @@ async function ackEvent(){
   toast(t('acknowledge'));switchTab('history');
 }
 function resetFallStatus(){
+  stopUserFallAlert(false);
   document.getElementById('fall-badge').innerHTML=`<span class="sdot blink"></span> ${t('status_normal')}`;
   document.getElementById('status-text').textContent=t('status_normal');
   document.getElementById('status-text').style.color='';
   document.getElementById('status-icon').innerHTML='<div class="s-dot ok"></div>';
+  document.getElementById('status-card').classList.remove('alert');
   _startStatusClock();
 }
 
