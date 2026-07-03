@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -481,6 +481,7 @@ html,body{background:var(--bg2);letter-spacing:0;font-family:-apple-system,Blink
 .nav{background:rgba(249,249,251,.82);box-shadow:none;border-top:1px solid rgba(60,60,67,.13);backdrop-filter:saturate(180%) blur(18px);padding-bottom:max(8px,env(safe-area-inset-bottom))}
 .nav-btn.active::after{height:3px;border-radius:0 0 6px 6px}
 .btn{border-radius:8px;font-weight:800;letter-spacing:0;box-shadow:none;transition:transform .12s ease,background .18s ease,opacity .18s ease}
+.btn svg{width:18px;height:18px;stroke-width:2.4;flex-shrink:0}
 .btn:active{transform:scale(.985)}
 .btn-primary{background:var(--ios-blue)!important;color:#fff!important;border-color:var(--ios-blue)!important}
 .btn-outline,.btn-ghost{background:var(--ios-fill);border-color:transparent;color:var(--accent)}
@@ -523,21 +524,47 @@ html,body{background:#f4f4f7}
 .status-main #status-icon,#status-icon{background:linear-gradient(180deg,rgba(48,209,88,.16),rgba(48,209,88,.09));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
 .status-label,#status-text{color:#087a51}
-.emergency-call{box-shadow:0 8px 20px rgba(255,59,48,.08)}
+.emergency-action,.emergency-call{background:linear-gradient(180deg,#f7fbf8,#eefaf2)!important;color:#087a51!important;border-color:rgba(52,199,89,.2)!important}
+.emergency-call{box-shadow:0 8px 20px rgba(52,199,89,.08)}
+.status-panel.alert ~ .action-panel .emergency-call{background:linear-gradient(180deg,#fff,#fff4f3)!important;color:var(--ios-red)!important;border-color:rgba(255,59,48,.26)!important}
 .guardian-mode .action-panel .emergency-call{background:#30d158!important;color:#fff!important;
   box-shadow:0 10px 22px rgba(48,209,88,.16)}
 .guardian-mode .action-panel .btn-ghost{background:#0a84ff;color:#fff;border-color:#0a84ff;
   box-shadow:0 10px 22px rgba(10,132,255,.14)}
+.guardian-mode .action-panel{grid-template-columns:1fr 1fr 1fr}
+.call-tile-icon{width:22px;height:22px;stroke-width:2.3;margin-bottom:6px;flex-shrink:0}
+.emergency-call,.guardian-contact-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.guardian-contact-btn{min-height:92px;border-radius:8px}
 .guardian-mode #guardian-panel #status-card{padding:12px;margin-top:2px;background:linear-gradient(180deg,#f7f8fc,#f1f5f9);
   border:1px solid rgba(60,60,67,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
 .guardian-mode #guardian-panel #status-card .ctitle{margin-bottom:8px}
 .guardian-mode #guardian-panel #status-card .status-main{align-items:center}
 .guardian-mode #guardian-panel #status-card #status-icon{width:48px;height:48px}
-.guardian-mode #guardian-panel #status-card #status-text{font-size:1.55rem}
+.guardian-mode #guardian-panel #status-card #status-text{font-size:1.8rem}
+.guardian-mode #guardian-panel #status-card #status-time{font-size:.72rem;color:#8e8e93;margin-top:2px}
 .guardian-mode #guardian-panel #status-card .status-copy{display:none}
+.metric-strip{display:none!important}
 .metric-tile{background:rgba(255,255,255,.8);border-color:rgba(60,60,67,.1);box-shadow:none}
 .nav{background:rgba(251,251,253,.9);border-top:1px solid rgba(60,60,67,.1);
   backdrop-filter:saturate(180%) blur(22px)}
+html[data-theme="dark"],html[data-theme="dark"] body{background:#111318}
+html[data-theme="dark"]{
+  --bg:#111318;--bg2:#17191f;--card:rgba(28,30,36,.94);--card2:#23262d;
+  --border:rgba(235,235,245,.14);--accent:#0a84ff;--accent2:#409cff;
+  --red:#ff453a;--green:#30d158;--orange:#ff9f0a;
+  --text:#f5f5f7;--text2:#d1d1d6;--muted:#98989d;--muted2:#6e6e73;
+  --shadow:0 10px 28px rgba(0,0,0,.28);--shadow-sm:0 4px 16px rgba(0,0,0,.22);
+  --sk-a:#2c2c2e;--sk-b:#3a3a3c;--ios-blue:#0a84ff;--ios-green:#30d158;--ios-red:#ff453a;--ios-fill:rgba(120,120,128,.22);
+}
+html[data-theme="dark"] .topbar,html[data-theme="dark"] .nav{background:rgba(28,30,36,.88);border-color:rgba(235,235,245,.12)}
+html[data-theme="dark"] .dashboard-shell{background:linear-gradient(180deg,#17191f 0%,#111318 58%,#111318 100%)}
+html[data-theme="dark"] .card{background:rgba(28,30,36,.94);border-color:rgba(235,235,245,.12);box-shadow:0 10px 26px rgba(0,0,0,.24)}
+html[data-theme="dark"] .dashboard-shell .ctitle{color:#d1d1d6}
+html[data-theme="dark"] .guardian-panel,html[data-theme="dark"] .guardian-person,html[data-theme="dark"] .guardian-mode #guardian-panel #status-card{background:#1c1e24;border-color:rgba(235,235,245,.12);box-shadow:none}
+html[data-theme="dark"] .stream-ph{background:linear-gradient(135deg,#1c1e24,#23262d)}
+html[data-theme="dark"] .fi,html[data-theme="dark"] select,html[data-theme="dark"] textarea{background:rgba(44,44,46,.78)!important;color:var(--text)!important;border-color:rgba(235,235,245,.14)!important;box-shadow:none}
+html[data-theme="dark"] .btn-ghost,html[data-theme="dark"] .btn-outline{background:var(--ios-fill);color:#64aaff}
+html[data-theme="dark"] .action-panel .btn-ghost{background:rgba(120,120,128,.22);color:#64aaff;border-color:transparent}
 @media (max-width:860px){
   .dashboard-grid{grid-template-columns:1fr}
   .metric-strip{grid-template-columns:1fr}
@@ -589,7 +616,10 @@ html,body{background:#f4f4f7}
         <input id="login-voice-consent" type="checkbox" checked style="margin-top:3px;accent-color:var(--accent)">
         <span>낙상 감지 시 TTS 음성 안내와 STT 음성 응답 사용에 동의합니다.</span>
       </label>
-      <button class="btn btn-primary" onclick="doLogin()"><span data-i18n="login">로그인</span></button>
+    <button class="btn btn-primary" onclick="doLogin()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+      <span data-i18n="login">로그인</span>
+    </button>
       <div class="auth-link mt12">
         <span data-i18n="no_account">계정이 없으신가요?</span>
         <span onclick="showScreen('screen-register')" data-i18n="register"> 회원가입</span>
@@ -658,7 +688,10 @@ html,body{background:#f4f4f7}
       <input id="reg-voice-consent" type="checkbox" checked style="margin-top:3px;accent-color:var(--accent)">
       <span>낙상 감지 시 TTS 음성 안내와 STT 음성 응답 사용에 동의합니다.</span>
     </label>
-    <button class="btn btn-primary mt8" onclick="doRegister()"><span data-i18n="register_btn">등록 완료</span></button>
+    <button class="btn btn-primary mt8" onclick="doRegister()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+      <span data-i18n="register_btn">등록 완료</span>
+    </button>
   </div>
 </div>
 
@@ -690,7 +723,7 @@ html,body{background:#f4f4f7}
             <span id="refresh-label" data-i18n="refresh">새로고침</span>
             <span id="refresh-spin" style="display:none">↻</span>
           </button>
-          <span class="monitor-chip">LIVE</span>
+          <span class="monitor-chip">실시간</span>
         </div>
       </div>
       <div id="stream-ph" class="stream-ph">
@@ -698,7 +731,10 @@ html,body{background:#f4f4f7}
         <div class="stream-ph-txt" data-i18n="stream_hint">엣지 디바이스 스트림 URL을 입력하세요</div>
         <div class="flex gap12" style="margin-bottom:6px">
           <input id="inline-url" class="fi" type="url" placeholder="/api/stream/video" style="padding:10px 12px;font-size:.85rem">
-          <button class="btn btn-primary btn-sm" style="width:auto;white-space:nowrap" onclick="applyInlineUrl()" data-i18n="connect">연결</button>
+          <button class="btn btn-primary btn-sm" style="width:auto;white-space:nowrap" onclick="applyInlineUrl()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.33-1.33"/></svg>
+            <span data-i18n="connect">연결</span>
+          </button>
         </div>
         <div style="font-size:.72rem;color:var(--muted)" data-i18n="stream_default">기본: /api/stream/video</div>
       </div>
@@ -724,9 +760,17 @@ html,body{background:#f4f4f7}
     <div class="card action-panel">
       <div class="ctitle" id="action-title">응급 대응</div>
       <button class="btn emergency-call" onclick="callContact()">
+        <svg class="call-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6.27 6.27l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z"/></svg>
         <span id="call-btn-label-large">119</span>
       </button>
-      <button class="btn btn-ghost btn-sm" onclick="switchTab('history')">기록 확인</button>
+      <button class="btn btn-ghost btn-sm guardian-contact-btn" id="guardian-contact-btn" onclick="callContact()">
+        <svg class="call-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6.27 6.27l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z"/></svg>
+        <span>연락</span>
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="switchTab('history')">
+        <svg class="call-tile-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+        <span>기록 확인</span>
+      </button>
     </div>
 
     <div class="card guardian-panel" id="guardian-panel" style="display:none">
@@ -740,12 +784,6 @@ html,body{background:#f4f4f7}
     </div>
     </aside>
     </div>
-
-    <section class="metric-strip">
-      <div class="metric-tile"><span id="metric-one-label">Device</span><strong id="metric-one-value">Jetson Orin NX</strong></div>
-      <div class="metric-tile"><span id="metric-two-label">Model</span><strong id="metric-two-value">ST-GCN</strong></div>
-      <div class="metric-tile"><span id="metric-three-label">Alert</span><strong id="metric-three-value">Voice + SMS</strong></div>
-    </section>
 
   </div>
   <nav class="nav" id="nav-dash">
@@ -898,8 +936,14 @@ html,body{background:#f4f4f7}
       <div class="ctitle" data-i18n="emergency_info">119 신고 정보</div>
       <div id="detail-emergency"></div>
     </div>
-    <button class="btn btn-danger" onclick="call119()"><span data-i18n="call_119">119 신고하기</span></button>
-    <button class="btn btn-outline" onclick="ackEvent()"><span data-i18n="acknowledge">확인 완료</span></button>
+    <button class="btn btn-danger" onclick="call119()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6.27 6.27l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z"/></svg>
+      <span data-i18n="call_119">119 신고하기</span>
+    </button>
+    <button class="btn btn-outline" onclick="ackEvent()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5"/></svg>
+      <span data-i18n="acknowledge">확인 완료</span>
+    </button>
   </div>
 </div>
 
@@ -956,7 +1000,10 @@ html,body{background:#f4f4f7}
             <label data-i18n="contact_phone">전화번호</label>
             <input id="cfg-c-phone" class="fi" type="tel" data-i18n-ph="c_phone_ph">
           </div>
-          <button class="btn btn-primary" onclick="saveContact()" data-i18n="save_btn">저장</button>
+          <button class="btn btn-primary" onclick="saveContact()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+            <span data-i18n="save_btn">저장</span>
+          </button>
         </div>
       </div>
 
@@ -984,7 +1031,10 @@ html,body{background:#f4f4f7}
               <option value="top" data-i18n="cam_type_top">CCTV (천장/상단)</option>
             </select>
           </div>
-          <button class="btn btn-primary" onclick="saveDeviceConfig()"><span data-i18n="save_btn">저장</span></button>
+          <button class="btn btn-primary" onclick="saveDeviceConfig()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+            <span data-i18n="save_btn">저장</span>
+          </button>
         </div>
       </div>
 
@@ -1015,7 +1065,10 @@ html,body{background:#f4f4f7}
               <option value="monthly" data-i18n="rpt_monthly">매월</option>
             </select>
           </div>
-          <button class="btn btn-primary" onclick="saveRptSchedule()"><span data-i18n="save_btn">저장</span></button>
+          <button class="btn btn-primary" onclick="saveRptSchedule()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+            <span data-i18n="save_btn">저장</span>
+          </button>
         </div>
       </div>
 
@@ -1035,8 +1088,14 @@ html,body{background:#f4f4f7}
           </div>
           <div id="sz-status" style="font-size:.82rem;color:var(--muted);margin-bottom:12px"></div>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-outline" style="flex:1" onclick="szLoadSnapshot()" data-i18n="sz_draw">구역 그리기</button>
-            <button class="btn btn-ghost" id="sz-clear-btn" onclick="szClear()" style="display:none;flex:1" data-i18n="sz_clear">구역 삭제</button>
+            <button class="btn btn-outline" style="flex:1" onclick="szLoadSnapshot()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              <span data-i18n="sz_draw">구역 그리기</span>
+            </button>
+            <button class="btn btn-ghost" id="sz-clear-btn" onclick="szClear()" style="display:none;flex:1">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              <span data-i18n="sz_clear">구역 삭제</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1084,6 +1143,7 @@ html,body{background:#f4f4f7}
             <input id="cfg-address" class="fi" type="text" data-i18n-ph="address_ph">
           </div>
           <button class="btn btn-primary" style="margin-bottom:12px" onclick="saveProfile()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
             <span data-i18n="save_btn">저장</span>
           </button>
           <div id="guardian-link-wrap" style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
@@ -1091,7 +1151,10 @@ html,body{background:#f4f4f7}
               <label data-i18n="guardian_id">보호자 아이디</label>
               <input id="cfg-guardian-id" class="fi" type="text">
             </div>
-            <button class="btn btn-ghost" onclick="linkGuardian()"><span data-i18n="link_btn">연결</span></button>
+            <button class="btn btn-ghost" onclick="linkGuardian()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.43"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.33-1.33"/></svg>
+              <span data-i18n="link_btn">연결</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1145,9 +1208,18 @@ html,body{background:#f4f4f7}
     <div class="modal-sub" id="modal-sub" data-i18n="fall_check">피보호자의 상태를 확인해 주세요.</div>
     <div class="modal-time" id="modal-time"></div>
     <div class="modal-acts">
-      <button class="btn btn-primary" onclick="guardianWatchVideo()"><span data-i18n="watch_video">영상 보기</span></button>
-      <button class="btn btn-danger"  onclick="call119()"><span data-i18n="call_emergency">119 신고하기</span></button>
-      <button class="btn btn-ghost"   onclick="guardianAck()"><span data-i18n="acknowledged_btn">확인했습니다</span></button>
+      <button class="btn btn-primary" onclick="guardianWatchVideo()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        <span data-i18n="watch_video">영상 보기</span>
+      </button>
+      <button class="btn btn-danger"  onclick="call119()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6.27 6.27l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z"/></svg>
+        <span data-i18n="call_emergency">119 신고하기</span>
+      </button>
+      <button class="btn btn-ghost"   onclick="guardianAck()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5"/></svg>
+        <span data-i18n="acknowledged_btn">확인했습니다</span>
+      </button>
     </div>
   </div>
 </div>
@@ -1166,8 +1238,14 @@ html,body{background:#f4f4f7}
       <span>초</span>
     </div>
     <div class="ufa-actions">
-      <button class="btn btn-danger btn-sm" onclick="handleUserVoiceChoice('contact')">연락</button>
-      <button class="btn btn-ghost btn-sm" onclick="handleUserVoiceChoice('dismiss')">아니</button>
+      <button class="btn btn-danger btn-sm" onclick="handleUserVoiceChoice('contact')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6.27 6.27l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z"/></svg>
+        <span>연락</span>
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="handleUserVoiceChoice('dismiss')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+        <span>아니</span>
+      </button>
     </div>
   </div>
 </div>
@@ -1508,7 +1586,7 @@ zh:{
 const LOCALES={ko:'ko-KR',en:'en-US',es:'es-ES',fr:'fr-FR',ru:'ru-RU',zh:'zh-CN'};
 
 let _lang  = localStorage.getItem('mg_lang') || 'ko';
-let _theme = localStorage.getItem('mg_theme') || 'dark';
+let _theme = localStorage.getItem('mg_theme') || 'light';
 
 function t(key,...args){
   let s=(STRINGS[_lang]||STRINGS.ko)[key]||(STRINGS.en||{})[key]||key;
@@ -1789,12 +1867,6 @@ function applyRoleDashboard(){
   setDashText('hero-title',isGuardian?'보호자 관제 화면':'실시간 낙상 감지');
   setDashText('hero-desc',isGuardian?'피보호자의 낙상 알림, 실시간 화면, 최근 기록을 한 화면에서 확인합니다.':'내 공간의 안전 상태와 긴급 대응을 바로 확인합니다.');
   setDashText('action-title',isGuardian?'보호자 조치':'응급 대응');
-  setDashText('metric-one-label',isGuardian?'Monitoring':'Device');
-  setDashText('metric-one-value',isGuardian?'피보호자 연결':'Jetson Orin NX');
-  setDashText('metric-two-label',isGuardian?'Response':'Model');
-  setDashText('metric-two-value',isGuardian?'알림 확인':'ST-GCN');
-  setDashText('metric-three-label',isGuardian?'Reports':'Alert');
-  setDashText('metric-three-value',isGuardian?'기록/리포트':'Voice + SMS');
   const panel=document.getElementById('guardian-panel');
   if(panel) panel.style.display=isGuardian?'':'none';
   placeDashboardCardsForRole(isGuardian);
