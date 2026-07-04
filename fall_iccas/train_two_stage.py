@@ -37,7 +37,14 @@ LR          = 1e-3
 WEIGHT_DECAY= 1e-4
 DROPOUT     = 0.5
 FPS         = 19.0          # UP-Fall camera ~19 Hz
+SEED        = 42
 DEVICE      = "cuda" if torch.cuda.is_available() else "cpu"
+
+# fix random seed for reproducibility
+torch.manual_seed(SEED)
+np.random.seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
 
 
 class _Tee:

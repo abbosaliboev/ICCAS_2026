@@ -1,10 +1,9 @@
-# Training Results History / 학습 결과 기록 / Training Natijalari Tarixi
+# Training Results History / 학습 결과 기록
 
 > **Language / 언어 / Til**
 > - [🇺🇸 English](#english)
 > - [🇰🇷 한국어](#korean)
-> - [🇺🇿 O'zbekcha](#uzbek)
-
+> 
 ---
 
 <a name="english"></a>
@@ -221,6 +220,31 @@ Run 6 → Run 7: More data (Subject 1+2+3+4)
 
 ---
 
+
+---
+
+### Run 8 — 2026-07-04 (Subject 1+2+3+4+5, subject-stratified split)
+
+What's new:
+- Added Subject 5 (5 subjects total, 5647 sequences)
+- Fixed random seed (SEED=42) for reproducibility
+- Flash/MemEfficient SDPA disabled for CUDA stability on Windows WDDM
+- Physics Rescue: no additional effect — Stage 1 already well-calibrated (rescue zone [0.50, 0.55) not triggered)
+- Early stopping at epoch 32 (best val Fall F1=0.9484)
+
+| Model | Fall F1 |
+|---|---|
+| ST-GCN Stage 1 | 0.9278 |
+| ST-GCN + Physics Rescue | **0.9278** |
+
+Confusion matrix (test, 851 samples):
+```
+              Pred NO-FALL  Pred FALL
+True NO-FALL      710          16      (16 FP)
+True FALL           3         122      ( 3 FN)
+```
+Saved to: `experiments/subject1_2_3_4_5/`
+
 <a name="korean"></a>
 # 🇰🇷 한국어
 
@@ -363,164 +387,27 @@ True FALL           4          95      (4 FN)
 
 ---
 
-<a name="uzbek"></a>
-# 🇺🇿 O'zbekcha
+---
 
-## Hozirgi eng yaxshi natija (Subject 1+2+3+4, subject-stratified split)
+### 실행 8 — 2026-07-04 (Subject 1+2+3+4+5, subject-stratified split)
 
-**Sana:** 2026-06-14
-**Dataset:** Subject 1+2+3+4 — X.npy shape (4479, 30, 17, 3)
-**Split:** Subject-stratified 70/15/15 (train=3134, val=670, test=675)
-**Har bir subject:** ~800 train / ~170 val / ~170 test
+변경 사항:
+- Subject 5 추가 (총 5명, 5647 시퀀스)
+- 랜덤 시드 고정 (SEED=42)
+- Flash/MemEfficient SDPA 비활성화 (Windows WDDM CUDA 안정성)
+- Physics Rescue: Stage 1이 이미 충분히 정확하여 추가 효과 없음
+- Early stopping: epoch 32에서 종료 (best val Fall F1=0.9484)
 
-| Model | Accuracy | Fall F1 | Precision | Recall | FP | FN |
-|---|---|---|---|---|---|---|
-| ST-GCN (Stage 1) | 98.5% | 0.950 | 0.95 | 0.95 | 5 | 5 |
-| ST-GCN + Physics Rescue | 98.7% | **0.955** | 0.95 | 0.96 | 5 | 4 |
+| 모델 | Fall F1 |
+|---|---|
+| ST-GCN Stage 1 | 0.9278 |
+| ST-GCN + Physics Rescue | **0.9278** |
 
-Confusion matrix (test set, 675 samples):
+혼동 행렬 (테스트, 851 샘플):
 ```
               Pred NO-FALL  Pred FALL
-True NO-FALL      571           5      (5 FP)
-True FALL           4          95      (4 FN)
+True NO-FALL      710          16      (16 FP)
+True FALL           3         122      ( 3 FN)
 ```
+저장 위치: `experiments/subject1_2_3_4_5/`
 
-Tuned thresholds:
-- `stage1_threshold = 0.50`
-- `rescue_threshold = 0.45`
-- `vel_threshold = 0.0237`
-- `acc_threshold = 0.0`
-
-Saqlangan joy: `experiments/subject1_2_3_4/`
-
-## Oldingi eng yaxshi natija (Subject 1 only, subject-dependent)
-
-**Sana:** 2026-06-11
-**Fall F1:** ST-GCN 0.960 → ST-GCN + Physics Rescue **0.960**
-
-## Ablation study (Subject 1+2+3+4, test set n=675)
-
-Har bir komponent qo'shgan hissa:
-
-| Konfiguratsiya | Fall F1 | Precision | Recall | FP | FN | Izoh |
-|---|:---:|:---:|:---:|:---:|:---:|---|
-| ST-GCN yolg'iz (Stage 1) | 0.950 | 0.95 | 0.95 | 5 | 5 | Baseline |
-| ST-GCN + Physics AND (eski) | ~0.864* | — | — | — | — | Physics to'g'ri topganlarni o'chiradi |
-| **ST-GCN + Physics Rescue (yangi)** | **0.955** | **0.95** | **0.96** | **5** | **4** | Physics faqat qo'shadi |
-
-> *AND mantiq natijasi Run 2 (Subject 1 only) dan.
-> Physics Rescue hissasi: 1 ta FN qo'shimcha aniqladi (5→4), precision o'zgarmasdan.
-
-## Kutilgan Baseline taqqosi (TODO)
-
-| Model | Kutilgan Fall F1 | Holat |
-|---|:---:|---|
-| LSTM (flat keypoints) | ~0.80–0.88 | ⬜ amalga oshirilmagan |
-| TCN (flat keypoints) | ~0.85–0.90 | ⬜ amalga oshirilmagan |
-| ST-GCN yolg'iz | **0.950** | ✅ bajarilgan |
-| **ST-GCN + Physics Rescue** | **0.955** | ✅ bajarilgan |
-
-## Natijalar tarixi
-
-### Run 7 — 2026-06-14 (Subject 1+2+3+4, subject-stratified split)
-Yangiliklar:
-- Subject 4 qo'shildi (1.62m, 71kg)
-- Subject-stratified bo'linish: har bir subject train/val/test ga teng tushadi
-- Physics Rescue FN ni 1 ta qo'shimcha aniqladi (5→4)
-- Early stopping: epoch 48 da to'xtadi (best val F1=0.970, epoch ~33)
-
-| Model | Fall F1 |
-|---|---|
-| ST-GCN Stage 1 | 0.950 |
-| ST-GCN + Physics Rescue | **0.955** |
-
-### Run 6 — 2026-06-14 (Subject 1+2+3, early stopping qo'shildi)
-Yangiliklar:
-- Early stopping (patience=15) overfitting ni oldini olish uchun
-- Training: epoch 50 da to'xtadi (best val F1=0.993, epoch ~35)
-- F1 tiklandi: 0.686 → 0.943
-
-| Model | Fall F1 |
-|---|---|
-| ST-GCN Stage 1 | **0.943** |
-| ST-GCN + Physics Rescue | **0.943** |
-
-Izoh: Physics Rescue qo'shimcha yaxshilanish bermadi — Stage 1 yaxshi kalibratsiya qilingan.
-
-### Run 5 — 2026-06-13 (Subject 1+2+3, early stopping yo'q — MUVAFFAQIYATSIZ)
-- Overfitting: val F1 epoch 20 (0.640) da eng yuqori, keyin 0.278 ga tushdi
-- F1 = 0.686 — cross-subject training da early stopping majburiy
-
-### Run 4 — 2026-06-13 (Subject 1+2, 2 ta subject)
-Yangiliklar:
-- Subject 2 qo'shildi (2210 sequence, avval 1145 edi)
-- Physics Rescue samarali: FP 7→4
-
-| Model | Fall F1 |
-|---|---|
-| ST-GCN Stage 1 | 0.931 |
-| ST-GCN + Physics Rescue | **0.948** |
-
-### Run 3 — 2026-06-11 (Physics Rescue + Zero-frame fix)
-Yangiliklar:
-- `conf=0.1` + forward-fill: zero frame 14.5% → **0%**
-- Rescue mantiq: physics endi faqat QO'SHADI, o'chirmaydi
-
-| Model | Fall F1 |
-|---|---|
-| ST-GCN Stage 1 | **0.960** |
-| ST-GCN + Physics Rescue | **0.960** |
-
-### Run 2 — 2026-06-11 (Zero-frame fix, eski physics)
-
-| Model | Fall F1 |
-|---|---|
-| ST-GCN Stage 1 | 0.913 |
-| ST-GCN + Physics (AND) | **0.864** ← physics zararli! |
-
-### Run 1 — 2026-06-10 (Boshlang'ich natija)
-
-| Model | Accuracy | Fall F1 |
-|---|---|---|
-| ST-GCN Stage 1 | 93.6% | 0.718 |
-| ST-GCN + Physics (AND) | 95.9% | **0.837** |
-
-## Yaxshilanish tahlili
-
-```
-Run 1 → Run 2: Zero-frame fix
-  Fall F1: 0.718 → 0.913  (+0.195)  ← eng katta ta'sir
-
-Run 2 → Run 3: Physics Rescue mantiq
-  Fall F1: 0.913 → 0.960  (+0.047)
-
-Run 3 → Run 4: Cross-subject (Subject 1+2)
-  Fall F1: 0.960 → 0.948  (-0.012)  ← kutilgan, qiyin vazifa
-
-Run 4 → Run 5: MUVAFFAQIYATSIZ — early stopping yo'q
-  Fall F1: 0.948 → 0.686  (sabab: overfitting)
-
-Run 5 → Run 6: Early stopping tuzatildi (Subject 1+2+3)
-  Fall F1: 0.686 → 0.943  (+0.257)
-
-Run 6 → Run 7: Ko'proq ma'lumot (Subject 1+2+3+4)
-  Fall F1: 0.943 → 0.955  (+0.012)
-```
-
-## Keyingi kutilgan natijalar
-
-| Scenario | Kutilgan Fall F1 |
-|---|---|
-| Subject 1-4 (hozirgi, subject-dependent) | 0.955 |
-| Subject 1-17, subject-dependent | ~0.95+ |
-| Subject 1-17, LOSO cross-subject | ~0.75-0.88 |
-
-> LOSO natijasi haqiqiy real-world performance ko'rsatkichi hisoblanadi va qog'oz uchun kerak.
-
-## Baseline modellar (qog'oz uchun qo'shish kerak)
-
-- [ ] LSTM baseline
-- [ ] TCN baseline
-- [ ] ST-GCN alone (without physics) — hozir mavjud
-- [ ] ST-GCN + Physics AND (eski mantiq) — hozir mavjud
-- [ ] **ST-GCN + Physics Rescue (yangi mantiq)** — hozir mavjud

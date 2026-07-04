@@ -39,6 +39,15 @@ N_JOINTS    = 17
 N_COORDS    = 3     # x, y, confidence
 
 # load once
+import torch
+if torch.cuda.is_available():
+    # Disable Flash/MemEfficient attention — incompatible with WDDM driver on Windows
+    torch.backends.cuda.enable_flash_sdp(False)
+    torch.backends.cuda.enable_mem_efficient_sdp(False)
+    torch.backends.cuda.enable_math_sdp(True)
+    DEVICE = "cuda"
+else:
+    DEVICE = "cpu"
 MODEL = YOLO("yolo11n-pose.pt")   # downloads automatically if not present
 
 
@@ -48,40 +57,38 @@ def sorted_images(folder):
                   if os.path.splitext(f)[1].lower() in exts)
 
 
-def extract_keypoints_batch(img_paths, batch_size=8):
+def extract_keypoints_batch(img_paths, batch_size=1):
     """
     Run YOLO-pose on a list of images in batches.
     Returns (F, 17, 3) array — x, y normalized, confidence.
-    Zero-filled if no person detected.
+    Keypoints extracted immediately per batch to keep RAM usage minimal.
     """
     import gc
-    results_all = []
-    for i in range(0, len(img_paths), batch_size):
-        batch = img_paths[i: i + batch_size]
-        results = MODEL(batch, verbose=False, conf=0.1)
-        results_all.extend(results)
-        gc.collect()
-
     kps = np.zeros((len(img_paths), N_JOINTS, N_COORDS), dtype=np.float32)
-    for i, res in enumerate(results_all):
-        if res.keypoints is None or len(res.keypoints.xy) == 0:
-            continue
-        # take highest-confidence person
-        if res.keypoints.conf is not None:
-            person_idx = int(res.keypoints.conf.sum(dim=1).argmax())
-        else:
-            person_idx = 0
 
-        xy   = res.keypoints.xy[person_idx].cpu().numpy()    # (17, 2) pixels
-        conf = res.keypoints.conf[person_idx].cpu().numpy()  # (17,)
+    for i in range(0, len(img_paths), batch_size):
+        batch_paths = img_paths[i: i + batch_size]
+        batch = [cv2.imread(p) for p in batch_paths]
+        batch = [b if b is not None else np.zeros((480, 640, 3), dtype=np.uint8)
+                 for b in batch]
 
-        # read image size for normalization
-        h, w = res.orig_shape
-        xy_norm = xy / np.array([w, h], dtype=np.float32)
+        results = MODEL(batch, verbose=False, conf=0.1, device=DEVICE)
 
-        kps[i, :, 0] = xy_norm[:, 0]   # x normalized
-        kps[i, :, 1] = xy_norm[:, 1]   # y normalized
-        kps[i, :, 2] = conf             # confidence
+        for j, res in enumerate(results):
+            idx = i + j
+            if res.keypoints is None or len(res.keypoints.xy) == 0:
+                continue
+            person_idx = int(res.keypoints.conf.sum(dim=1).argmax()) \
+                         if res.keypoints.conf is not None else 0
+            xy   = res.keypoints.xy[person_idx].cpu().numpy()
+            conf = res.keypoints.conf[person_idx].cpu().numpy()
+            h, w = res.orig_shape
+            kps[idx, :, 0] = xy[:, 0] / w
+            kps[idx, :, 1] = xy[:, 1] / h
+            kps[idx, :, 2] = conf
+
+        del results, batch
+        gc.collect()
 
     return kps   # (F, 17, 3)
 
@@ -181,8 +188,11 @@ def main():
     subj_label = f"Subject{sorted(subjects)}" if subjects else "All subjects"
     print(f"Dataset dir : {DATASET_DIR}")
     print(f"Subjects    : {subj_label}")
-    print(f"Output dir  : {out_dir}\n")
+    print(f"Output dir  : {out_dir}")
+    print(f"Device      : {DEVICE}\n")
 
+
+    import gc
     all_X, all_y, meta_rows = [], [], []
     seq_id = 0
 
@@ -192,6 +202,7 @@ def main():
 
         img_paths = [os.path.join(cam_folder, f) for f in imgs]
         trial_kps = extract_keypoints_batch(img_paths)  # (F, 17, 3)
+        gc.collect()
 
         # fill failed detections from neighboring frames
         zeros_before = int((trial_kps[:, :, :2].sum(axis=(1, 2)) == 0).sum())
