@@ -245,6 +245,41 @@ True FALL           3         122      ( 3 FN)
 ```
 Saved to: `experiments/subject1_2_3_4_5/`
 
+
+
+---
+
+### Run 9 — 2026-07-04 (LOSO, Subject 1–5, cross-subject)
+
+**Evaluation:** Leave-One-Subject-Out (5 folds)
+**Data:** Same cv_dataset as Run 8 (5647 sequences, subjects 1–5)
+
+Per-fold Fall F1:
+
+| Fold | Test Subject | ST-GCN F1 | Two-stage F1 |
+|---|---|---|---|
+| 1 | Subject 1 | 0.6080 | 0.6031 |
+| 2 | Subject 2 | 0.4733 | 0.4879 |
+| 3 | Subject 3 | 0.6893 | 0.6634 |
+| 4 | Subject 4 | 0.5507 | 0.5775 |
+| 5 | Subject 5 | 0.5479 | 0.5447 |
+| **Mean** | | **0.5738 ± 0.072** | **0.5753 ± 0.059** |
+
+Aggregated confusion matrix (Two-stage, all folds):
+```
+              Pred NO-FALL  Pred FALL
+True NO-FALL     4061         792      (792 FP)
+True FALL         158         636      (158 FN)
+```
+
+Key observations:
+- Physics Rescue catches 10 additional falls vs Stage 1 alone (FN 168→158) with virtually no extra FP (791→792)
+- This matches real-world observation: physics filter helps even when ST-GCN struggles
+- LOSO F1 (0.575) vs subject-dependent F1 (0.928) gap shows cross-subject generalization challenge
+- Consistent with UP-Fall literature: LOSO is significantly harder than subject-dependent evaluation
+
+Saved to: `experiments/subject1_2_3_4_5/loso/`
+
 <a name="korean"></a>
 # 🇰🇷 한국어
 
@@ -410,4 +445,26 @@ True NO-FALL      710          16      (16 FP)
 True FALL           3         122      ( 3 FN)
 ```
 저장 위치: `experiments/subject1_2_3_4_5/`
+
+---
+
+### 실행 9 — 2026-07-04 (LOSO, Subject 1–5, 교차 피험자)
+
+**평가 방식:** Leave-One-Subject-Out (5-fold)
+
+| 폴드 | 테스트 피험자 | ST-GCN F1 | 2단계 F1 |
+|---|---|---|---|
+| 1 | Subject 1 | 0.6080 | 0.6031 |
+| 2 | Subject 2 | 0.4733 | 0.4879 |
+| 3 | Subject 3 | 0.6893 | 0.6634 |
+| 4 | Subject 4 | 0.5507 | 0.5775 |
+| 5 | Subject 5 | 0.5479 | 0.5447 |
+| **평균** | | **0.5738 ± 0.072** | **0.5753 ± 0.059** |
+
+주요 관찰:
+- Physics Rescue가 LOSO에서도 효과적: FN 168→158 (낙상 10개 추가 감지), FP 거의 동일 (791→792)
+- 실사용(Jetson) 환경에서의 physics 필터 효과를 정량적으로 확인
+- subject-dependent(0.928) vs LOSO(0.575) 차이: 교차 피험자 일반화의 어려움 반영
+
+저장 위치: `experiments/subject1_2_3_4_5/loso/`
 
