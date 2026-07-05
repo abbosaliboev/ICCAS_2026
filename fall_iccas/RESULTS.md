@@ -280,6 +280,63 @@ Key observations:
 
 Saved to: `experiments/subject1_2_3_4_5/loso/`
 
+
+
+---
+
+### Run 10 — 2026-07-06 (Subject 1–10, subject-dependent)
+
+**Dataset:** Subject 1–10 — X.npy shape (10992, 30, 17, 3)
+**Split:** Subject-stratified ~70/15/15 (train=7693, val=1657, test=1658)
+**Seed:** 42
+
+| Model | Accuracy | Fall F1 | Precision | Recall | FP | FN |
+|---|---|---|---|---|---|---|
+| ST-GCN (Stage 1) | 98.5% | 0.9507 | 0.91 | 0.99 | 23 | 2 |
+| ST-GCN + Physics Rescue | 99.0% | **0.9675** | 0.96 | 0.98 | 11 | 5 |
+
+Physics Rescue cut FP from 23 → 11 (−52%) at cost of only 3 extra FN. Strongest rescue effect seen so far.
+
+Saved to: `experiments/subject1_to_10/`
+
+---
+
+### Run 11 — 2026-07-06 (LOSO, Subject 1–10, cross-subject)
+
+**Evaluation:** Leave-One-Subject-Out (10 folds)
+
+Per-fold Fall F1:
+
+| Fold | Test Subj | ST-GCN F1 | Two-stage F1 |
+|---|---|---|---|
+| 1 | Subject 1 | 0.7629 | 0.7453 |
+| 2 | Subject 2 | 0.6161 | 0.6164 |
+| 3 | Subject 3 | 0.5703 | 0.5885 |
+| 4 | Subject 4 | 0.6667 | 0.6269 |
+| 5 | Subject 5 | 0.5265 | 0.5378 |
+| 6 | Subject 6 | 0.4604 | 0.4615 |
+| 7 | Subject 7 | 0.6332 | 0.6213 |
+| 8 | Subject 8 | 0.7604 | 0.7579 |
+| 9 | Subject 9 | 0.5709 | 0.5891 |
+| 10 | Subject 10 | 0.6604 | 0.6603 |
+| **Mean** | | **0.6228 ± 0.091** | **0.6205 ± 0.084** |
+
+Aggregated confusion matrix (Stage 1, all 10 folds):
+```
+              Pred NO-FALL  Pred FALL
+True NO-FALL     7972        1455      (1455 FP)
+True FALL         216        1349      ( 216 FN)
+Recall = 86.2%   Accuracy = 84.8%
+```
+
+Key observations:
+- 5→10 subjects improves LOSO F1: 0.574 → 0.623 (+0.049) — more training data helps
+- Physics Rescue shows mixed results in LOSO (helps folds 3,5,9; hurts 1,4,7) — physics thresholds tuned per-fold on val subjects do not always generalise
+- In subject-dependent setting, Rescue cuts FP by 52% (23→11); in cross-subject it is less reliable
+- LOSO Recall=86.2%: model detects ~6 out of 7 falls even for completely unseen subjects
+
+Saved to: `experiments/subject1_to_10/loso/`
+
 <a name="korean"></a>
 # 🇰🇷 한국어
 
@@ -467,4 +524,30 @@ True FALL           3         122      ( 3 FN)
 - subject-dependent(0.928) vs LOSO(0.575) 차이: 교차 피험자 일반화의 어려움 반영
 
 저장 위치: `experiments/subject1_2_3_4_5/loso/`
+
+---
+
+### 실행 10 — 2026-07-06 (Subject 1–10, subject-dependent)
+
+**데이터셋:** Subject 1–10 — 총 10992 시퀀스
+
+| 모델 | Accuracy | Fall F1 | FP | FN |
+|---|---|---|---|---|
+| ST-GCN (Stage 1) | 98.5% | 0.9507 | 23 | 2 |
+| ST-GCN + Physics Rescue | 99.0% | **0.9675** | 11 | 5 |
+
+Physics Rescue가 FP를 52% 감소 (23→11). 역대 가장 큰 효과.
+
+---
+
+### 실행 11 — 2026-07-06 (LOSO, Subject 1–10, 교차 피험자)
+
+| 폴드 | 테스트 | ST-GCN F1 | 2단계 F1 |
+|---|---|---|---|
+| 평균 | | **0.6228 ± 0.091** | **0.6205 ± 0.084** |
+
+주요 관찰:
+- 5→10 피험자로 LOSO F1 개선: 0.574 → 0.623
+- Physics Rescue: subject-dependent에서는 FP 52% 감소, LOSO에서는 혼재된 결과
+- LOSO Recall=86.2%: 미확인 피험자에서도 7번 중 6번 낙상 감지
 

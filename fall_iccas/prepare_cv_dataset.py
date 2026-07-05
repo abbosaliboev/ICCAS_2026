@@ -41,14 +41,17 @@ N_COORDS    = 3     # x, y, confidence
 # load once
 import torch
 if torch.cuda.is_available():
-    # Disable Flash/MemEfficient attention — incompatible with WDDM driver on Windows
+    torch.cuda.init()
+    torch.cuda.empty_cache()
     torch.backends.cuda.enable_flash_sdp(False)
     torch.backends.cuda.enable_mem_efficient_sdp(False)
     torch.backends.cuda.enable_math_sdp(True)
     DEVICE = "cuda"
 else:
     DEVICE = "cpu"
-MODEL = YOLO("yolo11n-pose.pt")   # downloads automatically if not present
+MODEL = YOLO("yolo11n-pose.pt")
+if DEVICE == "cuda":
+    MODEL.to("cuda")   # move to GPU at load time, not lazily at first inference
 
 
 def sorted_images(folder):
@@ -57,7 +60,7 @@ def sorted_images(folder):
                   if os.path.splitext(f)[1].lower() in exts)
 
 
-def extract_keypoints_batch(img_paths, batch_size=1):
+def extract_keypoints_batch(img_paths, batch_size=16 if DEVICE == "cuda" else 1):
     """
     Run YOLO-pose on a list of images in batches.
     Returns (F, 17, 3) array — x, y normalized, confidence.
