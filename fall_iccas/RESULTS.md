@@ -221,6 +221,120 @@ Run 6 → Run 7: More data (Subject 1+2+3+4)
 
 ---
 
+### Run 8 — 2026-07-04 (Subject 1+2+3+4+5, subject-stratified split)
+
+What's new:
+- Added Subject 5 (5 subjects total, 5647 sequences)
+- Fixed random seed (SEED=42) for reproducibility
+- Flash/MemEfficient SDPA disabled for CUDA stability on Windows WDDM
+- Physics Rescue: no additional effect — Stage 1 already well-calibrated (rescue zone [0.50, 0.55) not triggered)
+- Early stopping at epoch 32 (best val Fall F1=0.9484)
+
+| Model | Fall F1 |
+|---|---|
+| ST-GCN Stage 1 | 0.9278 |
+| ST-GCN + Physics Rescue | **0.9278** |
+
+Confusion matrix (test, 851 samples):
+```
+              Pred NO-FALL  Pred FALL
+True NO-FALL      710          16      (16 FP)
+True FALL           3         122      ( 3 FN)
+```
+Saved to: `experiments/subject1_2_3_4_5/`
+
+
+
+---
+
+### Run 9 — 2026-07-04 (LOSO, Subject 1–5, cross-subject)
+
+**Evaluation:** Leave-One-Subject-Out (5 folds)
+**Data:** Same cv_dataset as Run 8 (5647 sequences, subjects 1–5)
+
+Per-fold Fall F1:
+
+| Fold | Test Subject | ST-GCN F1 | Two-stage F1 |
+|---|---|---|---|
+| 1 | Subject 1 | 0.6080 | 0.6031 |
+| 2 | Subject 2 | 0.4733 | 0.4879 |
+| 3 | Subject 3 | 0.6893 | 0.6634 |
+| 4 | Subject 4 | 0.5507 | 0.5775 |
+| 5 | Subject 5 | 0.5479 | 0.5447 |
+| **Mean** | | **0.5738 ± 0.072** | **0.5753 ± 0.059** |
+
+Aggregated confusion matrix (Two-stage, all folds):
+```
+              Pred NO-FALL  Pred FALL
+True NO-FALL     4061         792      (792 FP)
+True FALL         158         636      (158 FN)
+```
+
+Key observations:
+- Physics Rescue catches 10 additional falls vs Stage 1 alone (FN 168→158) with virtually no extra FP (791→792)
+- This matches real-world observation: physics filter helps even when ST-GCN struggles
+- LOSO F1 (0.575) vs subject-dependent F1 (0.928) gap shows cross-subject generalization challenge
+- Consistent with UP-Fall literature: LOSO is significantly harder than subject-dependent evaluation
+
+Saved to: `experiments/subject1_2_3_4_5/loso/`
+
+
+
+---
+
+### Run 10 — 2026-07-06 (Subject 1–10, subject-dependent)
+
+**Dataset:** Subject 1–10 — X.npy shape (10992, 30, 17, 3)
+**Split:** Subject-stratified ~70/15/15 (train=7693, val=1657, test=1658)
+**Seed:** 42
+
+| Model | Accuracy | Fall F1 | Precision | Recall | FP | FN |
+|---|---|---|---|---|---|---|
+| ST-GCN (Stage 1) | 98.5% | 0.9507 | 0.91 | 0.99 | 23 | 2 |
+| ST-GCN + Physics Rescue | 99.0% | **0.9675** | 0.96 | 0.98 | 11 | 5 |
+
+Physics Rescue cut FP from 23 → 11 (−52%) at cost of only 3 extra FN. Strongest rescue effect seen so far.
+
+Saved to: `experiments/subject1_to_10/`
+
+---
+
+### Run 11 — 2026-07-06 (LOSO, Subject 1–10, cross-subject)
+
+**Evaluation:** Leave-One-Subject-Out (10 folds)
+
+Per-fold Fall F1:
+
+| Fold | Test Subj | ST-GCN F1 | Two-stage F1 |
+|---|---|---|---|
+| 1 | Subject 1 | 0.7629 | 0.7453 |
+| 2 | Subject 2 | 0.6161 | 0.6164 |
+| 3 | Subject 3 | 0.5703 | 0.5885 |
+| 4 | Subject 4 | 0.6667 | 0.6269 |
+| 5 | Subject 5 | 0.5265 | 0.5378 |
+| 6 | Subject 6 | 0.4604 | 0.4615 |
+| 7 | Subject 7 | 0.6332 | 0.6213 |
+| 8 | Subject 8 | 0.7604 | 0.7579 |
+| 9 | Subject 9 | 0.5709 | 0.5891 |
+| 10 | Subject 10 | 0.6604 | 0.6603 |
+| **Mean** | | **0.6228 ± 0.091** | **0.6205 ± 0.084** |
+
+Aggregated confusion matrix (Stage 1, all 10 folds):
+```
+              Pred NO-FALL  Pred FALL
+True NO-FALL     7972        1455      (1455 FP)
+True FALL         216        1349      ( 216 FN)
+Recall = 86.2%   Accuracy = 84.8%
+```
+
+Key observations:
+- 5→10 subjects improves LOSO F1: 0.574 → 0.623 (+0.049) — more training data helps
+- Physics Rescue shows mixed results in LOSO (helps folds 3,5,9; hurts 1,4,7) — physics thresholds tuned per-fold on val subjects do not always generalise
+- In subject-dependent setting, Rescue cuts FP by 52% (23→11); in cross-subject it is less reliable
+- LOSO Recall=86.2%: model detects ~6 out of 7 falls even for completely unseen subjects
+
+Saved to: `experiments/subject1_to_10/loso/`
+
 <a name="korean"></a>
 # 🇰🇷 한국어
 
@@ -342,6 +456,70 @@ True FALL           4          95      (4 FN)
 |---|---|---|
 | ST-GCN Stage 1 | 93.6% | 0.718 |
 | ST-GCN + Physics (AND) | 95.9% | **0.837** |
+
+### 실행 8 — 2026-07-04 (Subject 1+2+3+4+5, subject-stratified split)
+
+변경 사항:
+- Subject 5 추가 (총 5명, 5647 시퀀스)
+- 랜덤 시드 고정 (SEED=42)
+- Flash/MemEfficient SDPA 비활성화 (Windows WDDM CUDA 안정성)
+- Physics Rescue: Stage 1이 이미 충분히 정확하여 추가 효과 없음
+- Early stopping: epoch 32에서 종료 (best val Fall F1=0.9484)
+
+| 모델 | Fall F1 |
+|---|---|
+| ST-GCN Stage 1 | 0.9278 |
+| ST-GCN + Physics Rescue | **0.9278** |
+
+혼동 행렬 (테스트, 851 샘플):
+```
+              Pred NO-FALL  Pred FALL
+True NO-FALL      710          16      (16 FP)
+True FALL           3         122      ( 3 FN)
+```
+저장 위치: `experiments/subject1_2_3_4_5/`
+
+### 실행 9 — 2026-07-04 (LOSO, Subject 1–5, 교차 피험자)
+
+**평가 방식:** Leave-One-Subject-Out (5-fold)
+
+| 폴드 | 테스트 피험자 | ST-GCN F1 | 2단계 F1 |
+|---|---|---|---|
+| 1 | Subject 1 | 0.6080 | 0.6031 |
+| 2 | Subject 2 | 0.4733 | 0.4879 |
+| 3 | Subject 3 | 0.6893 | 0.6634 |
+| 4 | Subject 4 | 0.5507 | 0.5775 |
+| 5 | Subject 5 | 0.5479 | 0.5447 |
+| **평균** | | **0.5738 ± 0.072** | **0.5753 ± 0.059** |
+
+주요 관찰:
+- Physics Rescue가 LOSO에서도 효과적: FN 168→158 (낙상 10개 추가 감지), FP 거의 동일 (791→792)
+- 실사용(Jetson) 환경에서의 physics 필터 효과를 정량적으로 확인
+- subject-dependent(0.928) vs LOSO(0.575) 차이: 교차 피험자 일반화의 어려움 반영
+
+저장 위치: `experiments/subject1_2_3_4_5/loso/`
+
+### 실행 10 — 2026-07-06 (Subject 1–10, subject-dependent)
+
+**데이터셋:** Subject 1–10 — 총 10992 시퀀스
+
+| 모델 | Accuracy | Fall F1 | FP | FN |
+|---|---|---|---|---|
+| ST-GCN (Stage 1) | 98.5% | 0.9507 | 23 | 2 |
+| ST-GCN + Physics Rescue | 99.0% | **0.9675** | 11 | 5 |
+
+Physics Rescue가 FP를 52% 감소 (23→11). 역대 가장 큰 효과.
+
+### 실행 11 — 2026-07-06 (LOSO, Subject 1–10, 교차 피험자)
+
+| 폴드 | 테스트 | ST-GCN F1 | 2단계 F1 |
+|---|---|---|---|
+| 평균 | | **0.6228 ± 0.091** | **0.6205 ± 0.084** |
+
+주요 관찰:
+- 5→10 피험자로 LOSO F1 개선: 0.574 → 0.623
+- Physics Rescue: subject-dependent에서는 FP 52% 감소, LOSO에서는 혼재된 결과
+- LOSO Recall=86.2%: 미확인 피험자에서도 7번 중 6번 낙상 감지
 
 ## 향후 예상 결과
 

@@ -48,11 +48,15 @@ class TwoStageDetector:
     # ── inference helpers ─────────────────────────────────────────────────────
 
     @torch.no_grad()
-    def _stage1_probs(self, x: torch.Tensor) -> np.ndarray:
+    def _stage1_probs(self, x: torch.Tensor, batch_size: int = 64) -> np.ndarray:
         self.model.eval()
-        logits = self.model(x)
-        probs  = torch.softmax(logits, dim=-1)[:, 1]
-        return probs.cpu().numpy()
+        parts = []
+        for i in range(0, len(x), batch_size):
+            batch = x[i:i + batch_size].to(self.device)
+            logits = self.model(batch)
+            parts.append(torch.softmax(logits, dim=-1)[:, 1].cpu())
+            del batch, logits
+        return torch.cat(parts).numpy()
 
     def predict_batch(
         self,
@@ -61,12 +65,12 @@ class TwoStageDetector:
     ) -> np.ndarray:
         """
         Args:
-            X_tensor : (N, C, T, V, M) — ST-GCN input
+            X_tensor : (N, C, T, V, M) — ST-GCN input on CPU
             X_numpy  : (N, T, V, C)    — raw keypoints for physics filter
         Returns:
             preds (N,) — 0 or 1
         """
-        probs = self._stage1_probs(X_tensor.to(self.device))
+        probs = self._stage1_probs(X_tensor)
 
         final = np.zeros(len(probs), dtype=int)
         for i, p in enumerate(probs):
@@ -103,7 +107,7 @@ class TwoStageDetector:
         """
         from sklearn.metrics import f1_score
 
-        probs = self._stage1_probs(X_tensor.to(self.device))
+        probs = self._stage1_probs(X_tensor)
         physics_preds = np.array([self.physics.predict(X_numpy[i]) for i in range(len(X_numpy))])
 
         best_f1, best_t1, best_tr = -1.0, 0.5, 0.3

@@ -180,6 +180,8 @@ Stage 1 prob:
 - **Old (AND):** `Stage1=1 AND physics=1` — physics could delete Stage 1 detections
 - **New (Rescue):** physics can only rescue what Stage 1 MISSED
 
+**Why AND logic fails:** In ablation testing (Subject 1, test n=172), Stage 1 alone achieved F1=0.913 with precision=1.00 — every positive prediction was a real fall. Applying the AND gate caused physics to veto some of those correct detections, dropping F1 to **0.864 (−0.049)**. When Stage 1 precision is already high, physics introduces its own false negatives without reducing false positives — making AND-gating actively harmful.
+
 ## Dataset preparation
 
 ### YOLO keypoint extraction
@@ -403,6 +405,8 @@ Stage 1 확률:
 **기존 AND 로직과의 중요한 차이:**
 - **기존 (AND):** `Stage1=1 AND physics=1` — physics가 Stage 1의 감지를 삭제할 수 있음
 - **신규 (Rescue):** physics는 Stage 1이 놓친(MISS) 것만 구제할 수 있음
+
+**AND 로직이 실패하는 이유:** Ablation 실험 (Subject 1, 테스트셋 n=172)에서 Stage 1 단독 F1=0.913, precision=1.00 — Stage 1이 FALL로 예측한 것은 모두 실제 낙상이었습니다. AND 로직 적용 시 physics가 이 올바른 감지 일부를 삭제하여 F1이 **0.864로 하락 (−0.049)**했습니다. Stage 1 precision이 이미 높은 경우, physics는 FP를 줄이지 못하면서 FN을 늘리므로 AND 게이팅은 오히려 역효과입니다.
 
 ## 데이터셋 준비
 
