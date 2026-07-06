@@ -465,6 +465,24 @@ def emergency_report(event_id: str, user=Depends(auth_user)):
     }
 
 
+_EMERGENCY_TEST_PHONE = "01088490868"  # 테스트용 — 실제 119 대신 이 번호로 전송
+
+@app.post("/api/fall-events/{event_id}/notify-emergency-sms")
+async def notify_emergency_sms(event_id: str, user=Depends(auth_user)):
+    ev = db.get_fall_event(event_id)
+    if not ev:
+        raise HTTPException(404, "이벤트를 찾을 수 없습니다")
+    target = db.get_user_by_id(ev.get("user_id", "")) if ev.get("user_id") else {}
+    name = (target or {}).get("display_name") or "피보호자"
+    address = (target or {}).get("address") or "등록된 주소 없음"
+    now_str = datetime.now().strftime("%H:%M")
+    message = (
+        f"[MobiCare 긴급신고] {now_str} {name}님에게서 낙상이 감지되었습니다. "
+        f"위치: {address}. 즉각적인 확인이 필요합니다."
+    )
+    return await sms.send_sms(_EMERGENCY_TEST_PHONE, message)
+
+
 @app.post("/api/fall-events/{event_id}/notify-guardian-sms")
 async def notify_guardian_sms(event_id: str, user=Depends(auth_user)):
     ev = db.get_fall_event(event_id)
