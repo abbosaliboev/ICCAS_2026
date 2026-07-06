@@ -10,7 +10,7 @@
 
 ---
 
-## ⚡ Quick Start / 빠른 시작 / Tezkor Boshlash
+## ⚡ Quick Start / 빠른 시작
 
 > Full guide → [fall_iccas/HOW_TO_RUN.md](./fall_iccas/HOW_TO_RUN.md)
 

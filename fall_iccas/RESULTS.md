@@ -1,9 +1,9 @@
 # Training Results History / 학습 결과 기록
 
-> **Language / 언어 / Til**
+> **Language / 언어**
 > - [🇺🇸 English](#english)
 > - [🇰🇷 한국어](#korean)
-> 
+
 ---
 
 <a name="english"></a>

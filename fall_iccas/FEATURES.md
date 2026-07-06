@@ -1,9 +1,8 @@
-# MobiCare Feature List / 기능 목록 / Xususiyatlar Ro'yxati
+# MobiCare Feature List / 기능 목록
 
-> **Language / 언어 / Til**
+> **Language / 언어**
 > - [🇺🇸 English](#english)
 > - [🇰🇷 한국어](#korean)
-> - [🇺🇿 O'zbekcha](#uzbek)
 
 ---
 
@@ -247,57 +246,3 @@ MobiCare는 독거 노인을 위한 실시간 카메라 기반 낙상 감지 시
 - YOLO TRT: 89.2fps (11ms)
 - ST-GCN+Physics CPU: 22.5fps (44ms)
 - 전체 파이프라인: ~68.7fps (실서버: 카메라 25–30fps 한계)
-
----
-
-<a name="uzbek"></a>
-# 🇺🇿 O'zbekcha
-
-## Tizim haqida
-
-MobiCare — yolg'iz yashovchi keksa odamlar uchun real-time kamera asosidagi yiqilishni aniqlash tizimi. ST-GCN deep learning modeli va fizika qoidalari filtri birlashtirilgan, NVIDIA Jetson edge qurilmasida ishlatiladi.
-
-## Asosiy xususiyatlar
-
-### 1. Yiqilishni aniqlash pipeline
-- YOLO11n-pose: 17 COCO keypoint (conf=0.1)
-- Zero-frame interpolation: yiqilish paytida YOLO miss qilganlarni to'ldiradi
-- ST-GCN 9 blok (3.1M parametr) → yiqilish ehtimoli
-- Physics Rescue filter: faqat qo'shadi, o'chirmaydi
-
-### 2. Edge server
-- MJPEG live stream (854×480)
-- Skeleton va bounding box overlay (yiqilishda qizil)
-- RTSP avtomatik qayta ulanish
-- TensorRT tezlashtirish (YOLO: 89.2fps, 11ms)
-- Avtomatik reset (odam turganda)
-- Screenshot avtomatik yuklash
-
-### 3. Xavfsiz zona
-- Karavot/divan sohasini qo'lda belgilash
-- Shu sohada yiqilish ogohlantirilmaydi
-
-### 4. Kamera turi
-- Old tomondagi kamera: h_span=0.80
-- Shiftdan CCTV: h_span=0.35
-
-### 5. Web Dashboard
-- Real-time stream + yiqilish holati (animatsiyali dot)
-- Favqulodda qo'ng'iroq tugmasi
-- WebSocket real-time xabarnoma
-- 6 tilda qo'llab-quvvatlash
-
-### 6. Hisobot sahifasi
-- Davr filtri + statistika
-- 7 kunlik bar chart (CSS)
-- CSV/PDF eksport
-- Email yuborish
-
-### 7. Foydalanuvchi profili
-- Ro'yxatdan o'tishda: ism, yosh, bo'y (sm), vazn (kg), jinsi
-- Kelajakda threshold kalibrovkasida ishlatiladi
-
-### 8. Ishlash ko'rsatkichlari (Jetson Orin Nano Super)
-- YOLO TRT: 89.2fps (11ms)
-- ST-GCN+Physics CPU: 22.5fps (44ms)
-- To'liq pipeline: ~68.7fps (real serverda kamera 25–30fps cheklaydi)

@@ -1,9 +1,8 @@
-# FPS Benchmark — Edge Server / FPS 벤치마크 / FPS O'lchovi
+# FPS Benchmark — Edge Server / FPS 벤치마크
 
-> **Language / 언어 / Til**
+> **Language / 언어**
 > - [🇺🇸 English](#english)
 > - [🇰🇷 한국어](#korean)
-> - [🇺🇿 O'zbekcha](#uzbek)
 
 ---
 
@@ -209,85 +208,3 @@ python bench_fps.py --frames 200 --tensorrt \
 **그럼에도 높은 FPS가 중요한 이유:**
 - YOLO 11 ms → 다음 프레임 전에 완전히 완료 (여유 22 ms)
 - 발열 감소, RTSP 재연결 후 즉시 복구, 향후 확장성 확보
-
----
-
-<a name="uzbek"></a>
-# 🇺🇿 O'zbekcha
-
-**Qurilma:** NVIDIA Jetson Orin Nano Super (Engineering Reference Developer Kit)
-**Quvvat:** 15W + `jetson_clocks` (CPU/GPU clock larini maksimalga qo'yish)
-**CUDA:** 12.6 | **PyTorch:** 2.5.0a0+872d972e41.nv24.08 | **TensorRT:** 10.3.0
-**Sana:** 2026-06-26 | **Kadrlar:** 200 | **Isitish:** 10
-
----
-
-## Kamera
-
-| Manba | Ruxsat | Ko'rsatilgan FPS | O'lchangan FPS | Kechikish |
-|-------|--------|:----------------:|:--------------:|:---------:|
-| Webcam (USB) | 640×480 | 30 | **30.0** | 33.3 ms |
-| RTSP IP kamera | 2560×1440 | 25 | **27.1** | 36.8 ms |
-
----
-
-## Model komponentlari (alohida benchmark)
-
-| Komponent | Backend | O'rtacha FPS | Min | Max | Kechikish |
-|-----------|---------|:------------:|:---:|:---:|:---------:|
-| YOLO11n-pose (imgsz=320, conf=0.1) | PyTorch (GPU) | **28.8** | 27.0 | 29.9 | 34.7 ms |
-| YOLO11n-pose (imgsz=320, conf=0.1) | **TensorRT (GPU)** | **89.2** | 79.9 | 98.1 | **11.2 ms** |
-| ST-GCN yolg'iz | CPU | 21.2 | 9.8 | 24.0 | 47.1 ms |
-| ST-GCN yolg'iz | **CUDA** | **59.5** | 54.9 | 60.6 | **16.8 ms** |
-| Physics filter yolg'iz | CPU (numpy) | **494** | 449 | 507 | 2.0 ms |
-| ST-GCN + Physics (TwoStage) | CPU | 23.5 | 14.1 | 26.0 | 42.5 ms |
-| ST-GCN + Physics (TwoStage) | **CUDA** | **60.0** | 59.2 | 60.7 | **16.7 ms** |
-
-> ST-GCN CUDA CPU dan 2.8 barobar tez (16.8 ms vs 47.1 ms).
-> Physics filter ST-GCN ga nisbatan atigi 0.1 ms qo'shimcha — deyarli bepul.
-> ST-GCN CUDA va TensorRT YOLO bir xil processda ishlay olmaydi (Jetson allocator konflikti).
-
----
-
-## To'liq pipeline (YOLO → ST-GCN → Physics)
-
-| YOLO backend | ST-GCN+Physics | O'rtacha FPS | Min | Max | Kechikish |
-|---|---|:---:|:---:|:---:|:---:|
-| PyTorch (GPU) | **CUDA** | 27.7 | 18.5 | 29.6 | 36.1 ms |
-| **TensorRT (GPU)** | CPU | **68.7** | 16.7 | 99.3 | **14.6 ms** |
-
-> TensorRT pipeline **2.5 barobar tezroq** (68.7 vs 27.7 fps).
-
----
-
-## Xulosalar jadvali
-
-| Holat | FPS | Kechikish | Izoh |
-|---|:---:|:---:|---|
-| Kamera (Webcam) | **30** | 33 ms | Hardware chegarasi |
-| Kamera (RTSP) | **25–27** | 37 ms | Hardware chegarasi |
-| YOLO PyTorch yolg'iz | 28.8 | 34.7 ms | |
-| YOLO TensorRT yolg'iz | **89.2** | **11.2 ms** | PT dan 3.1× tez |
-| ST-GCN + Physics (CPU) | 23.5 | 42.5 ms | |
-| ST-GCN + Physics (CUDA) | **60.0** | **16.7 ms** | CPU dan 2.6× tez |
-| Physics filter yolg'iz | 494 | 2.0 ms | Deyarli bepul |
-| **Pipeline: PyTorch + CUDA** | 27.7 | 36.1 ms | YOLO PT bottleneck |
-| **Pipeline: TRT + CPU** | **68.7** | **14.6 ms** | **Tavsiya etilgan** |
-
----
-
-## Haqiqiy vs Alohida FPS
-
-Benchmark statik dummy frame da sof model tezligini o'lchaydi.
-Haqiqiy serverda kamera bottleneck bo'ladi:
-
-```
-Alohida benchmark:  YOLO TRT → 89 fps, pipeline → 69 fps
-Haqiqiy server:     Kamera   → 25–30 fps (haqiqiy bottleneck)
-                    YOLO     → kamera tezligida 25–30 fps
-                    ST-GCN   → har 15-kadrda bir marta (~1.7–2 marta/son)
-```
-
-**Baribir yuqori FPS muhim sababi:**
-- YOLO 11 ms da tugaydi → keyingi kadr (33 ms) kelguncha 22 ms zapas
-- Past qizish, RTSP uzilgandan tez tiklash, kelajakda kengayish imkoniyati

@@ -1,9 +1,8 @@
-# How to Run MobiCare / 실행 방법 / Qanday Ishga Tushirish
+# How to Run MobiCare / 실행 방법
 
-> **Language / 언어 / Til**
+> **Language / 언어**
 > - [🇺🇸 English](#english)
 > - [🇰🇷 한국어](#korean)
-> - [🇺🇿 O'zbekcha](#uzbek)
 
 ---
 
@@ -362,133 +361,6 @@ python bench_fps.py
 Jetson에서 두 모델을 동시에 CUDA로 실행하지 말 것 (할당자 충돌).
 
 ### NumPy 버전 오류
-```bash
-pip install "numpy<2"
-```
-
----
-
-<a name="uzbek"></a>
-# 🇺🇿 O'zbekcha
-
-## Tizim tuzilishi
-
-```
-[IP Kamera] ──RTSP──► [Jetson Orin NX]  ── Fall event POST ──► [Backend PC]
-                       edge_server.py        http://PC_IP:8000    main.py
-                       MJPEG :8081 ─────────────────────────────► [Telefon/Brauzer]
-                                                                   :8000/app
-```
-
----
-
-## 1. Backend server (PC da)
-
-```bash
-cd backend
-pip install -r requirements.txt
-python main.py
-```
-
-Web ilova: **http://localhost:8000/app**
-
-Boshqa qurilmalardan (telefon, Jetson) kirish:
-- PC IP ni toping: `ip addr` → masalan: `10.198.137.100`
-- Telefondan: **http://10.198.137.100:8000/app**
-
----
-
-## 2. Edge server (Jetson Orin NX da)
-
-### 2-1. Oddiy — USB kamera (0-indeks)
-```bash
-cd fall_iccas
-python edge_server.py
-```
-
-### 2-2. RTSP IP kamera
-```bash
-python edge_server.py \
-  --source "rtsp://admin:PAROL@KAMERA_IP:554/stream1"
-```
-
-### 2-3. RTSP + TensorRT (Jetson uchun tavsiya)
-```bash
-python edge_server.py \
-  --source "rtsp://admin:PAROL@KAMERA_IP:554/stream1" \
-  --tensorrt
-```
-> Birinchi ishga tushirganda `.engine` ga eksport qiladi (~2 daqiqa). Keyingi safar tez yuklanadi.
-
-### 2-4. To'liq — boshqa PC dagi backendga ulash
-```bash
-python edge_server.py \
-  --source "rtsp://admin:PAROL@KAMERA_IP:554/stream1" \
-  --backend "http://10.198.137.100:8000" \
-  --device-token "edge-device-001" \
-  --tensorrt \
-  --stream-port 8081
-```
-
-### Barcha argumentlar
-
-| Argument | Default | Izoh |
-|---|---|---|
-| `--source` | `0` | Kamera indeksi yoki RTSP URL |
-| `--backend` | `http://localhost:8000` | Backend server manzili |
-| `--device-token` | `edge-device-001` | Backend uchun auth token |
-| `--stream-port` | `8081` | MJPEG stream porti |
-| `--tensorrt` | o'chiq | TensorRT ishlatish (Jetson GPU) |
-| `--exp` | `experiments/subject1_2_3_4` | Model experiment papkasi |
-| `--display` | o'chiq | OpenCV oynasini ko'rsatish |
-| `--confirm` | `3` | Ogohlantirish uchun ketma-ket FALL oynalari |
-| `--min-lock` | `5.0` | FALL ogohlantirishni ushlab turish vaqti (soniya) |
-| `--stand-streak` | `2` | Avtomatik reset uchun turib turish oynalari |
-| `--width` | `640` | Kamera eni (piksel) |
-| `--height` | `480` | Kamera balandligi (piksel) |
-| `--snap-dir` | `snapshots/` | Yiqilish screenshotlari papkasi |
-
----
-
-## 3. Stream ko'rish
-
-| Nima | URL |
-|---|---|
-| MJPEG stream (to'g'ridan) | `http://JETSON_IP:8081/video` |
-| Web ilova (stream bilan) | `http://PC_IP:8000/app` |
-| Ilovaga joylashtiriladigan URL | `http://JETSON_IP:8081/video` |
-
-> Web ilovada: **Stream URL** maydoniga MJPEG URL ni joylashtiring va **Connect** bosing.
-
----
-
-## 4. Trening (GPU li PC da)
-
-```bash
-# 1-qadam: UP-Fall rasmlaridan keypointlarni ajratib olish
-python prepare_cv_dataset.py
-
-# 2-qadam: Ikki bosqichli modelni trening qilish
-python train_two_stage.py
-
-# 3-qadam: FPS benchmark (Jetson da)
-python bench_fps.py
-```
-
----
-
-## 5. Muammolarni hal qilish
-
-### RTSP kamera ochilmayapti
-- Kamera IP ni tekshiring: `ping KAMERA_IP`
-- VLC da test qiling: `Media → Open Network Stream`
-- Parolda maxsus belgilar URL-encode qilinishi kerak: `$` → `%24`
-
-### Jetson CUDA xotira xatosi
-Doim `--tensorrt` ishlatilsin — YOLO TRT da, ST-GCN CPU da avtomatik ishlaydi.
-Jetson da ikkala modelni bir vaqtda CUDA da ishlatmang (allocator konflikti).
-
-### NumPy versiya xatosi
 ```bash
 pip install "numpy<2"
 ```
