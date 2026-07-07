@@ -65,6 +65,30 @@ class S {
   String get emergencyCall => _t('긴급 연락', 'Emergency');
   String get allClearBtn => _t('안심 확인', 'All Clear');
 
+  // Fall response overlay
+  String get fallAlertTitle => _t('낙상이 감지되었습니다', 'Fall Detected');
+  String get fallAlertMeta => _t('방금 전 · 중증', 'Just now · Severe');
+  String get fallAlertTtsPlaying => _t('TTS 재생 중...', 'Playing voice alert...');
+  String get fallAlertVoicePrompt =>
+      _t('"연락" 또는 "아니"라고 말씀해주세요', 'Say "help" or "no"');
+  String get fallAlertContacting => _t('연락 중...', 'Contacting...');
+  String get fallAlertContacted =>
+      _t('보호자 및 119에 연락 완료', 'Guardian and emergency services contacted');
+  String get fallAlertContactError =>
+      _t('연락 처리 중 오류 발생', 'Unable to complete contact request');
+  String get fallAlertCanceled =>
+      _t('취소되었습니다. 안전하세요!', 'Canceled. Please stay safe.');
+  String get fallAlertReport119 => _t('119 신고하기', 'Call Emergency');
+  String get fallAlertContactGuardian =>
+      _t('보호자에게 연락', 'Contact Guardian');
+  String get fallAlertConfirmed => _t('확인했습니다', "I'm OK");
+  String get fallAlertMicActive => _t('마이크 활성화 중', 'Microphone active');
+  String fallAlertSeconds(int seconds) => _ko ? '$seconds초' : '$seconds sec';
+  String get fallAlertTtsMessage => _t(
+    '낙상이 감지되었습니다. 보호자에게 연락 및 119 신고를 원하시면 "연락"이라고 말씀해주세요. 괜찮으시면 "아니"라고 말씀해주세요. 15초 간 응답이 없으시면 자동으로 119 문자 신고 및 보호자에게 연락 조치가 진행됩니다.',
+    'A fall has been detected. If you need your guardian and emergency services contacted, please say "help". If you are okay, please say "no". If there is no response for 15 seconds, an emergency text and guardian alert will be sent automatically.',
+  );
+
   // Emergency dialog
   String get emergencyDialogTitle => _t('긴급 연락', 'Emergency');
   String get emergencyDialogBody => _t(
