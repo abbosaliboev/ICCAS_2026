@@ -45,7 +45,7 @@ NFALL_COLOR  = (0, 220, 0)
 UNSURE_COLOR = (0, 200, 255)
 
 N_JOINTS   = 17
-WINDOW     = 30
+WINDOW     = 57
 STRIDE     = 15
 
 
@@ -177,9 +177,11 @@ def main():
     parser.add_argument("--camera", type=int, default=0,
                         help="Camera index (default 0)")
     parser.add_argument("--confirm", type=int, default=3,
-                        help="Consecutive FALL windows needed to trigger alert (default 3 ≈ 1.5s)")
-    parser.add_argument("--threshold", type=float, default=None,
-                        help="Override stage1 fall probability threshold (e.g. 0.90)")
+                        help="Consecutive FALL windows needed to trigger alert (default 3)")
+    parser.add_argument("--threshold", type=float, default=0.55,
+                        help="Stage1 fall probability threshold (default 0.55)")
+    parser.add_argument("--rescue-margin", type=float, default=0.10,
+                        help="Physics rescue band below threshold (default 0.10 -> 0.45..0.55)")
     parser.add_argument("--physics-only", action="store_true",
                         help="Bypass ST-GCN; use only hip velocity/acceleration rule")
     parser.add_argument("--vel-thresh", type=float, default=0.30,
@@ -216,9 +218,8 @@ def main():
 
     print(f"Loading detector from: {exp_dir}")
     detector, train_fps = load_detector(exp_dir, device)
-    if args.threshold is not None:
-        detector.stage1_threshold = args.threshold
-        detector.rescue_threshold = args.threshold - 0.05
+    detector.stage1_threshold = args.threshold
+    detector.rescue_threshold = max(0.0, args.threshold - args.rescue_margin)
     confirm_needed = args.confirm
     physics_only   = args.physics_only
     print(f"Detector loaded  (device={device}, train_fps={train_fps})")
@@ -227,7 +228,12 @@ def main():
         fall_types = "slow+fast" if args.fast_fall else "slow-only"
         print(f"Mode: {mode_str}  [{fall_types}]  slow_drop>{args.slow_drop:.2f}  windows={args.slow_windows}  confirm={confirm_needed}")
     else:
-        print(f"Mode: ST-GCN+Physics  stage1_threshold={detector.stage1_threshold:.2f}  confirm={confirm_needed}")
+        print(
+            f"Mode: ST-GCN+Physics  "
+            f"stage1_threshold={detector.stage1_threshold:.2f}  "
+            f"rescue_threshold={detector.rescue_threshold:.2f}  "
+            f"confirm={confirm_needed}"
+        )
 
     yolo = YOLO("yolo11n-pose.pt")
     print("YOLO loaded")

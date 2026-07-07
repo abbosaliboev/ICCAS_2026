@@ -42,7 +42,7 @@ SKELETON = [
     (11,13),(13,15),(12,14),(14,16),
 ]
 N_JOINTS = 17
-WINDOW   = 30
+WINDOW   = 57
 STRIDE   = 15
 
 # ── shared MJPEG frame ────────────────────────────────────────────────────────
@@ -274,7 +274,13 @@ def ffill(buf):
     return out
 
 
-def load_detector(exp_dir: str, device: str, tensorrt: bool = False):
+def load_detector(
+    exp_dir: str,
+    device: str,
+    tensorrt: bool = False,
+    stage1_threshold: float = None,
+    rescue_threshold: float = None,
+):
     ckpt  = os.path.join(exp_dir, "checkpoints")
     cfg   = json.load(open(os.path.join(ckpt, "two_stage_config.json")))
     pth   = os.path.join(ckpt, "best_stgcn.pth")
@@ -285,10 +291,13 @@ def load_detector(exp_dir: str, device: str, tensorrt: bool = False):
     model.eval()
 
     physics  = PhysicsFilter(fps=fps, vel_threshold=cfg["vel_threshold"], acc_threshold=cfg["acc_threshold"])
+    stage1_t = cfg["stage1_threshold"] if stage1_threshold is None else stage1_threshold
+    rescue_t = cfg["rescue_threshold"] if rescue_threshold is None else rescue_threshold
     detector = TwoStageDetector(model, physics,
-                                stage1_threshold=cfg["stage1_threshold"],
-                                rescue_threshold=cfg["rescue_threshold"],
+                                stage1_threshold=stage1_t,
+                                rescue_threshold=rescue_t,
                                 device=device)
+    log.info(f"Detector thresholds: stage1={stage1_t:.2f}, rescue={rescue_t:.2f}")
     return detector, fps
 
 
@@ -356,7 +365,10 @@ def main():
     ap.add_argument("--stream-port",  type=int, default=8081,  help="MJPEG HTTP port (default 8081)")
     ap.add_argument("--snap-dir",     default="snapshots",     help="Directory to save fall screenshots")
     ap.add_argument("--clip-dir",     default="clips",         help="Directory to save fall video clips")
-    ap.add_argument("--preclip-seconds", type=float, default=10.0, help="Seconds of video to keep before a fall")
+    ap.add_argument("--preclip-seconds", type=float, default=5.0, help="Seconds of video to keep before a fall")
+    ap.add_argument("--clip-buffer-fps", type=float, default=19.0, help="Max FPS stored in pre-fall clip buffer")
+    ap.add_argument("--stage1-threshold", type=float, default=0.55, help="ST-GCN confident FALL threshold")
+    ap.add_argument("--rescue-threshold", type=float, default=0.45, help="Physics rescue lower probability threshold")
     ap.add_argument("--confirm",      type=int, default=3,     help="Consecutive FALL windows to confirm (default 3)")
     ap.add_argument("--min-lock",     type=float, default=5.0, help="Min seconds to hold FALL alert")
     ap.add_argument("--stand-streak", type=int, default=2,     help="Standing windows to auto-reset")
@@ -374,7 +386,13 @@ def main():
     # ST-GCN must run on CPU when TensorRT is used — TRT and PyTorch CUDA
     # allocators conflict on Jetson shared GPU memory (CUDACachingAllocator crash).
     stgcn_device = "cpu" if args.tensorrt else device
-    detector, train_fps = load_detector(exp_dir, stgcn_device, tensorrt=False)
+    detector, train_fps = load_detector(
+        exp_dir,
+        stgcn_device,
+        tensorrt=False,
+        stage1_threshold=args.stage1_threshold,
+        rescue_threshold=args.rescue_threshold,
+    )
     yolo = load_yolo(args.tensorrt)
     log.info("Models loaded")
 
@@ -415,6 +433,7 @@ def main():
     yolo_fps      = 0.0   # YOLO inference FPS  (1 / inference_time)
     stgcn_fps     = 0.0   # ST-GCN inference FPS (1 / inference_time)
     t_prev        = time.time()
+    last_clip_sample_t = 0.0
     fall_streak   = 0
     fall_active   = False
     fall_lock_t   = 0.0
@@ -608,36 +627,37 @@ def main():
                     fall_streak = 0
 
             if fall_streak >= args.confirm and not fall_active:
-                fall_active  = True
-                fall_lock_t  = time.time() + args.min_lock
-                stand_streak = 0
                 event_id         = datetime.now().strftime('%Y%m%d%H%M%S')
-                current_event_id = event_id
                 event_created = client.post_fall(event_id, "severe", datetime.now().isoformat())
-                log.info("FALL DETECTED — alert active")
-                if event_created:
+                if not event_created:
+                    log.warning(f"FALL detected locally but backend event was not created: {event_id}")
+                    fall_streak = max(args.confirm - 1, 0)
+                else:
+                    fall_active  = True
+                    fall_lock_t  = time.time() + args.min_lock
+                    stand_streak = 0
+                    current_event_id = event_id
+                    log.info("FALL DETECTED — backend event created, alert active")
                     clip_frames = [(ts, f.copy()) for ts, f in pre_clip_buf]
                     threading.Thread(
                         target=save_and_upload_clip,
                         args=(event_id, clip_frames, clip_dir, client),
                         daemon=True,
                     ).start()
-                else:
-                    log.warning(f"Skipping clip upload until backend event exists: {event_id}")
-                ss_path = os.path.join(snap_dir, f"{event_id}.jpg")
-                ss_frame = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
-                # draw bbox on screenshot (fall_active just set, bbox not yet on frame)
-                if smooth_bbox is not None:
-                    _sx = 1280 / w; _sy = 720 / h
-                    _bx1 = max(0,    int(smooth_bbox[0]*_sx) - 12)
-                    _by1 = max(0,    int(smooth_bbox[1]*_sy) - 12)
-                    _bx2 = min(1280, int(smooth_bbox[2]*_sx) + 12)
-                    _by2 = min(720,  int(smooth_bbox[3]*_sy) + 12)
-                    cv2.rectangle(ss_frame, (_bx1, _by1), (_bx2, _by2), (0, 0, 255), 3)
-                    cv2.putText(ss_frame, "FALL", (_bx1, max(_by1-8, 20)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
-                cv2.imwrite(ss_path, ss_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                threading.Thread(target=client.upload_screenshot, args=(event_id, ss_path), daemon=True).start()
+                    ss_path = os.path.join(snap_dir, f"{event_id}.jpg")
+                    ss_frame = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
+                    # draw bbox on screenshot (fall_active just set, bbox not yet on frame)
+                    if smooth_bbox is not None:
+                        _sx = 1280 / w; _sy = 720 / h
+                        _bx1 = max(0,    int(smooth_bbox[0]*_sx) - 12)
+                        _by1 = max(0,    int(smooth_bbox[1]*_sy) - 12)
+                        _bx2 = min(1280, int(smooth_bbox[2]*_sx) + 12)
+                        _by2 = min(720,  int(smooth_bbox[3]*_sy) + 12)
+                        cv2.rectangle(ss_frame, (_bx1, _by1), (_bx2, _by2), (0, 0, 255), 3)
+                        cv2.putText(ss_frame, "FALL", (_bx1, max(_by1-8, 20)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
+                    cv2.imwrite(ss_path, ss_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                    threading.Thread(target=client.upload_screenshot, args=(event_id, ss_path), daemon=True).start()
 
         # auto-reset
         if fall_active and time.time() > fall_lock_t:
@@ -680,8 +700,12 @@ def main():
             small = cv2.resize(frame, (stream_w, stream_h), interpolation=cv2.INTER_LINEAR)
         else:
             small = frame
-        pre_clip_buf.append((time.time(), small.copy()))
-        prune_time_buffer(pre_clip_buf, time.time(), args.preclip_seconds)
+        clip_now = time.time()
+        clip_interval = 1.0 / args.clip_buffer_fps if args.clip_buffer_fps > 0 else 0.0
+        if clip_interval == 0.0 or clip_now - last_clip_sample_t >= clip_interval:
+            pre_clip_buf.append((clip_now, small.copy()))
+            last_clip_sample_t = clip_now
+        prune_time_buffer(pre_clip_buf, clip_now, args.preclip_seconds)
         _, jpg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 70])
         with _frame_lock:
             _latest_jpg = jpg.tobytes()
