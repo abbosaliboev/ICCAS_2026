@@ -4,6 +4,7 @@ import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 import '../models/fall_event.dart';
+import '../strings.dart';
 import 'event_detail_screen.dart';
 
 class GuardianScreen extends StatefulWidget {
@@ -48,17 +49,25 @@ class _GuardianScreenState extends State<GuardianScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
         child: _loading
             ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2))
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2,
+                ),
+              )
             : RefreshIndicator(
                 color: AppColors.primary,
                 onRefresh: _load,
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 20,
+                  ),
                   children: [
                     // ── Header ──────────────────────────────────────────────
                     Row(
@@ -67,9 +76,9 @@ class _GuardianScreenState extends State<GuardianScreen>
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              '피보호자 현황',
-                              style: TextStyle(
+                            Text(
+                              s.monitoredStatusTitle,
+                              style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
@@ -77,15 +86,19 @@ class _GuardianScreenState extends State<GuardianScreen>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '등록된 ${_monitored.length}명의 상태를 한눈에 확인하세요',
+                              s.monitoredStatusSubtitle(_monitored.length),
                               style: const TextStyle(
-                                  color: AppColors.textSecondary, fontSize: 13),
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
                         IconButton(
-                          icon: const Icon(Icons.refresh_rounded,
-                              color: AppColors.textSecondary),
+                          icon: const Icon(
+                            Icons.refresh_rounded,
+                            color: AppColors.textSecondary,
+                          ),
                           onPressed: _load,
                         ),
                       ],
@@ -101,32 +114,42 @@ class _GuardianScreenState extends State<GuardianScreen>
                       Container(
                         padding: const EdgeInsets.all(28),
                         decoration: cardDeco(radius: 16),
-                        child: const Column(
+                        child: Column(
                           children: [
-                            Icon(Icons.person_add_outlined,
-                                size: 40, color: AppColors.textTertiary),
-                            SizedBox(height: 12),
-                            Text(
-                              '연결된 피보호자가 없습니다',
-                              style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w500),
+                            const Icon(
+                              Icons.person_add_outlined,
+                              size: 40,
+                              color: AppColors.textTertiary,
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 12),
                             Text(
-                              '피보호자가 보호자 아이디를 입력하여 연결합니다',
-                              style:
-                                  TextStyle(color: AppColors.textTertiary, fontSize: 12),
+                              s.noLinkedRecipients,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              s.linkByGuardianId,
+                              style: const TextStyle(
+                                color: AppColors.textTertiary,
+                                fontSize: 12,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ],
                         ),
                       )
                     else
-                      ..._monitored.map((u) => _WardCard(
-                            user: u,
-                            events: _events.where((e) => e.userId == u.id).toList(),
-                          )),
+                      ..._monitored.map(
+                        (u) => _WardCard(
+                          user: u,
+                          events: _events
+                              .where((e) => e.userId == u.id)
+                              .toList(),
+                        ),
+                      ),
 
                     const SizedBox(height: 24),
 
@@ -135,18 +158,20 @@ class _GuardianScreenState extends State<GuardianScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            '전체 낙상 기록',
-                            style: TextStyle(
+                          Text(
+                            s.allFallRecords,
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
                           ),
                           Text(
-                            '${_events.length}건',
+                            s.countEntries(_events.length),
                             style: const TextStyle(
-                                color: AppColors.textTertiary, fontSize: 13),
+                              color: AppColors.textTertiary,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -173,40 +198,56 @@ class _StatsRow extends StatelessWidget {
     final todayCount = events.where((e) {
       try {
         final dt = DateTime.parse(e.timestamp).toLocal();
-        return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+        return dt.year == now.year &&
+            dt.month == now.month &&
+            dt.day == now.day;
       } catch (_) {
         return false;
       }
     }).length;
     final severeCount = events.where((e) => e.isSevere).length;
+    final s = S.of(context);
 
     return Row(
       children: [
         _MiniStat(
-            label: '오늘', value: '$todayCount건',
-            color: todayCount > 0 ? AppColors.danger : AppColors.success,
-            bg: todayCount > 0 ? AppColors.dangerTint : AppColors.successTint),
+          label: s.today,
+          value: s.countEntries(todayCount),
+          color: todayCount > 0 ? AppColors.danger : AppColors.success,
+          bg: todayCount > 0 ? AppColors.dangerTint : AppColors.successTint,
+        ),
         const SizedBox(width: 8),
         _MiniStat(
-            label: '이번 주',
-            value: '${events.where((e) {
-              try { return now.difference(DateTime.parse(e.timestamp).toLocal()).inDays < 7; }
-              catch (_) { return false; }
-            }).length}건',
-            color: AppColors.warningText,
-            bg: AppColors.warningTint),
+          label: s.thisWeek,
+          value: s.countEntries(
+            events.where((e) {
+              try {
+                return now
+                        .difference(DateTime.parse(e.timestamp).toLocal())
+                        .inDays <
+                    7;
+              } catch (_) {
+                return false;
+              }
+            }).length,
+          ),
+          color: AppColors.warningText,
+          bg: AppColors.warningTint,
+        ),
         const SizedBox(width: 8),
         _MiniStat(
-            label: '중증',
-            value: '$severeCount건',
-            color: severeCount > 0 ? AppColors.danger : AppColors.textSecondary,
-            bg: severeCount > 0 ? AppColors.dangerTint : AppColors.chip),
+          label: s.severe,
+          value: s.countEntries(severeCount),
+          color: severeCount > 0 ? AppColors.danger : AppColors.textSecondary,
+          bg: severeCount > 0 ? AppColors.dangerTint : AppColors.chip,
+        ),
         const SizedBox(width: 8),
         _MiniStat(
-            label: '전체',
-            value: '${events.length}건',
-            color: AppColors.primary,
-            bg: AppColors.primaryTint),
+          label: s.all,
+          value: s.countEntries(events.length),
+          color: AppColors.primary,
+          bg: AppColors.primaryTint,
+        ),
       ],
     );
   }
@@ -217,29 +258,40 @@ class _MiniStat extends StatelessWidget {
   final String value;
   final Color color;
   final Color bg;
-  const _MiniStat(
-      {required this.label, required this.value, required this.color, required this.bg});
+  const _MiniStat({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.bg,
+  });
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(12),
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          child: Column(
-            children: [
-              Text(value,
-                  style: TextStyle(
-                      color: color, fontSize: 16, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 2),
-              Text(label,
-                  style: const TextStyle(color: AppColors.textTertiary, fontSize: 10)),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.textTertiary, fontSize: 10),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 // ── Ward card ─────────────────────────────────────────────────────────────────
@@ -252,15 +304,23 @@ class _WardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final hasRecentAlert = events.isNotEmpty &&
-        now.difference(DateTime.tryParse(events.first.timestamp)?.toLocal() ?? now).inHours < 24;
+    final hasRecentAlert =
+        events.isNotEmpty &&
+        now
+                .difference(
+                  DateTime.tryParse(events.first.timestamp)?.toLocal() ?? now,
+                )
+                .inHours <
+            24;
     final statusOk = !hasRecentAlert;
     final initial =
-        (user.displayName.isNotEmpty ? user.displayName : user.username)[0].toUpperCase();
+        (user.displayName.isNotEmpty ? user.displayName : user.username)[0]
+            .toUpperCase();
+    final s = S.of(context);
 
-    String recentNote = events.isEmpty ? '기록 없음' : '확인 완료';
+    String recentNote = events.isEmpty ? s.noRecords : s.confirmed;
     if (events.isNotEmpty && !events.first.isAcknowledged) {
-      recentNote = hasRecentAlert ? '방금 · 낙상 의심 · 확인 필요' : '확인 필요';
+      recentNote = hasRecentAlert ? s.justNowFallNeedsCheck : s.needsConfirm;
     }
 
     return Container(
@@ -271,8 +331,9 @@ class _WardCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor:
-                statusOk ? AppColors.primaryTint : AppColors.dangerTint,
+            backgroundColor: statusOk
+                ? AppColors.primaryTint
+                : AppColors.dangerTint,
             child: Text(
               initial,
               style: TextStyle(
@@ -290,7 +351,9 @@ class _WardCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      user.displayName.isNotEmpty ? user.displayName : user.username,
+                      user.displayName.isNotEmpty
+                          ? user.displayName
+                          : user.username,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -298,10 +361,17 @@ class _WardCard extends StatelessWidget {
                       ),
                     ),
                     if (user.age != null) ...[
-                      const Text(' · ', style: TextStyle(color: AppColors.textTertiary)),
-                      Text('${user.age}세',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 13)),
+                      const Text(
+                        ' · ',
+                        style: TextStyle(color: AppColors.textTertiary),
+                      ),
+                      Text(
+                        s.ageYears(user.age!),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -310,7 +380,9 @@ class _WardCard extends StatelessWidget {
                   recentNote,
                   style: TextStyle(
                     fontSize: 12,
-                    color: statusOk ? AppColors.textTertiary : AppColors.dangerPressed,
+                    color: statusOk
+                        ? AppColors.textTertiary
+                        : AppColors.dangerPressed,
                   ),
                 ),
               ],
@@ -335,7 +407,7 @@ class _WardCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 5),
                 Text(
-                  statusOk ? '정상' : '확인 필요',
+                  statusOk ? s.normal : s.needsConfirm,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -358,71 +430,91 @@ class _EventTile extends StatelessWidget {
   const _EventTile({required this.event});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
-        ),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: cardDeco(radius: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: event.isSevere ? AppColors.dangerTint : AppColors.warningTint,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.person_off_outlined,
-                  color: event.isSevere ? AppColors.danger : AppColors.warning,
-                  size: 18,
-                ),
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: cardDeco(radius: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: event.isSevere
+                    ? AppColors.dangerTint
+                    : AppColors.warningTint,
+                borderRadius: BorderRadius.circular(10),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event.monitoredUserName != null
-                          ? '${event.monitoredUserName}님 · ${event.isSevere ? '중증' : '경미'}'
-                          : event.isSevere ? '심각한 낙상' : '낙상 의심',
-                      style: TextStyle(
-                        color: event.isSevere ? AppColors.danger : AppColors.warningText,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                    Text(
-                      _formatTs(event.timestamp),
-                      style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
-                    ),
-                  ],
-                ),
+              child: Icon(
+                Icons.person_off_outlined,
+                color: event.isSevere ? AppColors.danger : AppColors.warning,
+                size: 18,
               ),
-              if (event.isAcknowledged)
-                const Icon(Icons.check_circle, color: AppColors.success, size: 16)
-              else
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.dangerTint,
-                    borderRadius: BorderRadius.circular(100),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.monitoredEventTitle(
+                      event.monitoredUserName,
+                      event.isSevere,
+                    ),
+                    style: TextStyle(
+                      color: event.isSevere
+                          ? AppColors.danger
+                          : AppColors.warningText,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
                   ),
-                  child: const Text('미확인',
-                      style: TextStyle(
-                          color: AppColors.danger, fontSize: 10, fontWeight: FontWeight.w700)),
+                  Text(
+                    _formatTs(event.timestamp),
+                    style: const TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (event.isAcknowledged)
+              const Icon(Icons.check_circle, color: AppColors.success, size: 16)
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.dangerTint,
+                  borderRadius: BorderRadius.circular(100),
                 ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 16),
-            ],
-          ),
+                child: Text(
+                  s.unconfirmed,
+                  style: const TextStyle(
+                    color: AppColors.danger,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.chevron_right,
+              color: AppColors.textTertiary,
+              size: 16,
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
   String _formatTs(String ts) {
     try {
