@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
@@ -34,6 +35,11 @@ class MobiCareApp extends StatelessWidget {
       darkTheme: AppTheme.dark,
       themeMode: themeProvider.themeMode,
       locale: settingsProvider.locale,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       supportedLocales: const [
         Locale('ko'), Locale('en'), Locale('es'),
         Locale('fr'), Locale('ru'), Locale('zh'),

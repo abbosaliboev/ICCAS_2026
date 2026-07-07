@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.8
 
   # HTTP & networking
@@ -27,7 +29,7 @@ dependencies:
   chewie: ^1.8.5
 
   # UI utilities
-  intl: ^0.19.0
+  intl: ^0.20.2
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
 
