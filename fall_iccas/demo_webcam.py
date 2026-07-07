@@ -45,7 +45,7 @@ NFALL_COLOR  = (0, 220, 0)
 UNSURE_COLOR = (0, 200, 255)
 
 N_JOINTS   = 17
-WINDOW     = 57
+WINDOW     = 30
 STRIDE     = 15
 
 
@@ -180,8 +180,8 @@ def main():
                         help="Consecutive FALL windows needed to trigger alert (default 3)")
     parser.add_argument("--threshold", type=float, default=0.55,
                         help="Stage1 fall probability threshold (default 0.55)")
-    parser.add_argument("--rescue-margin", type=float, default=0.10,
-                        help="Physics rescue band below threshold (default 0.10 -> 0.45..0.55)")
+    parser.add_argument("--rescue-margin", type=float, default=0.05,
+                        help="Physics rescue band below threshold (default 0.05 -> 0.50..0.55)")
     parser.add_argument("--physics-only", action="store_true",
                         help="Bypass ST-GCN; use only hip velocity/acceleration rule")
     parser.add_argument("--vel-thresh", type=float, default=0.30,

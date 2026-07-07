@@ -42,7 +42,7 @@ SKELETON = [
     (11,13),(13,15),(12,14),(14,16),
 ]
 N_JOINTS = 17
-WINDOW   = 57
+WINDOW   = 30
 STRIDE   = 15
 
 # ── shared MJPEG frame ────────────────────────────────────────────────────────
@@ -368,7 +368,7 @@ def main():
     ap.add_argument("--preclip-seconds", type=float, default=5.0, help="Seconds of video to keep before a fall")
     ap.add_argument("--clip-buffer-fps", type=float, default=19.0, help="Max FPS stored in pre-fall clip buffer")
     ap.add_argument("--stage1-threshold", type=float, default=0.55, help="ST-GCN confident FALL threshold")
-    ap.add_argument("--rescue-threshold", type=float, default=0.45, help="Physics rescue lower probability threshold")
+    ap.add_argument("--rescue-threshold", type=float, default=0.50, help="Physics rescue lower probability threshold")
     ap.add_argument("--confirm",      type=int, default=3,     help="Consecutive FALL windows to confirm (default 3)")
     ap.add_argument("--min-lock",     type=float, default=5.0, help="Min seconds to hold FALL alert")
     ap.add_argument("--stand-streak", type=int, default=2,     help="Standing windows to auto-reset")
