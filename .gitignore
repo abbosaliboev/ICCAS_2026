@@ -14,7 +14,9 @@ build/
 *.sqlite3
 
 # ML model binaries (large files)
-
+# Full 17-subject LOSO / two-camera experiments (X.npy > 100MB GitHub limit; reproducible from code)
+fall_iccas/experiments/subject1_to_17/
+fall_iccas/experiments/subject1_to_17_cam2/
 
 # Logs & temp
 *.log
