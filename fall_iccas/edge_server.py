@@ -291,7 +291,7 @@ def load_yolo(tensorrt: bool):
 def main():
     global _latest_jpg
     ap = argparse.ArgumentParser()
-    ap.add_argument("--exp",          default=None,            help="Experiment dir (default: experiments/subject1_2_3_4)")
+    ap.add_argument("--exp",          default=None,            help="Experiment dir with checkpoints/ (default: fall_iccas — uses checkpoints/, the latest 17-subject model)")
     ap.add_argument("--source",       default="0",             help="Camera index or RTSP URL")
     ap.add_argument("--backend",      default="http://localhost:8000", help="Backend server URL")
     ap.add_argument("--device-token", default="edge-device-001", help="Device token for backend auth")
@@ -307,7 +307,8 @@ def main():
     args = ap.parse_args()
 
     base    = os.path.dirname(__file__)
-    exp_dir = args.exp or os.path.join(base, "experiments", "subject1_2_3_4")
+    # default: fall_iccas/checkpoints/ — the latest 17-subject two-stage model
+    exp_dir = args.exp or base
     device  = "cuda" if torch.cuda.is_available() else "cpu"
     log.info(f"Device: {device}")
 
