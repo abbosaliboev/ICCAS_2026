@@ -1,0 +1,256 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/settings_provider.dart';
+
+/// App-wide string localization.
+/// Usage: final s = S.of(context);  then use s.home, s.events, etc.
+/// Non-reactive reads (inside callbacks): S.read(context).someString
+class S {
+  final bool _ko;
+  const S._(this._ko);
+
+  factory S.of(BuildContext context) {
+    final code = context.watch<SettingsProvider>().localeCode;
+    return S._(code == 'ko');
+  }
+
+  factory S.read(BuildContext context) {
+    final code = context.read<SettingsProvider>().localeCode;
+    return S._(code == 'ko');
+  }
+
+  bool get isKorean => _ko;
+  String _t(String ko, String en) => _ko ? ko : en;
+
+  // ── Bottom navigation ──────────────────────────────────────────────────────
+  String get home     => _t('홈',     'Home');
+  String get records  => _t('기록',   'History');
+  String get report   => _t('리포트', 'Reports');
+  String get settings => _t('설정',   'Settings');
+
+  // ── Common actions ─────────────────────────────────────────────────────────
+  String get save     => _t('저장',   'Save');
+  String get saving   => _t('저장 중...', 'Saving...');
+  String get cancel   => _t('취소',   'Cancel');
+  String get delete   => _t('삭제',   'Delete');
+  String get retry    => _t('재시도', 'Retry');
+  String get edit     => _t('수정',   'Edit');
+  String get confirm  => _t('확인',   'Confirm');
+  String get close    => _t('닫기',   'Close');
+  String get refresh  => _t('새로고침', 'Refresh');
+
+  // ── Fall severity labels ───────────────────────────────────────────────────
+  String get all         => _t('전체', 'All');
+  String get severe      => _t('중증', 'Severe');
+  String get mild        => _t('경미', 'Mild');
+  String get severeFall  => _t('심각한 낙상', 'Severe Fall');
+  String get fallSuspect => _t('낙상 의심',   'Fall Suspected');
+  String get confirmed   => _t('확인 완료',   'Confirmed');
+  String get needsConfirm => _t('확인 필요',  'Needs Confirm');
+  String get unconfirmed  => _t('미확인',     'Unconfirmed');
+
+  // ── Home screen ────────────────────────────────────────────────────────────
+  String greeting(String name) => _ko ? '안녕하세요, $name님' : 'Hello, $name';
+  String get normal          => _t('정상입니다', 'All Clear');
+  String get safeNote        => _t('지금 안전하게 지내고 계세요', 'Currently safe and sound');
+  String get fallSuspected   => _t('낙상 의심 감지', 'Fall Detected');
+  String get needsAttention  => _t('확인이 필요해요', 'Needs Attention');
+  String get severeFallMsg   => _t('중증 낙상이 의심됩니다', 'Severe fall suspected');
+  String get fallDetectedMsg => _t('낙상이 감지되었습니다', 'A fall has been detected');
+  String get recentFalls     => _t('최근 낙상 기록', 'Recent Falls');
+  String get viewAll         => _t('전체보기', 'View All');
+  String get noRecentFalls   => _t('최근 낙상 기록이 없습니다', 'No recent fall events');
+  String get liveCam         => _t('라이브 카메라', 'Live Camera');
+  String get aiAnalyzing     => _t('AI 분석 중', 'AI Monitoring');
+  String get emergencyCall   => _t('긴급 연락', 'Emergency');
+  String get allClearBtn     => _t('안심 확인', 'All Clear');
+
+  // Emergency dialog
+  String get emergencyDialogTitle => _t('긴급 연락', 'Emergency');
+  String get emergencyDialogBody  =>
+      _t('보호자와 119에 즉시 연락하시겠습니까?', 'Contact your guardian and emergency services now?');
+  String get contactNow           => _t('연락하기', 'Contact Now');
+  String get guardianContactedMsg =>
+      _t('보호자 및 119에 연락했습니다', 'Guardian and emergency services contacted');
+  String contactFailed(String e)  => _t('연락 실패: $e', 'Contact failed: $e');
+
+  // ── Events screen ──────────────────────────────────────────────────────────
+  String get fallRecords   => _t('낙상 기록',   'Fall Records');
+  String get noFalls       => _t('낙상 기록이 없습니다', 'No fall events recorded');
+  String get noFiltered    => _t('해당 기록이 없습니다', 'No matching events');
+
+  // ── Reports screen ─────────────────────────────────────────────────────────
+  String get reportsTitle      => _t('리포트',       'Reports');
+  String get today             => _t('오늘',         'Today');
+  String get thisWeek          => _t('이번 주',       'This Week');
+  String get thisMonth         => _t('이번 달',       'This Month');
+  String get allTime           => _t('전체',          'All Time');
+  String get totalFalls        => _t('총 낙상 수',    'Total Falls');
+  String get severeEvents      => _t('중증 이벤트',   'Severe Events');
+  String get peakTime          => _t('위험 시간대',   'Peak Hours');
+  String get lastEvent         => _t('마지막 발생',   'Last Event');
+  String get dailyChart        => _t('일별 낙상 현황','Daily Fall Chart');
+  String get exportCsv         => _t('CSV 내보내기',  'Export CSV');
+  String get emailReport       => _t('이메일 전송',   'Email Report');
+  String get fallList          => _t('낙상 목록',     'Fall List');
+  String get noEventsInPeriod  => _t('해당 기간 낙상 이벤트 없음', 'No events in this period');
+  String countEntries(int n)   => _ko ? '${n}건' : '$n event${n == 1 ? '' : 's'}';
+
+  // ── App settings screen ────────────────────────────────────────────────────
+  String get settingsTitle           => _t('설정',             'Settings');
+  String get appearanceSection       => _t('외관',             'Appearance');
+  String get themeLabel              => _t('테마',             'Theme');
+  String get themeSubtitle           => _t('앱 전체 색상 모드', 'App color mode');
+  String get languageLabel           => _t('언어',             'Language');
+  String get languageSubtitle        => _t('앱 표시 언어 설정', 'App display language');
+  String get selectLanguage          => _t('언어 선택',         'Select Language');
+  String get lightMode               => _t('☀️  라이트',       '☀️  Light');
+  String get darkMode                => _t('🌙  다크',         '🌙  Dark');
+  String get lightModeSet            => _t('라이트 모드가 설정되었습니다', 'Light mode enabled');
+  String get darkModeSet             => _t('다크 모드가 설정되었습니다',  'Dark mode enabled');
+  String get emergencyContactSection => _t('긴급 연락처',       'Emergency Contact');
+  String get emergencyContactSubtitle =>
+      _t('연락처를 등록하면 낙상 시 빠른 전화 가능', 'Register for quick emergency contact');
+  String emergencyContactSet(String who) =>
+      _ko ? '$who(이)가 긴급 연락처로 설정되었습니다' : '$who set as emergency contact';
+  String get emergencyContactCleared => _t('긴급 연락처가 삭제되었습니다', 'Emergency contact removed');
+  String get connectionSection       => _t('연결',             'Connection');
+  String get serverSettingsLabel     => _t('서버 설정',         'Server Settings');
+  String get serverSettingsSubtitle  => _t('백엔드 & 엣지 서버 주소', 'Backend & edge server address');
+  String get cameraAndSafetySection  => _t('카메라 & 안전',    'Camera & Safety');
+  String get cameraTypeLabel         => _t('카메라 유형',       'Camera Type');
+  String get cameraTypeSubtitle      => _t('설치 위치에 맞게 설정하세요', 'Set for your installation');
+  String cameraTypeSet(String label) =>
+      _ko ? '$label(으)로 카메라 유형이 설정되었습니다' : '$label camera type set';
+  String get safeZoneLabel           => _t('안전 구역 설정',    'Safe Zone Settings');
+  String get safeZoneSubtitle        => _t('낙상 감지 제외 구역 관리', 'Manage fall detection exclusion zones');
+  String get appInfoSection          => _t('앱 정보',           'App Info');
+  String get appInfoSubtitle         => _t('v1.0.0 · Edge AI 기반 낙상 감지', 'v1.0.0 · Edge AI Fall Detection');
+  String get logoutLabel             => _t('로그아웃',          'Log Out');
+  String get logoutConfirmTitle      => _t('로그아웃',          'Log Out');
+  String get logoutConfirmBody       =>
+      _t('정말 로그아웃하시겠습니까?', 'Are you sure you want to log out?');
+  String get frontCameraBtn          => _t('정면',              'Front');
+  String get ceilingCameraBtn        => _t('천장',              'Ceiling');
+  String get guardianAccountLabel    => _t('보호자 계정',        'Guardian Account');
+  String get userAccountLabel        => _t('실사용자 계정',      'User Account');
+  String get nameHint                => _t('이름 (예: 홍길동)',  'Name');
+  String get phoneHint               => _t('전화번호 (예: 010-1234-5678)', 'Phone number');
+  String languageSelected(String lang) =>
+      _ko ? '$lang(으)로 언어가 설정되었습니다' : '$lang language set';
+
+  // ── Safe zone screen ───────────────────────────────────────────────────────
+  String get safeZoneTitle       => _t('안전 구역 설정', 'Safe Zone Settings');
+  String get safeZoneInfo        => _t(
+    '침대나 소파 등 낙상 감지를 제외할 구역을\n카메라 화면 위에 드래그하여 지정하세요.',
+    'Drag on the camera feed to mark areas\n(bed, sofa, etc.) to exclude from fall detection.',
+  );
+  String get drawZoneLabel       => _t('구역 그리기',      'Draw Zone');
+  String get noZoneLabel         => _t('구역 없음',        'No zones');
+  String zoneCount(int n)        => _ko ? '${n}개 구역 지정됨' : '$n zone${n == 1 ? '' : 's'} defined';
+  String get cancelLastZone      => _t('마지막 구역 취소', 'Undo Last Zone');
+  String get safeZoneSaved       => _t('안전 구역이 저장되었습니다', 'Safe zone saved');
+  String get safeZoneCleared     => _t('구역이 삭제되었습니다',     'Zones cleared');
+  String saveFailed(Object e)    => _t('저장 실패: $e',  'Save failed: $e');
+  String deleteFailed(Object e)  => _t('삭제 실패: $e',  'Delete failed: $e');
+  String get snapshotRefresh     => _t('스냅샷 새로고침', 'Refresh Snapshot');
+  String get frontCameraLabel    => _t('정면 카메라',      'Front Camera');
+  String get ceilingCameraLabel  => _t('CCTV (천장)',     'CCTV (Ceiling)');
+  String get noCameraMsg         =>
+      _t('카메라 연결 없음\n구역 그리기는 가능합니다', 'No camera connected\nZone drawing still available');
+
+  // ── Stream screen ──────────────────────────────────────────────────────────
+  String get liveViewTitle        => _t('라이브 뷰',     'Live View');
+  String get streamConnected      => _t('연결됨',        'Connected');
+  String get streamDisconnected   => _t('연결 끊김',     'Disconnected');
+  String get streamFallDetected   => _t('낙상 감지됨',   'Fall Detected');
+  String get streamResolving      => _t('상황 완료',     'Resolved');
+  String get streamFallResolved   => _t('낙상 상황 해제', 'Fall Cleared');
+  String get cameraOffline        => _t('카메라 연결 없음', 'Camera Offline');
+  String get reconnect            => _t('재연결 시도',   'Reconnect');
+  String get pauseStream          => _t('일시정지',      'Pause');
+  String get resumeStream         => _t('재생',          'Resume');
+
+  // ── Event detail screen ────────────────────────────────────────────────────
+  String get eventDetailTitle     => _t('이벤트 상세',   'Event Details');
+  String get impactZoneTitle      => _t('충격 부위 분석', 'Impact Zone');
+  String get estimateLabel        => _t('추정',           'Estimate');
+  String get impactBadge          => _t('충격',           'Impact');
+  String get emergencyReportTitle => _t('긴급 리포트',    'Emergency Report');
+  String get acknowledgeBtn       => _t('확인 처리',      'Acknowledge');
+  String get sendSmsBtn           => _t('보호자에게 문자 전송', 'Send SMS to Guardian');
+  String get smsSentMsg           => _t('문자 전송 완료', 'SMS sent successfully');
+  String smsFailed(String e)      => _t('문자 전송 실패: $e', 'SMS failed: $e');
+  String get deleteEventTitle     => _t('이벤트 삭제',   'Delete Event');
+  String get deleteEventBody      =>
+      _t('이 이벤트와 관련 영상을 삭제할까요?', 'Delete this event and its footage?');
+  String get acknowledgedMsg      => _t('확인 처리되었습니다', 'Event acknowledged');
+  String get estimatedImpact      => _t('추정 충격 부위', 'Estimated Impact');
+  String get fallDirectionLabel   => _t('낙상 방향',     'Fall Direction');
+  String get nameLabel            => _t('이름',           'Name');
+  String get ageLabel             => _t('나이',           'Age');
+  String get addressLabel         => _t('주소',           'Address');
+  String get contactField         => _t('연락처',         'Contact');
+  String get timeLabel            => _t('발생 시각',      'Time');
+  String get footageLabel         => _t('영상',           'Footage');
+  String get available            => _t('있음',           'Available');
+  String get none                 => _t('없음',           'None');
+
+  // Body regions (ordered head→foot)
+  List<String> get bodyRegions => _ko
+      ? ['머리/목', '어깨', '손목/팔꿈치', '골반/고관절', '무릎', '발목/발']
+      : ['Head/Neck', 'Shoulder', 'Wrist/Elbow', 'Hip/Joint', 'Knee', 'Ankle/Foot'];
+
+  // Fall directions map
+  Map<String, String> get fallDirections => _ko
+      ? {
+          'forward':        '앞으로 넘어짐',
+          'backward':       '뒤로 넘어짐',
+          'sideways_left':  '왼쪽으로 넘어짐',
+          'sideways_right': '오른쪽으로 넘어짐',
+        }
+      : {
+          'forward':        'Fell Forward',
+          'backward':       'Fell Backward',
+          'sideways_left':  'Fell to Left',
+          'sideways_right': 'Fell to Right',
+        };
+
+  // ── Login screen ───────────────────────────────────────────────────────────
+  String get loginSubtitle  => _t('낙상 감지 케어 시스템', 'AI Fall Detection Care System');
+  String get usernameHint   => _t('아이디',   'Username');
+  String get passwordHint   => _t('비밀번호', 'Password');
+  String get loginBtn       => _t('로그인',   'Sign In');
+  String get loginFailed    =>
+      _t('아이디 또는 비밀번호가 올바르지 않습니다', 'Invalid username or password');
+
+  // ── Profile screen ─────────────────────────────────────────────────────────
+  String get profileTitle      => _t('프로필',   'Profile');
+  String get displayNameLabel  => _t('표시 이름', 'Display Name');
+  String get phoneLabelP       => _t('전화번호', 'Phone');
+  String get addressLabelP     => _t('주소',     'Address');
+  String get ageLabelP         => _t('나이',     'Age');
+  String get genderLabel       => _t('성별',     'Gender');
+  String get male              => _t('남성',     'Male');
+  String get female            => _t('여성',     'Female');
+  String get noSetting         => _t('미설정',   'Not set');
+  String get guardianLinkLabel => _t('보호자 연동', 'Link Guardian');
+  String get profileSaved      => _t('프로필이 저장되었습니다', 'Profile saved');
+  String get optional          => _t('선택사항', 'Optional');
+
+  // ── Guardian screen ────────────────────────────────────────────────────────
+  String get guardianTitle       => _t('보호 대상 모니터링', 'Monitoring');
+  String get noMonitoredUser     => _t('연동된 피보호자가 없습니다', 'No monitored user linked');
+  String get guardianCodeSection => _t('나의 보호자 코드', 'My Guardian Code');
+  String get enterGuardianCode   => _t('보호자 코드 입력', 'Enter guardian code');
+  String get linkGuardianBtn     => _t('보호자 연동하기',  'Link Guardian');
+  String get linkSuccess         => _t('보호자 연동 완료', 'Guardian linked');
+
+  // ── Server settings screen ─────────────────────────────────────────────────
+  String get serverSettingsTitle  => _t('서버 설정',  'Server Settings');
+  String get backendUrlLabel      => _t('백엔드 서버 URL', 'Backend Server URL');
+  String get testConnectionLabel  => _t('연결 테스트',    'Test Connection');
+  String get connecting           => _t('연결 중...',     'Connecting...');
+  String get connectionSuccess    => _t('연결 성공',      'Connection OK');
+  String connectionFailedMsg(String e) => _t('연결 실패: $e', 'Connection failed: $e');
+}

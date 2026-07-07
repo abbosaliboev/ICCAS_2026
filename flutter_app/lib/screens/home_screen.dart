@@ -3,12 +3,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/fall_event.dart';
 import '../services/ws_service.dart';
+import '../strings.dart';
 import '../widgets/fall_response_overlay.dart';
 import 'event_detail_screen.dart';
 import 'events_screen.dart';
@@ -87,8 +87,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s    = S.of(context);
     final auth = context.watch<AuthProvider>();
     final user = auth.user!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg      = isDark ? DarkColors.bg      : AppColors.bg;
+    final surface = isDark ? DarkColors.surface  : AppColors.surface;
+    final border  = isDark ? DarkColors.border   : AppColors.border;
+    final primary = isDark ? DarkColors.primary  : AppColors.primary;
+    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
 
     final tabs = [
       user.isGuardian
@@ -108,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: bg,
       body: Stack(
         children: [
           IndexedStack(index: _tabIndex, children: tabs),
@@ -122,40 +129,40 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border(top: BorderSide(color: AppColors.border)),
+        decoration: BoxDecoration(
+          color: surface,
+          border: Border(top: BorderSide(color: border)),
         ),
         child: BottomNavigationBar(
           currentIndex: _tabIndex,
           onTap: (i) => setState(() => _tabIndex = i),
-          backgroundColor: AppColors.surface,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textTertiary,
+          backgroundColor: surface,
+          selectedItemColor: primary,
+          unselectedItemColor: textTer,
           type: BottomNavigationBarType.fixed,
           elevation: 0,
           selectedFontSize: 11,
           unselectedFontSize: 11,
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: '홈',
+              icon: const Icon(Icons.home_outlined),
+              activeIcon: const Icon(Icons.home_rounded),
+              label: s.home,
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.history_outlined),
-              activeIcon: Icon(Icons.history_rounded),
-              label: '기록',
+              icon: const Icon(Icons.history_outlined),
+              activeIcon: const Icon(Icons.history_rounded),
+              label: s.records,
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart_outlined),
-              activeIcon: Icon(Icons.bar_chart_rounded),
-              label: '리포트',
+              icon: const Icon(Icons.bar_chart_outlined),
+              activeIcon: const Icon(Icons.bar_chart_rounded),
+              label: s.report,
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings_rounded),
-              label: '설정',
+              icon: const Icon(Icons.settings_outlined),
+              activeIcon: const Icon(Icons.settings_rounded),
+              label: s.settings,
             ),
           ],
         ),
@@ -223,25 +230,44 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-    final dateStr =
-        '${now.year}년 ${now.month}월 ${now.day}일 (${weekdays[now.weekday - 1]}) · '
-        '${now.hour > 12 ? '오후' : '오전'} ${now.hour > 12 ? now.hour - 12 : now.hour}:${now.minute.toString().padLeft(2, '0')}';
+    final s     = S.of(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final textPri = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
+    final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+    final isKo = context.watch<SettingsProvider>().localeCode == 'ko';
+    final now  = DateTime.now();
+
+    final String dateStr;
+    if (isKo) {
+      final weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+      final ampm = now.hour >= 12 ? '오후' : '오전';
+      final h    = now.hour > 12 ? now.hour - 12 : (now.hour == 0 ? 12 : now.hour);
+      dateStr =
+          '${now.year}년 ${now.month}월 ${now.day}일 (${weekdays[now.weekday - 1]}) · '
+          '$ampm $h:${now.minute.toString().padLeft(2, '0')}';
+    } else {
+      final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      final weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      final ampm = now.hour >= 12 ? 'PM' : 'AM';
+      final h    = now.hour > 12 ? now.hour - 12 : (now.hour == 0 ? 12 : now.hour);
+      dateStr =
+          '${months[now.month - 1]} ${now.day}, ${now.year} (${weekdays[now.weekday - 1]}) · '
+          '$ampm $h:${now.minute.toString().padLeft(2, '0')}';
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '안녕하세요, ${user.displayName.isNotEmpty ? user.displayName : user.username}님',
-          style: const TextStyle(
+          s.greeting(user.displayName.isNotEmpty ? user.displayName : user.username),
+          style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
+            color: textPri,
           ),
         ),
         const SizedBox(height: 2),
-        Text(dateStr, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+        Text(dateStr, style: TextStyle(color: textSec, fontSize: 13)),
       ],
     );
   }
@@ -256,6 +282,7 @@ class _StatusHeroBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s        = S.of(context);
     final hasAlert = activeAlert != null;
     final isSevere = activeAlert?.category == 'severe';
     final bg = hasAlert ? AppColors.dangerTint : AppColors.successTint;
@@ -263,11 +290,11 @@ class _StatusHeroBanner extends StatelessWidget {
         ? (isSevere ? AppColors.danger : AppColors.warning)
         : AppColors.success;
     final headline = hasAlert
-        ? (isSevere ? '확인이 필요해요' : '낙상 의심 감지')
-        : '정상입니다';
+        ? (isSevere ? s.needsAttention : s.fallSuspected)
+        : s.normal;
     final sub = hasAlert
-        ? (isSevere ? '중증 낙상이 의심됩니다' : '낙상이 감지되었습니다')
-        : '지금 안전하게 지내고 계세요';
+        ? (isSevere ? s.severeFallMsg : s.fallDetectedMsg)
+        : s.safeNote;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
@@ -334,8 +361,10 @@ class _StreamCard extends StatefulWidget {
 
 class _StreamCardState extends State<_StreamCard> with SingleTickerProviderStateMixin {
   Timer? _pollTimer;
+  Timer? _zoneTimer;
   Uint8List? _frame;
   bool _fetching = false;
+  List<Map<String, double>> _zones = [];
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
 
@@ -348,11 +377,32 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
     )..repeat(reverse: true);
     _pulseAnim = Tween<double>(begin: 1.0, end: 0.25).animate(_pulseCtrl);
     _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) => _fetch());
+    _loadZones();
+    _zoneTimer = Timer.periodic(const Duration(seconds: 15), (_) => _loadZones());
+  }
+
+  Future<void> _loadZones() async {
+    try {
+      final api = context.read<AuthProvider>().api;
+      final data = await api.getSafeZone();
+      final zones = (data['zones'] as List?)
+          ?.map((e) {
+            final m = e as Map<String, dynamic>;
+            return {
+              'x': (m['x'] as num).toDouble(),
+              'y': (m['y'] as num).toDouble(),
+              'w': (m['w'] as num).toDouble(),
+              'h': (m['h'] as num).toDouble(),
+            };
+          }).toList() ?? <Map<String, double>>[];
+      if (mounted) setState(() => _zones = zones);
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _zoneTimer?.cancel();
     _pulseCtrl.dispose();
     super.dispose();
   }
@@ -380,23 +430,30 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
+    final s      = S.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const StreamScreen()),
       ),
       child: Container(
-        decoration: cardDeco(radius: 18),
+        decoration: cardDeco(radius: 18, dark: isDark),
         clipBehavior: Clip.antiAlias,
         child: AspectRatio(
           aspectRatio: 16 / 10,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Frame or placeholder
-              _frame != null
-                  ? Image.memory(_frame!, fit: BoxFit.cover, gaplessPlayback: true)
-                  : _StripePlaceholder(),
+              // Frame or placeholder — with safe zone overlay
+              CustomPaint(
+                foregroundPainter: _zones.isNotEmpty
+                    ? _StreamZonePainter(zones: _zones)
+                    : null,
+                child: _frame != null
+                    ? Image.memory(_frame!, fit: BoxFit.cover, gaplessPlayback: true)
+                    : _StripePlaceholder(),
+              ),
 
               // Top-left: AI badge
               Positioned(
@@ -423,9 +480,9 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
                         ),
                       ),
                       const SizedBox(width: 6),
-                      const Text(
-                        'AI 분석 중',
-                        style: TextStyle(
+                      Text(
+                        s.aiAnalyzing,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -446,14 +503,14 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
                     color: Colors.black.withOpacity(0.55),
                     borderRadius: BorderRadius.circular(100),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.videocam, color: Colors.white70, size: 13),
-                      SizedBox(width: 4),
+                      const Icon(Icons.videocam, color: Colors.white70, size: 13),
+                      const SizedBox(width: 4),
                       Text(
-                        '라이브 카메라',
-                        style: TextStyle(color: Colors.white, fontSize: 11),
+                        s.liveCam,
+                        style: const TextStyle(color: Colors.white, fontSize: 11),
                       ),
                     ],
                   ),
@@ -520,6 +577,36 @@ class _StripePainter extends CustomPainter {
   bool shouldRepaint(_) => false;
 }
 
+class _StreamZonePainter extends CustomPainter {
+  final List<Map<String, double>> zones;
+  const _StreamZonePainter({required this.zones});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fill = Paint()
+      ..color = const Color(0xFF00C850).withOpacity(0.18)
+      ..style = PaintingStyle.fill;
+    final stroke = Paint()
+      ..color = const Color(0xFF00C850)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    for (final z in zones) {
+      final rect = Rect.fromLTWH(
+        (z['x']! * size.width),
+        (z['y']! * size.height),
+        (z['w']! * size.width),
+        (z['h']! * size.height),
+      );
+      canvas.drawRect(rect, fill);
+      canvas.drawRect(rect, stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StreamZonePainter old) => old.zones != zones;
+}
+
 // ── Emergency buttons ─────────────────────────────────────────────────────────
 
 class _EmergencyButtons extends StatefulWidget {
@@ -535,15 +622,16 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
 
   Future<void> _callEmergency() async {
     if (_sending) return;
+    final s = S.read(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('긴급 연락'),
-        content: const Text('보호자와 119에 즉시 연락하시겠습니까?'),
+        title: Text(s.emergencyDialogTitle),
+        content: Text(s.emergencyDialogBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(s.cancel, style: const TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -552,7 +640,7 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('연락하기'),
+            child: Text(s.contactNow),
           ),
         ],
       ),
@@ -569,17 +657,19 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
         ]);
       }
       if (mounted) {
+        final sNow = S.read(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('보호자 및 119에 연락했습니다'),
+          SnackBar(
+            content: Text(sNow.guardianContactedMsg),
             backgroundColor: AppColors.success,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        final sNow = S.read(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('연락 실패: $e'), backgroundColor: AppColors.danger),
+          SnackBar(content: Text(sNow.contactFailed(e.toString())), backgroundColor: AppColors.danger),
         );
       }
     } finally {
@@ -587,19 +677,9 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
     }
   }
 
-  Future<void> _callContact(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
-    final hasContact = settings.contactPhone.isNotEmpty;
-    final contactLabel = hasContact
-        ? (settings.contactName.isNotEmpty ? settings.contactName : settings.contactPhone)
-        : '긴급 연락처';
-
+    final s = S.of(context);
     return Column(
       children: [
         Row(
@@ -616,8 +696,8 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('🚨', style: TextStyle(fontSize: 18)),
-                  label: const Text('긴급 연락',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  label: Text(s.emergencyCall,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.danger,
                     foregroundColor: Colors.white,
@@ -648,32 +728,13 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
                       return const BorderSide(color: AppColors.success);
                     }),
                   ),
-                  child: const Text('안심 확인',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  child: Text(s.allClearBtn,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
               ),
             ),
           ],
         ),
-        // ── Stored emergency contact call button ──────────────────────────
-        if (hasContact) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: OutlinedButton.icon(
-              onPressed: () => _callContact(settings.contactPhone),
-              icon: const Icon(Icons.phone_outlined, size: 18),
-              label: Text('📞  $contactLabel 에게 전화',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -694,55 +755,50 @@ class _RecentEventsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s      = S.of(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final textPri = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
+    final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+    final primary = isDark ? DarkColors.primary       : AppColors.primary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              '최근 낙상 기록',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+            Text(
+              s.recentFalls,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: textPri),
             ),
             GestureDetector(
               onTap: onViewAll,
-              child: const Text(
-                '전체보기',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Text(
+                s.viewAll,
+                style: TextStyle(fontSize: 13, color: primary, fontWeight: FontWeight.w600),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
         if (loading)
-          const Center(
+          Center(
             child: Padding(
-              padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+              padding: const EdgeInsets.all(20),
+              child: CircularProgressIndicator(color: primary, strokeWidth: 2),
             ),
           )
         else if (recentEvents.isEmpty)
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: cardDeco(radius: 14),
-            child: const Center(
+            decoration: cardDeco(radius: 14, dark: isDark),
+            child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_outline, color: AppColors.success, size: 36),
-                  SizedBox(height: 8),
-                  Text(
-                    '최근 낙상 기록이 없습니다',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-                  ),
+                  const Icon(Icons.check_circle_outline, color: AppColors.success, size: 36),
+                  const SizedBox(height: 8),
+                  Text(s.noRecentFalls,
+                      style: TextStyle(color: textSec, fontSize: 14)),
                 ],
               ),
             ),
@@ -760,10 +816,14 @@ class _RecentEventTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSevere = event.isSevere;
+    final s        = S.of(context);
+    final isDark    = Theme.of(context).brightness == Brightness.dark;
+    final textPri   = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
+    final textTer   = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
+    final isSevere  = event.isSevere;
     final badgeBg   = isSevere ? AppColors.dangerTint  : AppColors.warningTint;
     final badgeText = isSevere ? AppColors.danger       : AppColors.warningText;
-    final label     = isSevere ? '중증' : '경미';
+    final label     = isSevere ? s.severe : s.mild;
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -773,10 +833,9 @@ class _RecentEventTile extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(14),
-        decoration: cardDeco(radius: 14),
+        decoration: cardDeco(radius: 14, dark: isDark),
         child: Row(
           children: [
-            // Icon instead of thumbnail
             Container(
               width: 44,
               height: 44,
@@ -796,21 +855,15 @@ class _RecentEventTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _formatTs(event.timestamp),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                    ),
+                    _formatTs(event.timestamp, context),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: textPri, fontSize: 14),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    event.isAcknowledged ? '확인 완료' : '확인 필요',
+                    event.isAcknowledged ? s.confirmed : s.needsConfirm,
                     style: TextStyle(
                       fontSize: 12,
-                      color: event.isAcknowledged
-                          ? AppColors.textTertiary
-                          : AppColors.dangerPressed,
+                      color: event.isAcknowledged ? textTer : AppColors.dangerPressed,
                     ),
                   ),
                 ],
@@ -821,16 +874,12 @@ class _RecentEventTile extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: badgeBg,
-                    borderRadius: BorderRadius.circular(100),
-                  ),
+                  decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(100)),
                   child: Text(label,
-                      style: TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w700, color: badgeText)),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: badgeText)),
                 ),
                 const SizedBox(height: 4),
-                const Icon(Icons.chevron_right, size: 16, color: AppColors.textTertiary),
+                Icon(Icons.chevron_right, size: 16, color: textTer),
               ],
             ),
           ],
@@ -839,13 +888,20 @@ class _RecentEventTile extends StatelessWidget {
     );
   }
 
-  String _formatTs(String ts) {
+  String _formatTs(String ts, BuildContext context) {
     try {
-      final dt = DateTime.parse(ts).toLocal();
-      final h    = dt.hour > 12 ? dt.hour - 12 : dt.hour;
-      final ampm = dt.hour >= 12 ? '오후' : '오전';
-      return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')} · '
-          '$ampm $h:${dt.minute.toString().padLeft(2, '0')}';
+      final dt   = DateTime.parse(ts).toLocal();
+      final isKo = context.read<SettingsProvider>().localeCode == 'ko';
+      final h    = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+      if (isKo) {
+        final ampm = dt.hour >= 12 ? '오후' : '오전';
+        return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')} · '
+            '$ampm $h:${dt.minute.toString().padLeft(2, '0')}';
+      } else {
+        final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+        return '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} · '
+            '$ampm $h:${dt.minute.toString().padLeft(2, '0')}';
+      }
     } catch (_) {
       return ts;
     }

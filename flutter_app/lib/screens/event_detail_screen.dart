@@ -5,6 +5,7 @@ import 'package:chewie/chewie.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../models/fall_event.dart';
+import '../strings.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -23,6 +24,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   bool _videoInitialized = false;
   bool _smsLoading = false;
   String? _smsResult;
+  bool _smsSuccess = false;
 
   @override
   void initState() {
@@ -34,7 +36,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final api = context.read<AuthProvider>().api;
     try {
       final event = await api.getFallEvent(widget.eventId);
-      if (event == null) throw Exception('이벤트를 찾을 수 없습니다');
+      if (event == null) throw Exception('Event not found');
       Map<String, dynamic>? report;
       try {
         report = await api.getEmergencyReport(widget.eventId);
@@ -75,6 +77,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Future<void> _acknowledge() async {
+    final s   = S.read(context);
     final api = context.read<AuthProvider>().api;
     try {
       await api.acknowledgeEvent(widget.eventId);
@@ -90,7 +93,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           ));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('확인 처리되었습니다'), backgroundColor: AppColors.success),
+          SnackBar(content: Text(s.acknowledgedMsg), backgroundColor: AppColors.success),
         );
       }
     } catch (e) {
@@ -105,32 +108,39 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Future<void> _sendSms() async {
     setState(() { _smsLoading = true; _smsResult = null; });
     try {
+      final s      = S.read(context);
       final result = await context.read<AuthProvider>().api.notifyGuardianSms(widget.eventId);
-      setState(() => _smsResult = result['ok'] == true ? '문자 전송 완료' : '문자 전송 실패: ${result['detail']}');
+      final ok = result['ok'] == true;
+      setState(() {
+        _smsSuccess = ok;
+        _smsResult  = ok ? s.smsSentMsg : s.smsFailed(result['detail']?.toString() ?? '');
+      });
     } catch (e) {
-      setState(() => _smsResult = '오류: $e');
+      setState(() { _smsSuccess = false; _smsResult = e.toString(); });
     } finally {
       setState(() => _smsLoading = false);
     }
   }
 
   Future<void> _delete() async {
+    final s = S.read(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('이벤트 삭제', style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text('이 이벤트와 관련 영상을 삭제할까요?',
-            style: TextStyle(color: AppColors.textSecondary)),
+        title: Text(s.deleteEventTitle,
+            style: const TextStyle(color: AppColors.textPrimary)),
+        content: Text(s.deleteEventBody,
+            style: const TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(s.cancel, style: const TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('삭제', style: TextStyle(color: AppColors.danger)),
+            child: Text(s.delete, style: const TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -150,6 +160,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
@@ -157,8 +168,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
         centerTitle: false,
-        title: const Text('이벤트 상세',
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text(s.eventDetailTitle,
+            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
         actions: [
           if (_event != null)
             IconButton(
@@ -174,11 +185,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   child: Text(_error!,
                       style: const TextStyle(color: AppColors.danger),
                       textAlign: TextAlign.center))
-              : _buildBody(),
+              : _buildBody(s),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(S s) {
     final event = _event!;
     final isSevere = event.isSevere;
 
@@ -211,15 +222,15 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           Row(
             children: [
               _Pill(
-                label: isSevere ? '심각한 낙상' : '낙상 의심',
+                label: isSevere ? s.severeFall : s.fallSuspect,
                 icon: Icons.warning_rounded,
                 bg: isSevere ? AppColors.dangerTint : AppColors.warningTint,
                 fg: isSevere ? AppColors.danger : AppColors.warningText,
               ),
               const SizedBox(width: 8),
               if (event.isAcknowledged)
-                const _Pill(
-                  label: '확인됨',
+                _Pill(
+                  label: s.confirmed,
                   icon: Icons.check_circle,
                   bg: AppColors.successTint,
                   fg: AppColors.success,
@@ -244,8 +255,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               child: ElevatedButton.icon(
                 onPressed: _acknowledge,
                 icon: const Icon(Icons.check_circle_outline),
-                label: const Text('확인 처리',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                label: Text(s.acknowledgeBtn,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
@@ -269,8 +280,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                     )
                   : const Icon(Icons.sms_outlined, color: AppColors.primary),
-              label: const Text('보호자에게 문자 전송',
-                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              label: Text(s.sendSmsBtn,
+                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.primary),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -283,7 +294,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             Text(
               _smsResult!,
               style: TextStyle(
-                color: _smsResult!.contains('완료') ? AppColors.success : AppColors.danger,
+                color: _smsSuccess ? AppColors.success : AppColors.danger,
                 fontSize: 13,
               ),
             ),
@@ -329,6 +340,7 @@ class _ReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final r = report;
     String tsFormatted = r['timestamp'] ?? '-';
     try {
@@ -344,18 +356,18 @@ class _ReportCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('긴급 리포트',
-              style: TextStyle(
+          Text(s.emergencyReportTitle,
+              style: const TextStyle(
                   color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
           const SizedBox(height: 12),
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 12),
-          _Row(label: '이름', value: r['name'] ?? '-'),
-          _Row(label: '나이', value: r['age']?.toString() ?? '-'),
-          _Row(label: '주소', value: r['address'] ?? '-'),
-          _Row(label: '연락처', value: r['phone'] ?? '-'),
-          _Row(label: '발생 시각', value: tsFormatted),
-          _Row(label: '영상', value: r['has_video'] == true ? '있음' : '없음'),
+          _Row(label: s.nameLabel,    value: r['name'] ?? '-'),
+          _Row(label: s.ageLabel,     value: r['age']?.toString() ?? '-'),
+          _Row(label: s.addressLabel, value: r['address'] ?? '-'),
+          _Row(label: s.contactField, value: r['phone'] ?? '-'),
+          _Row(label: s.timeLabel,    value: tsFormatted),
+          _Row(label: s.footageLabel, value: r['has_video'] == true ? s.available : s.none),
         ],
       ),
     );
@@ -374,7 +386,7 @@ class _Row extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 70,
+              width: 80,
               child: Text(label,
                   style: const TextStyle(color: AppColors.textTertiary, fontSize: 13)),
             ),
@@ -395,49 +407,37 @@ class _BodyRegionCard extends StatelessWidget {
 
   const _BodyRegionCard({required this.report, required this.isSevere});
 
-  static const _directions = {
+  // Korean internal keys — must match backend data
+  static const _koRegions = [
+    '머리/목', '어깨', '손목/팔꿈치', '골반/고관절', '무릎', '발목/발',
+  ];
+
+  static const _koDirections = {
     'forward':        '앞으로 넘어짐',
     'backward':       '뒤로 넘어짐',
     'sideways_left':  '왼쪽으로 넘어짐',
     'sideways_right': '오른쪽으로 넘어짐',
   };
 
-  // The 6 body regions displayed top-to-bottom
-  static const _regions = [
-    '머리/목',
-    '어깨',
-    '손목/팔꿈치',
-    '골반/고관절',
-    '무릎',
-    '발목/발',
-  ];
-
-  String get _injury {
+  String _injuryKey() {
     final raw = (report?['estimated_injury'] ?? '') as String;
     if (raw.isNotEmpty) return raw;
-    // Fallback: infer from category
     return isSevere ? '골반/고관절' : '무릎/손목';
   }
 
-  String get _directionLabel {
-    final raw = (report?['direction'] ?? '') as String;
-    return _directions[raw] ?? '';
-  }
-
-  // Which regions to highlight
-  Set<String> get _highlighted {
-    final inj = _injury.toLowerCase();
+  Set<String> _highlighted() {
+    final inj = _injuryKey().toLowerCase();
     final hits = <String>{};
-    for (final r in _regions) {
+    for (final r in _koRegions) {
       if (inj.contains(r.split('/').first.toLowerCase()) ||
           inj.contains(r.split('/').last.toLowerCase())) {
         hits.add(r);
       }
     }
-    // If nothing matched exactly, highlight the full raw string if it appears
     if (hits.isEmpty) {
-      for (final r in _regions) {
-        if (r.toLowerCase().contains(inj) || inj.contains(r.toLowerCase().split('/').first)) {
+      for (final r in _koRegions) {
+        if (r.toLowerCase().contains(inj) ||
+            inj.contains(r.toLowerCase().split('/').first)) {
           hits.add(r);
         }
       }
@@ -447,10 +447,22 @@ class _BodyRegionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final highlighted = _highlighted;
-    final injLabel = _injury;
-    final dirLabel = _directionLabel;
-    final isEstimate = (report?['estimated_injury'] ?? '').toString().isEmpty;
+    final s           = S.of(context);
+    final highlighted = _highlighted();
+    final injKey      = _injuryKey();
+    final dirRaw      = (report?['direction'] ?? '') as String;
+    final dirLabel    = s.fallDirections[dirRaw] ?? (_koDirections[dirRaw] ?? '');
+    final isEstimate  = (report?['estimated_injury'] ?? '').toString().isEmpty;
+    final displayLabels = s.bodyRegions; // localized, same order as _koRegions
+
+    // Build a localized injury label: find matching Korean key, use its English equivalent
+    String injDisplay = injKey;
+    for (int i = 0; i < _koRegions.length; i++) {
+      if (_koRegions[i] == injKey || injKey.contains(_koRegions[i].split('/').first)) {
+        injDisplay = displayLabels[i];
+        break;
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -463,8 +475,8 @@ class _BodyRegionCard extends StatelessWidget {
             children: [
               const Icon(Icons.accessibility_new_rounded, color: AppColors.primary, size: 18),
               const SizedBox(width: 8),
-              const Text('충격 부위 분석',
-                  style: TextStyle(
+              Text(s.impactZoneTitle,
+                  style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
                       fontSize: 15)),
@@ -476,8 +488,8 @@ class _BodyRegionCard extends StatelessWidget {
                     color: AppColors.warningTint,
                     borderRadius: BorderRadius.circular(100),
                   ),
-                  child: const Text('추정',
-                      style: TextStyle(
+                  child: Text(s.estimateLabel,
+                      style: const TextStyle(
                           color: AppColors.warningText, fontSize: 10, fontWeight: FontWeight.w700)),
                 ),
               ],
@@ -489,21 +501,24 @@ class _BodyRegionCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Stick figure
+              // Stick figure (uses internal Korean keys for highlight logic)
               SizedBox(
                 width: 80,
                 height: 180,
                 child: CustomPaint(
-                  painter: _BodyFigurePainter(highlighted: highlighted, regions: _regions),
+                  painter: _BodyFigurePainter(
+                      highlighted: highlighted, regions: _koRegions),
                 ),
               ),
               const SizedBox(width: 16),
 
-              // Region labels
+              // Region labels (localized)
               Expanded(
                 child: Column(
-                  children: _regions.map((r) {
-                    final isHit = highlighted.contains(r);
+                  children: List.generate(_koRegions.length, (i) {
+                    final koKey = _koRegions[i];
+                    final isHit = highlighted.contains(koKey);
+                    final label = displayLabels[i];
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -519,7 +534,7 @@ class _BodyRegionCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 10),
                           Text(
-                            r,
+                            label,
                             style: TextStyle(
                               color: isHit ? AppColors.danger : AppColors.textSecondary,
                               fontSize: 13,
@@ -534,8 +549,8 @@ class _BodyRegionCard extends StatelessWidget {
                                 color: AppColors.dangerTint,
                                 borderRadius: BorderRadius.circular(100),
                               ),
-                              child: const Text('충격',
-                                  style: TextStyle(
+                              child: Text(s.impactBadge,
+                                  style: const TextStyle(
                                       color: AppColors.danger,
                                       fontSize: 9,
                                       fontWeight: FontWeight.w800)),
@@ -544,7 +559,7 @@ class _BodyRegionCard extends StatelessWidget {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
                 ),
               ),
             ],
@@ -560,8 +575,8 @@ class _BodyRegionCard extends StatelessWidget {
               Expanded(
                 child: _SummaryItem(
                   icon: Icons.location_on_outlined,
-                  label: '추정 충격 부위',
-                  value: injLabel,
+                  label: s.estimatedImpact,
+                  value: injDisplay,
                   highlight: true,
                 ),
               ),
@@ -570,7 +585,7 @@ class _BodyRegionCard extends StatelessWidget {
                 Expanded(
                   child: _SummaryItem(
                     icon: Icons.turn_slight_right,
-                    label: '낙상 방향',
+                    label: s.fallDirectionLabel,
                     value: dirLabel,
                     highlight: false,
                   ),
@@ -634,7 +649,7 @@ class _BodyFigurePainter extends CustomPainter {
 
   const _BodyFigurePainter({required this.highlighted, required this.regions});
 
-  static const _activeColor = AppColors.danger;
+  static const _activeColor   = AppColors.danger;
   static const _inactiveColor = Color(0xFFD5D0C8);
 
   Paint _paint(bool active, {bool fill = false}) => Paint()
@@ -648,126 +663,61 @@ class _BodyFigurePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    // Distribute 6 regions evenly across the canvas height
-    // Region Y centers (rough anatomical proportions):
-    // head: 8%, shoulders: 20%, wrists: 35%, hips: 52%, knees: 68%, ankles: 85%
     final headCY   = size.height * 0.07;
     final shldrY   = size.height * 0.19;
-    final torsoTopY = size.height * 0.19;
     final torsoMidY = size.height * 0.40;
     final hipY     = size.height * 0.52;
     final kneeY    = size.height * 0.68;
     final ankleY   = size.height * 0.85;
     final headR    = size.width * 0.18;
 
-    // Head
-    canvas.drawCircle(
-      Offset(cx, headCY),
-      headR,
-      _paint(_hit('머리/목'), fill: _hit('머리/목')),
-    );
+    canvas.drawCircle(Offset(cx, headCY), headR,
+        _paint(_hit('머리/목'), fill: _hit('머리/목')));
+    canvas.drawLine(Offset(cx, headCY + headR), Offset(cx, shldrY),
+        _paint(_hit('머리/목')));
+    canvas.drawLine(Offset(cx - size.width * 0.38, shldrY),
+        Offset(cx + size.width * 0.38, shldrY), _paint(_hit('어깨')));
+    canvas.drawLine(Offset(cx, shldrY), Offset(cx, hipY),
+        _paint(_hit('골반/고관절')));
 
-    // Neck
-    canvas.drawLine(
-      Offset(cx, headCY + headR),
-      Offset(cx, shldrY),
-      _paint(_hit('머리/목')),
-    );
-
-    // Shoulders
-    canvas.drawLine(
-      Offset(cx - size.width * 0.38, shldrY),
-      Offset(cx + size.width * 0.38, shldrY),
-      _paint(_hit('어깨')),
-    );
-
-    // Torso
-    canvas.drawLine(
-      Offset(cx, torsoTopY),
-      Offset(cx, hipY),
-      _paint(_hit('골반/고관절')),
-    );
-
-    // Left arm (shoulder → elbow → wrist)
     final elbowLX = cx - size.width * 0.38;
     final wristLX = cx - size.width * 0.45;
-    canvas.drawLine(
-      Offset(cx - size.width * 0.38, shldrY),
-      Offset(elbowLX, torsoMidY),
-      _paint(_hit('손목/팔꿈치')),
-    );
-    canvas.drawLine(
-      Offset(elbowLX, torsoMidY),
-      Offset(wristLX, torsoMidY + size.height * 0.08),
-      _paint(_hit('손목/팔꿈치')),
-    );
+    canvas.drawLine(Offset(cx - size.width * 0.38, shldrY),
+        Offset(elbowLX, torsoMidY), _paint(_hit('손목/팔꿈치')));
+    canvas.drawLine(Offset(elbowLX, torsoMidY),
+        Offset(wristLX, torsoMidY + size.height * 0.08), _paint(_hit('손목/팔꿈치')));
 
-    // Right arm
     final elbowRX = cx + size.width * 0.38;
     final wristRX = cx + size.width * 0.45;
-    canvas.drawLine(
-      Offset(cx + size.width * 0.38, shldrY),
-      Offset(elbowRX, torsoMidY),
-      _paint(_hit('손목/팔꿈치')),
-    );
-    canvas.drawLine(
-      Offset(elbowRX, torsoMidY),
-      Offset(wristRX, torsoMidY + size.height * 0.08),
-      _paint(_hit('손목/팔꿈치')),
-    );
+    canvas.drawLine(Offset(cx + size.width * 0.38, shldrY),
+        Offset(elbowRX, torsoMidY), _paint(_hit('손목/팔꿈치')));
+    canvas.drawLine(Offset(elbowRX, torsoMidY),
+        Offset(wristRX, torsoMidY + size.height * 0.08), _paint(_hit('손목/팔꿈치')));
 
-    // Hips
-    canvas.drawLine(
-      Offset(cx - size.width * 0.22, hipY),
-      Offset(cx + size.width * 0.22, hipY),
-      _paint(_hit('골반/고관절')),
-    );
-    // Hip highlight circle
+    canvas.drawLine(Offset(cx - size.width * 0.22, hipY),
+        Offset(cx + size.width * 0.22, hipY), _paint(_hit('골반/고관절')));
     if (_hit('골반/고관절')) {
       canvas.drawCircle(Offset(cx, hipY), 5, _paint(true, fill: true));
     }
 
-    // Left leg
-    canvas.drawLine(
-      Offset(cx - size.width * 0.18, hipY),
-      Offset(cx - size.width * 0.18, kneeY),
-      _paint(_hit('무릎')),
-    );
-    canvas.drawLine(
-      Offset(cx - size.width * 0.18, kneeY),
-      Offset(cx - size.width * 0.18, ankleY),
-      _paint(_hit('발목/발')),
-    );
+    canvas.drawLine(Offset(cx - size.width * 0.18, hipY),
+        Offset(cx - size.width * 0.18, kneeY), _paint(_hit('무릎')));
+    canvas.drawLine(Offset(cx - size.width * 0.18, kneeY),
+        Offset(cx - size.width * 0.18, ankleY), _paint(_hit('발목/발')));
+    canvas.drawLine(Offset(cx + size.width * 0.18, hipY),
+        Offset(cx + size.width * 0.18, kneeY), _paint(_hit('무릎')));
+    canvas.drawLine(Offset(cx + size.width * 0.18, kneeY),
+        Offset(cx + size.width * 0.18, ankleY), _paint(_hit('발목/발')));
 
-    // Right leg
-    canvas.drawLine(
-      Offset(cx + size.width * 0.18, hipY),
-      Offset(cx + size.width * 0.18, kneeY),
-      _paint(_hit('무릎')),
-    );
-    canvas.drawLine(
-      Offset(cx + size.width * 0.18, kneeY),
-      Offset(cx + size.width * 0.18, ankleY),
-      _paint(_hit('발목/발')),
-    );
-
-    // Knee highlights
     if (_hit('무릎')) {
       canvas.drawCircle(Offset(cx - size.width * 0.18, kneeY), 4, _paint(true, fill: true));
       canvas.drawCircle(Offset(cx + size.width * 0.18, kneeY), 4, _paint(true, fill: true));
     }
 
-    // Feet
-    canvas.drawLine(
-      Offset(cx - size.width * 0.18, ankleY),
-      Offset(cx - size.width * 0.35, ankleY),
-      _paint(_hit('발목/발')),
-    );
-    canvas.drawLine(
-      Offset(cx + size.width * 0.18, ankleY),
-      Offset(cx + size.width * 0.35, ankleY),
-      _paint(_hit('발목/발')),
-    );
+    canvas.drawLine(Offset(cx - size.width * 0.18, ankleY),
+        Offset(cx - size.width * 0.35, ankleY), _paint(_hit('발목/발')));
+    canvas.drawLine(Offset(cx + size.width * 0.18, ankleY),
+        Offset(cx + size.width * 0.35, ankleY), _paint(_hit('발목/발')));
   }
 
   @override
@@ -783,7 +733,7 @@ class _ScreenshotWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
-    final url = auth.api.screenshotUrl(eventId);
+    final url  = auth.api.screenshotUrl(eventId);
     return Image.network(
       url,
       headers: {'Authorization': 'Bearer ${auth.token}'},

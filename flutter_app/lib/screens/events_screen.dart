@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../models/fall_event.dart';
+import '../strings.dart';
 import 'event_detail_screen.dart';
 
 class EventsScreen extends StatefulWidget {
@@ -47,9 +48,16 @@ class _EventsScreenState extends State<EventsScreen> with AutomaticKeepAliveClie
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final s      = S.of(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final bg      = isDark ? DarkColors.bg           : AppColors.bg;
+    final textPri = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
+    final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+    final primary = isDark ? DarkColors.primary       : AppColors.primary;
     final filtered = _filtered;
+
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,16 +68,16 @@ class _EventsScreenState extends State<EventsScreen> with AutomaticKeepAliveClie
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    '낙상 기록',
+                  Text(
+                    s.fallRecords,
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: textPri,
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary),
+                    icon: Icon(Icons.refresh_rounded, color: textSec),
                     onPressed: _load,
                   ),
                 ],
@@ -81,13 +89,13 @@ class _EventsScreenState extends State<EventsScreen> with AutomaticKeepAliveClie
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
               child: Row(
                 children: [
-                  _FilterChip(label: '전체', value: 'all', selected: _filter,
+                  _FilterChip(label: s.all, value: 'all', selected: _filter, isDark: isDark,
                       onTap: () => setState(() => _filter = 'all')),
                   const SizedBox(width: 8),
-                  _FilterChip(label: '중증', value: 'severe', selected: _filter,
+                  _FilterChip(label: s.severe, value: 'severe', selected: _filter, isDark: isDark,
                       onTap: () => setState(() => _filter = 'severe')),
                   const SizedBox(width: 8),
-                  _FilterChip(label: '경미', value: 'mild', selected: _filter,
+                  _FilterChip(label: s.mild, value: 'mild', selected: _filter, isDark: isDark,
                       onTap: () => setState(() => _filter = 'mild')),
                 ],
               ),
@@ -98,20 +106,21 @@ class _EventsScreenState extends State<EventsScreen> with AutomaticKeepAliveClie
             // ── List ────────────────────────────────────────────────────────
             Expanded(
               child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2))
+                  ? Center(
+                      child: CircularProgressIndicator(color: primary, strokeWidth: 2))
                   : _error != null
                       ? _ErrorView(error: _error!, onRetry: _load)
                       : filtered.isEmpty
-                          ? _EmptyView(filter: _filter)
+                          ? _EmptyView(message: _filter == 'all' ? s.noFalls : s.noFiltered)
                           : RefreshIndicator(
-                              color: AppColors.primary,
+                              color: primary,
                               onRefresh: _load,
                               child: ListView.builder(
                                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                                 itemCount: filtered.length,
                                 itemBuilder: (ctx, i) => _EventCard(
                                   event: filtered[i],
+                                  isDark: isDark,
                                   onTap: () async {
                                     await Navigator.push(
                                       context,
@@ -139,31 +148,36 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final String value;
   final String selected;
+  final bool isDark;
   final VoidCallback onTap;
 
   const _FilterChip({
     required this.label,
     required this.value,
     required this.selected,
+    required this.isDark,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isActive = value == selected;
+    final isActive  = value == selected;
+    final primary   = isDark ? DarkColors.primary       : AppColors.primary;
+    final chip      = isDark ? DarkColors.chip          : AppColors.chip;
+    final textSec   = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary : AppColors.chip,
+          color: isActive ? primary : chip,
           borderRadius: BorderRadius.circular(100),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isActive ? Colors.white : AppColors.textSecondary,
+            color: isActive ? Colors.white : textSec,
             fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
             fontSize: 13,
           ),
@@ -177,26 +191,29 @@ class _FilterChip extends StatelessWidget {
 
 class _EventCard extends StatelessWidget {
   final FallEvent event;
+  final bool isDark;
   final VoidCallback onTap;
 
-  const _EventCard({required this.event, required this.onTap});
+  const _EventCard({required this.event, required this.isDark, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final s        = S.of(context);
+    final textPri  = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
+    final textTer  = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
     final isSevere = event.isSevere;
-    final badgeBg = isSevere ? AppColors.dangerTint : AppColors.warningTint;
-    final badgeText = isSevere ? AppColors.danger : AppColors.warningText;
-    final label = isSevere ? '중증' : '경미';
+    final badgeBg  = isSevere ? AppColors.dangerTint : AppColors.warningTint;
+    final badgeFg  = isSevere ? AppColors.danger     : AppColors.warningText;
+    final label    = isSevere ? s.severe : s.mild;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
-        decoration: cardDeco(radius: 16),
+        decoration: cardDeco(radius: 16, dark: isDark),
         child: Row(
           children: [
-            // Icon indicator instead of thumbnail
             Container(
               width: 48,
               height: 48,
@@ -217,20 +234,14 @@ class _EventCard extends StatelessWidget {
                 children: [
                   Text(
                     _formatTs(event.timestamp),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: textPri, fontSize: 14),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    event.isAcknowledged ? '확인 완료' : '확인 필요',
+                    event.isAcknowledged ? s.confirmed : s.needsConfirm,
                     style: TextStyle(
                       fontSize: 12,
-                      color: event.isAcknowledged
-                          ? AppColors.textTertiary
-                          : AppColors.dangerPressed,
+                      color: event.isAcknowledged ? textTer : AppColors.dangerPressed,
                     ),
                   ),
                 ],
@@ -245,17 +256,11 @@ class _EventCard extends StatelessWidget {
                     color: badgeBg,
                     borderRadius: BorderRadius.circular(100),
                   ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: badgeText,
-                    ),
-                  ),
+                  child: Text(label,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: badgeFg)),
                 ),
                 const SizedBox(height: 6),
-                const Icon(Icons.chevron_right, size: 16, color: AppColors.textTertiary),
+                Icon(Icons.chevron_right, size: 16, color: textTer),
               ],
             ),
           ],
@@ -283,50 +288,58 @@ class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.error, required this.onRetry});
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, color: AppColors.danger, size: 48),
-              const SizedBox(height: 12),
-              Text(error,
-                  style: const TextStyle(color: AppColors.textSecondary),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: onRetry,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('재시도'),
-              ),
-            ],
-          ),
-        ),
-      );
-}
-
-class _EmptyView extends StatelessWidget {
-  final String filter;
-  const _EmptyView({required this.filter});
-
-  @override
-  Widget build(BuildContext context) => Center(
+  Widget build(BuildContext context) {
+    final s       = S.of(context);
+    final textSec = Theme.of(context).brightness == Brightness.dark
+        ? DarkColors.textSecondary
+        : AppColors.textSecondary;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle_outline, color: AppColors.success, size: 56),
-            const SizedBox(height: 14),
-            Text(
-              filter == 'all' ? '낙상 기록이 없습니다' : '해당 기록이 없습니다',
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 15, fontWeight: FontWeight.w500),
+            const Icon(Icons.error_outline, color: AppColors.danger, size: 48),
+            const SizedBox(height: 12),
+            Text(error, style: TextStyle(color: textSec), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(s.retry),
             ),
           ],
         ),
-      );
+      ),
+    );
+  }
+}
+
+class _EmptyView extends StatelessWidget {
+  final String message;
+  const _EmptyView({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final textSec = Theme.of(context).brightness == Brightness.dark
+        ? DarkColors.textSecondary
+        : AppColors.textSecondary;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.check_circle_outline, color: AppColors.success, size: 56),
+          const SizedBox(height: 14),
+          Text(
+            message,
+            style: TextStyle(color: textSec, fontSize: 15, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
 }

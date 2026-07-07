@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import '../strings.dart';
 
 class _Zone {
   final double x, y, w, h;
@@ -30,6 +31,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   bool _saving = false;
   String _cameraType = 'front';
   String? _message;
+  bool _isError = false;
 
   Offset? _drawStart;
   Offset? _drawCurrent;
@@ -117,30 +119,33 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   double _dmin(double a, double b) => a < b ? a : b;
 
   Future<void> _save() async {
+    final s = S.read(context);
     setState(() { _saving = true; _message = null; });
     try {
       final api = context.read<AuthProvider>().api;
       await api.setSafeZone(_zones.map((z) => z.toJson()).toList());
       await api.setCameraType(_cameraType);
-      setState(() => _message = '안전 구역이 저장되었습니다');
+      setState(() { _message = s.safeZoneSaved; _isError = false; });
     } catch (e) {
-      setState(() => _message = '저장 실패: $e');
+      setState(() { _message = s.saveFailed(e); _isError = true; });
     } finally {
       setState(() => _saving = false);
     }
   }
 
   Future<void> _clear() async {
+    final s = S.read(context);
     try {
       await context.read<AuthProvider>().api.clearSafeZone();
-      setState(() { _zones.clear(); _message = '구역이 삭제되었습니다'; });
+      setState(() { _zones.clear(); _message = s.safeZoneCleared; _isError = false; });
     } catch (e) {
-      setState(() => _message = '삭제 실패: $e');
+      setState(() { _message = s.deleteFailed(e); _isError = true; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final s      = S.of(context);
     final isDark  = context.watch<ThemeProvider>().isDark;
     final bg      = isDark ? DarkColors.bg      : AppColors.bg;
     final surface = isDark ? DarkColors.surface  : Colors.white;
@@ -156,14 +161,14 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
         foregroundColor: textPri,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        title: Text('안전 구역 설정',
+        title: Text(s.safeZoneTitle,
             style: TextStyle(color: textPri, fontWeight: FontWeight.w700)),
         iconTheme: IconThemeData(color: textPri),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh, color: textSec),
             onPressed: _fetchSnapshot,
-            tooltip: '스냅샷 새로고침',
+            tooltip: s.snapshotRefresh,
           ),
         ],
       ),
@@ -185,7 +190,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '침대나 소파 등 낙상 감지를 제외할 구역을\n카메라 화면 위에 드래그하여 지정하세요.',
+                    s.safeZoneInfo,
                     style: TextStyle(color: textPri, fontSize: 13, height: 1.5),
                   ),
                 ),
@@ -194,19 +199,19 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
             const SizedBox(height: 20),
 
             // ── Camera type selector ──────────────────────────────────────
-            Text('카메라 유형', style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(s.cameraTypeLabel, style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             Row(children: [
               _camChip(isDark, surface, border, primary, textPri, textSec,
-                  'front', Icons.videocam_outlined, '정면 카메라'),
+                  'front', Icons.videocam_outlined, s.frontCameraLabel),
               const SizedBox(width: 10),
               _camChip(isDark, surface, border, primary, textPri, textSec,
-                  'top', Icons.camera_alt_outlined, 'CCTV (천장)'),
+                  'top', Icons.camera_alt_outlined, s.ceilingCameraLabel),
             ]),
             const SizedBox(height: 20),
 
             // ── Canvas ────────────────────────────────────────────────────
-            Text('구역 그리기', style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(s.drawZoneLabel, style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             AspectRatio(
               aspectRatio: 16 / 9,
@@ -226,7 +231,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                         onPanUpdate: _onPanUpdate,
                         onPanEnd: _onPanEnd,
                         child: CustomPaint(
-                          painter: _ZonePainter(
+                          foregroundPainter: _ZonePainter(
                             zones: _zones,
                             drawStart: _drawStart,
                             drawCurrent: _drawCurrent,
@@ -241,11 +246,11 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.videocam_off,
+                                      const Icon(Icons.videocam_off,
                                           color: Colors.white24, size: 40),
                                       const SizedBox(height: 8),
-                                      const Text('카메라 연결 없음\n구역 그리기는 가능합니다',
-                                          style: TextStyle(color: Colors.white24, fontSize: 12),
+                                      Text(s.noCameraMsg,
+                                          style: const TextStyle(color: Colors.white24, fontSize: 12),
                                           textAlign: TextAlign.center),
                                     ],
                                   ),
@@ -259,14 +264,14 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _zones.isEmpty ? '구역 없음' : '${_zones.length}개 구역 지정됨',
+                  _zones.isEmpty ? s.noZoneLabel : s.zoneCount(_zones.length),
                   style: TextStyle(color: textSec, fontSize: 12),
                 ),
                 if (_zones.isNotEmpty)
                   GestureDetector(
                     onTap: () => setState(() => _zones.removeLast()),
-                    child: Text('마지막 구역 취소',
-                        style: TextStyle(color: AppColors.warning, fontSize: 12)),
+                    child: Text(s.cancelLastZone,
+                        style: const TextStyle(color: AppColors.warning, fontSize: 12)),
                   ),
               ],
             ),
@@ -276,12 +281,12 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _message!.contains('실패')
+                  color: _isError
                       ? Colors.red.withOpacity(0.08)
                       : Colors.green.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: _message!.contains('실패')
+                    color: _isError
                         ? Colors.red.withOpacity(0.3)
                         : Colors.green.withOpacity(0.3),
                   ),
@@ -289,7 +294,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                 child: Text(
                   _message!,
                   style: TextStyle(
-                    color: _message!.contains('실패') ? Colors.red : Colors.green,
+                    color: _isError ? Colors.red : Colors.green,
                     fontSize: 13,
                   ),
                   textAlign: TextAlign.center,
@@ -303,7 +308,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _saving ? null : _clear,
                   icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
-                  label: const Text('구역 삭제', style: TextStyle(color: Colors.redAccent)),
+                  label: Text(s.delete, style: const TextStyle(color: Colors.redAccent)),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.redAccent.withOpacity(0.4)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -320,7 +325,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.save, size: 18),
-                  label: Text(_saving ? '저장 중...' : '저장'),
+                  label: Text(_saving ? s.saving : s.save),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primary,
                     foregroundColor: Colors.white,

@@ -4,6 +4,7 @@ import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/settings_provider.dart';
+import '../strings.dart';
 import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'safe_zone_screen.dart';
@@ -13,6 +14,7 @@ class AppSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s        = S.of(context);
     final auth     = context.watch<AuthProvider>();
     final themeP   = context.watch<ThemeProvider>();
     final settingsP = context.watch<SettingsProvider>();
@@ -35,48 +37,48 @@ class AppSettingsScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           children: [
-            Text('설정',
+            Text(s.settingsTitle,
                 style: TextStyle(
                     fontSize: 22, fontWeight: FontWeight.w700, color: textP)),
             const SizedBox(height: 20),
 
             // ── Account card ────────────────────────────────────────────────
-            _accountCard(context, user, initial, isDark, primary),
+            _accountCard(context, s, user, initial, isDark, primary),
             const SizedBox(height: 28),
 
-            // ── 외관 ────────────────────────────────────────────────────────
-            _sectionTitle('외관', textT),
-            _themeToggle(context, themeP, isDark, primary, chipBg, textP, textS),
+            // ── Appearance ──────────────────────────────────────────────────
+            _sectionTitle(s.appearanceSection, textT),
+            _themeToggle(context, s, themeP, isDark, primary, chipBg, textP, textS),
             const SizedBox(height: 8),
-            _languagePicker(context, settingsP, isDark, textP, textS, chipBg, primary),
+            _languagePicker(context, s, settingsP, isDark, textP, textS, chipBg, primary),
             const SizedBox(height: 28),
 
-            // ── 긴급 연락처 ──────────────────────────────────────────────────
-            _sectionTitle('긴급 연락처', textT),
-            _emergencyContactRow(context, settingsP, isDark, textP, textS, primary),
+            // ── Emergency contact ────────────────────────────────────────────
+            _sectionTitle(s.emergencyContactSection, textT),
+            _emergencyContactRow(context, s, settingsP, isDark, textP, textS, primary),
             const SizedBox(height: 28),
 
-            // ── 연결 ────────────────────────────────────────────────────────
-            _sectionTitle('연결', textT),
+            // ── Connection ──────────────────────────────────────────────────
+            _sectionTitle(s.connectionSection, textT),
             _SettingsRow(
               icon: Icons.dns_outlined,
-              title: '서버 설정',
-              subtitle: '백엔드 & 엣지 서버 주소',
+              title: s.serverSettingsLabel,
+              subtitle: s.serverSettingsSubtitle,
               isDark: isDark,
               onTap: () => Navigator.push(
                   context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
             ),
 
-            // ── 카메라 & 안전 ───────────────────────────────────────────────
+            // ── Camera & Safety ─────────────────────────────────────────────
             if (!user.isGuardian) ...[
               const SizedBox(height: 28),
-              _sectionTitle('카메라 & 안전', textT),
-              _cameraTypeRow(context, settingsP, isDark, textP, textS, chipBg, primary),
+              _sectionTitle(s.cameraAndSafetySection, textT),
+              _cameraTypeRow(context, s, settingsP, isDark, textP, textS, chipBg, primary),
               const SizedBox(height: 8),
               _SettingsRow(
                 icon: Icons.crop_free_outlined,
-                title: '안전 구역 설정',
-                subtitle: '낙상 감지 제외 구역 관리',
+                title: s.safeZoneLabel,
+                subtitle: s.safeZoneSubtitle,
                 isDark: isDark,
                 onTap: () => Navigator.push(
                     context, MaterialPageRoute(builder: (_) => const SafeZoneScreen())),
@@ -84,11 +86,11 @@ class AppSettingsScreen extends StatelessWidget {
             ],
 
             const SizedBox(height: 28),
-            _sectionTitle('앱 정보', textT),
+            _sectionTitle(s.appInfoSection, textT),
             _SettingsRow(
               icon: Icons.info_outline,
               title: 'MobiCare',
-              subtitle: 'v1.0.0 · Edge AI 기반 낙상 감지',
+              subtitle: s.appInfoSubtitle,
               isDark: isDark,
               onTap: null,
             ),
@@ -100,19 +102,20 @@ class AppSettingsScreen extends StatelessWidget {
               height: 52,
               child: TextButton(
                 onPressed: () async {
+                  final sNow = S.read(context);
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('로그아웃'),
-                      content: const Text('정말 로그아웃하시겠습니까?'),
+                      title: Text(sNow.logoutConfirmTitle),
+                      content: Text(sNow.logoutConfirmBody),
                       actions: [
                         TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('취소')),
+                            child: Text(sNow.cancel)),
                         TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('로그아웃',
-                                style: TextStyle(color: AppColors.danger))),
+                            child: Text(sNow.logoutLabel,
+                                style: const TextStyle(color: AppColors.danger))),
                       ],
                     ),
                   );
@@ -125,8 +128,8 @@ class AppSettingsScreen extends StatelessWidget {
                   side: const BorderSide(color: AppColors.dangerTint),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('로그아웃',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                child: Text(s.logoutLabel,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               ),
             ),
             const SizedBox(height: 20),
@@ -138,7 +141,7 @@ class AppSettingsScreen extends StatelessWidget {
 
   // ── Account card ──────────────────────────────────────────────────────────
 
-  Widget _accountCard(BuildContext context, dynamic user, String initial,
+  Widget _accountCard(BuildContext context, S s, dynamic user, String initial,
       bool isDark, Color primary) {
     final surface = isDark ? DarkColors.surface : AppColors.surface;
     final border  = isDark ? DarkColors.border  : AppColors.border;
@@ -178,7 +181,7 @@ class AppSettingsScreen extends StatelessWidget {
                       fontSize: 16, fontWeight: FontWeight.w700, color: textP),
                 ),
                 const SizedBox(height: 2),
-                Text(user.isGuardian ? '보호자 계정' : '실사용자 계정',
+                Text(user.isGuardian ? s.guardianAccountLabel : s.userAccountLabel,
                     style: TextStyle(fontSize: 13, color: textS)),
               ],
             ),
@@ -194,8 +197,8 @@ class AppSettingsScreen extends StatelessWidget {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child:
-                const Text('수정', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            child: Text(s.edit,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -204,7 +207,7 @@ class AppSettingsScreen extends StatelessWidget {
 
   // ── Theme toggle ──────────────────────────────────────────────────────────
 
-  Widget _themeToggle(BuildContext context, ThemeProvider themeP, bool isDark,
+  Widget _themeToggle(BuildContext context, S s, ThemeProvider themeP, bool isDark,
       Color primary, Color chipBg, Color textP, Color textS) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -230,9 +233,9 @@ class AppSettingsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('테마', style: TextStyle(
+                    Text(s.themeLabel, style: TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w600, color: textP)),
-                    Text('앱 전체 색상 모드', style: TextStyle(fontSize: 12, color: textS)),
+                    Text(s.themeSubtitle, style: TextStyle(fontSize: 12, color: textS)),
                   ],
                 ),
               ),
@@ -242,21 +245,31 @@ class AppSettingsScreen extends StatelessWidget {
           Row(
             children: [
               _ThemeBtn(
-                label: '☀️  라이트',
+                label: s.lightMode,
                 selected: !isDark,
                 primary: primary,
                 chipBg: chipBg,
                 textP: textP,
-                onTap: () => themeP.setDark(false),
+                onTap: () {
+                  themeP.setDark(false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(S.read(context).lightModeSet),
+                        duration: const Duration(seconds: 2)));
+                },
               ),
               const SizedBox(width: 8),
               _ThemeBtn(
-                label: '🌙  다크',
+                label: s.darkMode,
                 selected: isDark,
                 primary: primary,
                 chipBg: chipBg,
                 textP: textP,
-                onTap: () => themeP.setDark(true),
+                onTap: () {
+                  themeP.setDark(true);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(S.read(context).darkModeSet),
+                        duration: const Duration(seconds: 2)));
+                },
               ),
             ],
           ),
@@ -267,7 +280,7 @@ class AppSettingsScreen extends StatelessWidget {
 
   // ── Language picker ───────────────────────────────────────────────────────
 
-  Widget _languagePicker(BuildContext context, SettingsProvider settingsP,
+  Widget _languagePicker(BuildContext context, S s, SettingsProvider settingsP,
       bool isDark, Color textP, Color textS, Color chipBg, Color primary) {
     final surface = isDark ? DarkColors.surface : AppColors.surface;
     final border  = isDark ? DarkColors.border  : AppColors.border;
@@ -290,9 +303,9 @@ class AppSettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('언어', style: TextStyle(
+                Text(s.languageLabel, style: TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w600, color: textP)),
-                Text('앱 표시 언어 설정', style: TextStyle(fontSize: 12, color: textS)),
+                Text(s.languageSubtitle, style: TextStyle(fontSize: 12, color: textS)),
               ],
             ),
           ),
@@ -308,7 +321,7 @@ class AppSettingsScreen extends StatelessWidget {
                   Text(
                     SettingsProvider.languages.firstWhere(
                         (l) => l['code'] == settingsP.localeCode,
-                        orElse: () => {'label': '한국어'})['label']!,
+                        orElse: () => {'label': 'Korean'})['label']!,
                     style: TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w600, color: primary),
                   ),
@@ -330,52 +343,61 @@ class AppSettingsScreen extends StatelessWidget {
       backgroundColor: isDark ? DarkColors.surface : AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                  width: 36, height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? DarkColors.border : AppColors.border,
-                    borderRadius: BorderRadius.circular(2))),
-            ),
-            const SizedBox(height: 16),
-            Text('언어 선택',
-                style: TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.w700,
-                    color: isDark ? DarkColors.textPrimary : AppColors.textPrimary)),
-            const SizedBox(height: 12),
-            ...SettingsProvider.languages.map((lang) {
-              final selected = lang['code'] == settingsP.localeCode;
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(lang['label']!,
-                    style: TextStyle(
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                        color: selected ? primary
-                            : (isDark ? DarkColors.textPrimary : AppColors.textPrimary))),
-                trailing: selected
-                    ? Icon(Icons.check_rounded, color: primary)
-                    : null,
-                onTap: () {
-                  settingsP.setLocale(lang['code']!);
-                  Navigator.pop(ctx);
-                },
-              );
-            }),
-          ],
-        ),
-      ),
+      builder: (ctx) {
+        final s = S.read(context);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                    width: 36, height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? DarkColors.border : AppColors.border,
+                      borderRadius: BorderRadius.circular(2))),
+              ),
+              const SizedBox(height: 16),
+              Text(s.selectLanguage,
+                  style: TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w700,
+                      color: isDark ? DarkColors.textPrimary : AppColors.textPrimary)),
+              const SizedBox(height: 12),
+              ...SettingsProvider.languages.map((lang) {
+                final selected = lang['code'] == settingsP.localeCode;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(lang['label']!,
+                      style: TextStyle(
+                          fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+                          color: selected ? primary
+                              : (isDark ? DarkColors.textPrimary : AppColors.textPrimary))),
+                  trailing: selected
+                      ? Icon(Icons.check_rounded, color: primary)
+                      : null,
+                  onTap: () {
+                    settingsP.setLocale(lang['code']!);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(S.read(context).languageSelected(lang['label']!)),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 
   // ── Emergency contact ─────────────────────────────────────────────────────
 
-  Widget _emergencyContactRow(BuildContext context, SettingsProvider settingsP,
+  Widget _emergencyContactRow(BuildContext context, S s, SettingsProvider settingsP,
       bool isDark, Color textP, Color textS, Color primary) {
     final surface = isDark ? DarkColors.surface : AppColors.surface;
     final border  = isDark ? DarkColors.border  : AppColors.border;
@@ -406,13 +428,13 @@ class AppSettingsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('긴급 연락처',
+                  Text(s.emergencyContactSection,
                       style: TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w600, color: textP)),
                   Text(
                     hasContact
-                        ? '${settingsP.contactName.isNotEmpty ? settingsP.contactName : '이름 없음'} · ${settingsP.contactPhone}'
-                        : '연락처를 등록하면 낙상 시 빠른 전화 가능',
+                        ? '${settingsP.contactName.isNotEmpty ? settingsP.contactName : (settingsP.localeCode == 'ko' ? '이름 없음' : 'No name')} · ${settingsP.contactPhone}'
+                        : s.emergencyContactSubtitle,
                     style: TextStyle(fontSize: 12, color: textS),
                   ),
                 ],
@@ -430,38 +452,49 @@ class AppSettingsScreen extends StatelessWidget {
       bool isDark, Color primary) {
     final nameCtrl  = TextEditingController(text: settingsP.contactName);
     final phoneCtrl = TextEditingController(text: settingsP.contactPhone);
+    final messenger = ScaffoldMessenger.of(context);
+    final s = S.read(context);
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('긴급 연락처'),
+        title: Text(s.emergencyContactSection),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameCtrl,
-              decoration: lightInputDeco('이름 (예: 홍길동)', icon: Icons.person_outline),
+              decoration: lightInputDeco(s.nameHint, icon: Icons.person_outline),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: phoneCtrl,
               keyboardType: TextInputType.phone,
-              decoration: lightInputDeco('전화번호 (예: 010-1234-5678)', icon: Icons.phone_outlined),
+              decoration: lightInputDeco(s.phoneHint, icon: Icons.phone_outlined),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(s.cancel)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: primary, foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 elevation: 0),
             onPressed: () {
-              settingsP.setContact(nameCtrl.text.trim(), phoneCtrl.text.trim());
+              final name = nameCtrl.text.trim();
+              final phone = phoneCtrl.text.trim();
+              settingsP.setContact(name, phone);
               Navigator.pop(ctx);
+              final label = name.isNotEmpty ? name : phone;
+              messenger.showSnackBar(SnackBar(
+                content: Text(label.isNotEmpty
+                    ? s.emergencyContactSet(label)
+                    : s.emergencyContactCleared),
+                duration: const Duration(seconds: 2),
+              ));
             },
-            child: const Text('저장'),
+            child: Text(s.save),
           ),
         ],
       ),
@@ -470,7 +503,7 @@ class AppSettingsScreen extends StatelessWidget {
 
   // ── Camera type ───────────────────────────────────────────────────────────
 
-  Widget _cameraTypeRow(BuildContext context, SettingsProvider settingsP,
+  Widget _cameraTypeRow(BuildContext context, S s, SettingsProvider settingsP,
       bool isDark, Color textP, Color textS, Color chipBg, Color primary) {
     final surface = isDark ? DarkColors.surface : AppColors.surface;
     final border  = isDark ? DarkColors.border  : AppColors.border;
@@ -493,10 +526,10 @@ class AppSettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('카메라 유형',
+                Text(s.cameraTypeLabel,
                     style: TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w600, color: textP)),
-                Text('설치 위치에 맞게 설정하세요', style: TextStyle(fontSize: 12, color: textS)),
+                Text(s.cameraTypeSubtitle, style: TextStyle(fontSize: 12, color: textS)),
               ],
             ),
           ),
@@ -506,13 +539,22 @@ class AppSettingsScreen extends StatelessWidget {
             primary: primary,
             chipBg: chipBg,
             textP: textP,
+            frontLabel: s.frontCameraBtn,
+            ceilingLabel: s.ceilingCameraBtn,
             onChanged: (val) async {
               await settingsP.setCameraType(val);
-              // sync to backend
               try {
                 final api = context.read<AuthProvider>().api;
                 await api.setCameraType(val);
               } catch (_) {}
+              final sNow = S.read(context);
+              final label = val == 'front' ? sNow.frontCameraLabel : sNow.ceilingCameraLabel;
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(sNow.cameraTypeSet(label)),
+                  duration: const Duration(seconds: 2),
+                ));
+              }
             },
           ),
         ],
@@ -578,18 +620,21 @@ class _CameraTypeToggle extends StatelessWidget {
   final Color primary;
   final Color chipBg;
   final Color textP;
+  final String frontLabel;
+  final String ceilingLabel;
   final ValueChanged<String> onChanged;
   const _CameraTypeToggle({required this.value, required this.isDark,
       required this.primary, required this.chipBg, required this.textP,
+      required this.frontLabel, required this.ceilingLabel,
       required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _tab('front', '정면', Icons.camera_front_outlined),
+          _tab('front', frontLabel, Icons.camera_front_outlined),
           const SizedBox(width: 6),
-          _tab('top', '천장', Icons.camera_outdoor_outlined),
+          _tab('top', ceilingLabel, Icons.camera_outdoor_outlined),
         ],
       );
 
