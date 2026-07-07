@@ -387,7 +387,18 @@ def main():
         try:
             if os.path.exists(safe_zone_path):
                 with open(safe_zone_path) as _f:
-                    return json.load(_f).get("zones", [])
+                    zones = json.load(_f).get("zones", [])
+                # normalize: mobile app saves {x,y,w,h}, web UI saves {x1,y1,x2,y2}
+                norm = []
+                for z in zones:
+                    if "x1" in z:
+                        norm.append(z)
+                    else:
+                        norm.append({
+                            "x1": z["x"], "y1": z["y"],
+                            "x2": z["x"] + z["w"], "y2": z["y"] + z["h"],
+                        })
+                return norm
         except Exception:
             pass
         return []

@@ -188,6 +188,25 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
                 ),
               ),
 
+              // Cancel button — available immediately, no need to wait for TTS to finish
+              if (_ttsPlaying) ...[
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _responded ? null : () => _handleResponse(emergency: false),
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('괜찮아요 (취소)', style: TextStyle(fontSize: 16)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+              ],
+
               // Countdown + buttons (shown after TTS)
               if (!_ttsPlaying) ...[
                 const SizedBox(height: 24),
