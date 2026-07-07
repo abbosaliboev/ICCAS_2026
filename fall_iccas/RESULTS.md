@@ -467,6 +467,27 @@ Notes:
 
 Saved to: `experiments/subject1_to_17_cam2/loso/fuse_cameras.json`
 
+---
+
+### Run 15 — 2026-07-07 (Subject 1–17, subject-stratified split) — POSTER HEADLINE
+
+Full 17-subject dataset, subject-stratified 70/15/15 (each subject proportionally in train/val/test — subject-DEPENDENT, the protocol most UP-Fall papers use; NOT LOSO). `train_two_stage.py`. Test n=2837 (414 fall).
+
+| Model | Accuracy | Fall F1 | Precision | Recall | FP | FN |
+|---|---|---|---|---|---|---|
+| ST-GCN (Stage 1) | 0.9873 | 0.9578 | 0.93 | 0.99 | 31 | 5 |
+| **ST-GCN + Physics (2-Stage)** | **0.9919** | **0.9723** | 0.97 | 0.97 | 12 | 11 |
+
+Two-stage confusion: `[[2411 12] [11 403]]` → Sensitivity 97.3%, Specificity 99.5%.
+
+Notes:
+- **This is the poster/benchmark-table number** — comparable protocol to most UP-Fall papers (subject-mixed). Competitive with the field: Ramirez 99.3% acc, TCNTE 99.58%, Inturi 98.59%; our Sensitivity 97.3% exceeds TCNTE's 95.4%.
+- Physics rescue helped here: F1 0.9578→0.9723, false alarms 31→12 (−61%), at the cost of a few more FN (5→11). Net precision 0.93→0.97.
+- Model size: ST-GCN ~3.1M params (larger than TCNTE's 14.7k) — but still real-time on Jetson Orin NX (see FPS_BENCHMARK.md).
+- Honest caveat vs Run 14: this subject-DEPENDENT 0.97 is easier than the subject-INDEPENDENT LOSO (fusion 0.68). Both recorded; poster leads with this, LOSO kept for a future rigorous paper.
+
+Saved to: `experiments/subject1_to_17/two_stage/`
+
 <a name="korean"></a>
 # 🇰🇷 한국어
 
