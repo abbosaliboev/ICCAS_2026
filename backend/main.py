@@ -328,6 +328,9 @@ async def ingest_fall(body: FallEventReq, dev=Depends(auth_device)):
 
 @app.post("/api/fall-events/{event_id}/video")
 async def upload_clip(event_id: str, file: UploadFile = File(...), dev=Depends(auth_device)):
+    ev = db.get_fall_event(event_id)
+    if not ev:
+        raise HTTPException(404, "낙상 이벤트가 DB에 먼저 생성되어야 합니다")
     ext   = Path(file.filename).suffix or ".mp4"
     fname = f"{event_id}{ext}"
     dest  = CLIPS / fname
@@ -374,7 +377,7 @@ def get_clip(event_id: str, user=Depends(auth_media)):
     path = Path(ev["video_path"])
     if not path.exists() or path.stat().st_size < 1000:
         raise HTTPException(404, "파일을 찾을 수 없습니다")
-    return FileResponse(str(path), media_type='video/mp4; codecs="avc1.42E01F"',
+    return FileResponse(str(path), media_type="video/mp4",
                         headers={"Content-Disposition": f'inline; filename="{event_id}.mp4"'})
 
 
