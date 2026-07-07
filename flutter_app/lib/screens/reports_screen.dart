@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../models/fall_event.dart';
@@ -85,6 +87,39 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
       if (diff.inHours < 24) return '${diff.inHours}시간 전';
       return '오늘 ${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
     } catch (_) { return '—'; }
+  }
+
+  String _generateCsv() {
+    final rows = ['﻿타임스탬프,유형,상태'];
+    for (final e in _filtered) {
+      rows.add('${e.timestamp},${e.isSevere ? "중증" : "경미"},${e.isAcknowledged ? "확인됨" : "미확인"}');
+    }
+    return rows.join('\n');
+  }
+
+  Future<void> _exportCsv() async {
+    final csv = _generateCsv();
+    await Share.share(csv, subject: 'MobiCare 낙상 기록');
+  }
+
+  Future<void> _emailReport() async {
+    final auth = context.read<AuthProvider>();
+    final user = auth.user;
+    final now = DateTime.now();
+    final period = ['오늘', '이번 주', '이번 달', '전체'][_period.index];
+    final subject = Uri.encodeComponent('MobiCare 낙상 리포트 - $period');
+    final body = Uri.encodeComponent(
+      'MobiCare 낙상 리포트\n'
+      '사용자: ${user?.displayName ?? ""}\n'
+      '기간: $period\n'
+      '생성: ${now.year}-${now.month.toString().padLeft(2,"0")}-${now.day.toString().padLeft(2,"0")}\n\n'
+      '총 낙상: $_totalCount건  중증: $_severeCount건\n'
+      '위험 시간대: $_peakHour  마지막 발생: $_lastOccurrence\n\n'
+      '--- 상세 기록 ---\n'
+      '${_generateCsv()}',
+    );
+    final uri = Uri.parse('mailto:?subject=$subject&body=$body');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   List<_DayBar> get _chartData {
@@ -201,6 +236,42 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                       ),
                       const SizedBox(height: 20),
                     ],
+
+                    // ── Export buttons ───────────────────────────────────────
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: filtered.isEmpty ? null : _exportCsv,
+                            icon: const Icon(Icons.download_outlined, size: 16),
+                            label: const Text('CSV 내보내기',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: filtered.isEmpty ? null : _emailReport,
+                            icon: const Icon(Icons.email_outlined, size: 16),
+                            label: const Text('이메일 전송',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
 
                     // ── Events list ──────────────────────────────────────────
                     Row(

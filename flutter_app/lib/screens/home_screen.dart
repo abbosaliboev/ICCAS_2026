@@ -3,11 +3,14 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
 import '../models/fall_event.dart';
 import '../services/ws_service.dart';
 import '../widgets/fall_response_overlay.dart';
+import 'event_detail_screen.dart';
 import 'events_screen.dart';
 import 'stream_screen.dart';
 import 'reports_screen.dart';
@@ -584,64 +587,93 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
     }
   }
 
+  Future<void> _callContact(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final settings = context.watch<SettingsProvider>();
+    final hasContact = settings.contactPhone.isNotEmpty;
+    final contactLabel = hasContact
+        ? (settings.contactName.isNotEmpty ? settings.contactName : settings.contactPhone)
+        : '긴급 연락처';
+
+    return Column(
       children: [
-        Expanded(
-          flex: 3,
-          child: SizedBox(
-            height: 60,
-            child: ElevatedButton.icon(
-              onPressed: _sending ? null : _callEmergency,
-              icon: _sending
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text('🚨', style: TextStyle(fontSize: 18)),
-              label: const Text(
-                '긴급 연락',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.danger.withOpacity(0.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: SizedBox(
+                height: 60,
+                child: ElevatedButton.icon(
+                  onPressed: _sending ? null : _callEmergency,
+                  icon: _sending
+                      ? const SizedBox(
+                          width: 18, height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('🚨', style: TextStyle(fontSize: 18)),
+                  label: const Text('긴급 연락',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.danger.withOpacity(0.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                ),
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: SizedBox(
+                height: 60,
+                child: OutlinedButton(
+                  onPressed: widget.activeAlert != null ? widget.onDismiss : null,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.success,
+                    side: const BorderSide(color: AppColors.success),
+                    disabledForegroundColor: AppColors.textTertiary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ).copyWith(
+                    side: WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.disabled)) {
+                        return const BorderSide(color: AppColors.border);
+                      }
+                      return const BorderSide(color: AppColors.success);
+                    }),
+                  ),
+                  child: const Text('안심 확인',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 2,
-          child: SizedBox(
-            height: 60,
-            child: OutlinedButton(
-              onPressed: widget.activeAlert != null ? widget.onDismiss : null,
+        // ── Stored emergency contact call button ──────────────────────────
+        if (hasContact) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: OutlinedButton.icon(
+              onPressed: () => _callContact(settings.contactPhone),
+              icon: const Icon(Icons.phone_outlined, size: 18),
+              label: Text('📞  $contactLabel 에게 전화',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.success,
-                side: const BorderSide(color: AppColors.success),
-                disabledForegroundColor: AppColors.textTertiary,
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ).copyWith(
-                side: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.disabled)) {
-                    return const BorderSide(color: AppColors.border);
-                  }
-                  return const BorderSide(color: AppColors.success);
-                }),
-              ),
-              child: const Text(
-                '안심 확인',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -729,66 +761,80 @@ class _RecentEventTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSevere = event.isSevere;
-    final badgeBg = isSevere ? AppColors.dangerTint : AppColors.warningTint;
-    final badgeText = isSevere ? AppColors.danger : AppColors.warningText;
-    final label = isSevere ? '중증' : '경미';
+    final badgeBg   = isSevere ? AppColors.dangerTint  : AppColors.warningTint;
+    final badgeText = isSevere ? AppColors.danger       : AppColors.warningText;
+    final label     = isSevere ? '중증' : '경미';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: cardDeco(radius: 14),
-      child: Row(
-        children: [
-          // Thumbnail placeholder
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: CustomPaint(painter: _MiniStripePainter()),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _formatTs(event.timestamp),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  event.isAcknowledged ? '확인 완료' : '확인 필요',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: event.isAcknowledged ? AppColors.textTertiary : AppColors.dangerPressed,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: badgeBg,
-              borderRadius: BorderRadius.circular(100),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: badgeText,
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: cardDeco(radius: 14),
+        child: Row(
+          children: [
+            // Icon instead of thumbnail
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isSevere ? AppColors.dangerTint : AppColors.warningTint,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.personal_injury_outlined,
+                color: isSevere ? AppColors.danger : AppColors.warningText,
+                size: 22,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _formatTs(event.timestamp),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    event.isAcknowledged ? '확인 완료' : '확인 필요',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: event.isAcknowledged
+                          ? AppColors.textTertiary
+                          : AppColors.dangerPressed,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: badgeBg,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Text(label,
+                      style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700, color: badgeText)),
+                ),
+                const SizedBox(height: 4),
+                const Icon(Icons.chevron_right, size: 16, color: AppColors.textTertiary),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -796,7 +842,7 @@ class _RecentEventTile extends StatelessWidget {
   String _formatTs(String ts) {
     try {
       final dt = DateTime.parse(ts).toLocal();
-      final h = dt.hour > 12 ? dt.hour - 12 : dt.hour;
+      final h    = dt.hour > 12 ? dt.hour - 12 : dt.hour;
       final ampm = dt.hour >= 12 ? '오후' : '오전';
       return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')} · '
           '$ampm $h:${dt.minute.toString().padLeft(2, '0')}';
@@ -804,22 +850,4 @@ class _RecentEventTile extends StatelessWidget {
       return ts;
     }
   }
-}
-
-class _MiniStripePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
-        Paint()..color = const Color(0xFF1A1A1A));
-    final p = Paint()
-      ..color = Colors.white.withOpacity(0.06)
-      ..strokeWidth = 8
-      ..style = PaintingStyle.stroke;
-    for (double x = -size.height; x < size.width + size.height; x += 12) {
-      canvas.drawLine(Offset(x, 0), Offset(x + size.height, size.height), p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }

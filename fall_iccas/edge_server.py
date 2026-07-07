@@ -133,6 +133,20 @@ class BackendClient:
         self.token   = device_token
         self.headers = {"X-Device-Token": device_token}
 
+    def get_config(self) -> dict:
+        """Fetch safe-zone + camera-type config from backend (returns {} on failure)."""
+        try:
+            r = requests.get(
+                f"{self.base}/api/device/config",
+                headers=self.headers,
+                timeout=3,
+            )
+            if r.status_code == 200:
+                return r.json()
+        except Exception as e:
+            log.debug(f"Config fetch failed: {e}")
+        return {}
+
     def post_fall(self, event_id: str, category: str, timestamp: str) -> bool:
         payload = {
             "event_id":  event_id,
@@ -293,7 +307,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--exp",          default=None,            help="Experiment dir (default: experiments/subject1_2_3_4)")
     ap.add_argument("--source",       default="0",             help="Camera index or RTSP URL")
-    ap.add_argument("--backend",      default="http://localhost:8000", help="Backend server URL")
+    ap.add_argument("--backend",      default="http://192.168.0.57:8000", help="Backend server URL")
     ap.add_argument("--device-token", default="edge-device-001", help="Device token for backend auth")
     ap.add_argument("--stream-port",  type=int, default=8081,  help="MJPEG HTTP port (default 8081)")
     ap.add_argument("--snap-dir",     default="snapshots",     help="Directory to save fall screenshots")
@@ -362,38 +376,48 @@ def main():
     current_event_id = None
     smooth_bbox      = None   # EMA-smoothed [x1,y1,x2,y2] from YOLO boxes
 
-    # camera type config (front = normal, top = ceiling/CCTV)
-    cam_cfg_path = os.path.join(base, "camera_config.json")
-    def load_cam_config():
+    # camera type config + safe zones (fetched from backend API, local file fallback)
+    cam_cfg_path   = os.path.join(base, "camera_config.json")
+    safe_zone_path = os.path.join(base, "safe_zone.json")
+    camera_type    = "front"
+    safe_zones: list = []
+    last_cfg_reload  = 0.0
+
+    def _zone_to_x1y1x2y2(z: dict) -> dict:
+        """Normalise zone dict to x1/y1/x2/y2 regardless of stored format."""
+        if "x1" in z:
+            return z
+        x, y, w, h = z.get("x", 0), z.get("y", 0), z.get("w", 0), z.get("h", 0)
+        return {"x1": x, "y1": y, "x2": x + w, "y2": y + h}
+
+    def load_config():
+        nonlocal camera_type, safe_zones
+        # 1) try backend API
+        cfg = client.get_config()
+        if cfg:
+            raw_zones    = cfg.get("zones", [])
+            safe_zones   = [_zone_to_x1y1x2y2(z) for z in raw_zones]
+            camera_type  = cfg.get("camera_type", "front")
+            log.info(f"Config from API: cam={camera_type}, zones={len(safe_zones)}")
+            return
+        # 2) local file fallback (same machine or rsync'd)
         try:
             if os.path.exists(cam_cfg_path):
                 with open(cam_cfg_path) as _f:
-                    return json.load(_f).get("camera_type", "front")
+                    camera_type = json.load(_f).get("camera_type", "front")
         except Exception:
             pass
-        return "front"
-    camera_type = load_cam_config()
-    last_cam_reload = 0.0
-    # top-down camera: person appears compressed vertically → lower h_span threshold
-    # front camera: normal threshold
-    log.info(f"Camera type: {camera_type}")
-
-    # safe zone
-    safe_zone_path   = os.path.join(base, "safe_zone.json")
-    safe_zones       = []
-    last_zone_reload = 0.0
-
-    def load_safe_zones():
         try:
             if os.path.exists(safe_zone_path):
                 with open(safe_zone_path) as _f:
-                    return json.load(_f).get("zones", [])
+                    raw_zones  = json.load(_f).get("zones", [])
+                    safe_zones = [_zone_to_x1y1x2y2(z) for z in raw_zones]
         except Exception:
             pass
-        return []
+        log.info(f"Config from file: cam={camera_type}, zones={len(safe_zones)}")
 
-    safe_zones = load_safe_zones()
-    log.info(f"Safe zones loaded: {len(safe_zones)}")
+    load_config()
+    log.info(f"Camera type: {camera_type}")
     log.info("Edge server running. Ctrl+C to stop.")
 
     while True:
@@ -444,15 +468,10 @@ def main():
         person_visible = float(kp[:, 2].max()) > 0.15
         no_person_frames = 0 if person_visible else no_person_frames + 1
 
-        # reload camera config every 30 s
-        if time.time() - last_cam_reload > 30:
-            camera_type = load_cam_config()
-            last_cam_reload = time.time()
-
-        # reload safe zones every 10 s
-        if time.time() - last_zone_reload > 10:
-            safe_zones = load_safe_zones()
-            last_zone_reload = time.time()
+        # reload config (safe zones + camera type) from backend API every 15 s
+        if time.time() - last_cfg_reload > 15:
+            load_config()
+            last_cfg_reload = time.time()
 
         # check if mid-hip is inside a safe zone
         in_safe_zone = False

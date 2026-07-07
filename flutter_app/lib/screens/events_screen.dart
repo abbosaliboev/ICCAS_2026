@@ -196,17 +196,19 @@ class _EventCard extends StatelessWidget {
         decoration: cardDeco(radius: 16),
         child: Row(
           children: [
-            // Thumbnail
+            // Icon indicator instead of thumbnail
             Container(
-              width: 56,
-              height: 56,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(10),
+                color: isSevere ? AppColors.dangerTint : AppColors.warningTint,
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: event.hasVideo
-                  ? const Icon(Icons.play_circle_outline, color: Colors.white38, size: 28)
-                  : CustomPaint(painter: _ThumbnailStripePainter()),
+              child: Icon(
+                Icons.personal_injury_outlined,
+                color: isSevere ? AppColors.danger : AppColors.warningText,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -271,24 +273,6 @@ class _EventCard extends StatelessWidget {
       return ts;
     }
   }
-}
-
-class _ThumbnailStripePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
-        Paint()..color = const Color(0xFF1A1A1A));
-    final p = Paint()
-      ..color = Colors.white.withOpacity(0.06)
-      ..strokeWidth = 8
-      ..style = PaintingStyle.stroke;
-    for (double x = -size.height; x < size.width + size.height; x += 12) {
-      canvas.drawLine(Offset(x, 0), Offset(x + size.height, size.height), p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }
 
 // ── Error & empty states ──────────────────────────────────────────────────────

@@ -3,7 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 
 class StreamScreen extends StatefulWidget {
   const StreamScreen({super.key});
@@ -27,10 +29,7 @@ class _StreamScreenState extends State<StreamScreen> with AutomaticKeepAliveClie
   }
 
   void _startStream() {
-    setState(() {
-      _active = true;
-      _error = false;
-    });
+    setState(() { _active = true; _error = false; });
     _timer = Timer.periodic(const Duration(milliseconds: 120), (_) => _fetchFrame());
   }
 
@@ -49,10 +48,7 @@ class _StreamScreenState extends State<StreamScreen> with AutomaticKeepAliveClie
         headers: {'Authorization': 'Bearer ${auth.token}'},
       ).timeout(const Duration(seconds: 3));
       if (res.statusCode == 200 && mounted) {
-        setState(() {
-          _frame = res.bodyBytes;
-          _error = false;
-        });
+        setState(() { _frame = res.bodyBytes; _error = false; });
       } else if (mounted) {
         setState(() => _error = true);
       }
@@ -70,15 +66,28 @@ class _StreamScreenState extends State<StreamScreen> with AutomaticKeepAliveClie
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final isDark = context.watch<ThemeProvider>().isDark;
+    final bg       = isDark ? DarkColors.bg      : Colors.black;
+    final barBg    = isDark ? DarkColors.surface  : const Color(0xFF1A1A2E);
+    final textColor = Colors.white;
+    final subColor  = Colors.white70;
+    final dimColor  = Colors.white38;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF16213E),
-        title: const Text('라이브 카메라', style: TextStyle(color: Colors.white)),
+        backgroundColor: barBg,
+        foregroundColor: textColor,
+        elevation: 0,
+        title: const Text('라이브 카메라',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: Icon(_active ? Icons.pause : Icons.play_arrow, color: Colors.white),
+            icon: Icon(_active ? Icons.pause_circle_outline : Icons.play_circle_outline,
+                color: Colors.white),
             onPressed: _active ? _stopStream : _startStream,
+            tooltip: _active ? '일시 정지' : '재생',
           ),
         ],
       ),
@@ -95,24 +104,27 @@ class _StreamScreenState extends State<StreamScreen> with AutomaticKeepAliveClie
                           fit: BoxFit.contain,
                           width: double.infinity,
                         )
-                      : const Column(
+                      : Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(color: Color(0xFF4FC3F7)),
-                            SizedBox(height: 16),
-                            Text('스트림 연결 중...', style: TextStyle(color: Colors.white54)),
+                            CircularProgressIndicator(
+                                color: isDark ? DarkColors.primary : AppColors.primary,
+                                strokeWidth: 2),
+                            const SizedBox(height: 16),
+                            Text('스트림 연결 중...',
+                                style: TextStyle(color: subColor, fontSize: 14)),
                           ],
                         ),
             ),
           ),
+          // ── Status bar ───────────────────────────────────────────────────
           Container(
-            color: const Color(0xFF16213E),
+            color: barBg,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
                 Container(
-                  width: 8,
-                  height: 8,
+                  width: 8, height: 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _active && !_error ? Colors.greenAccent : Colors.redAccent,
@@ -120,11 +132,12 @@ class _StreamScreenState extends State<StreamScreen> with AutomaticKeepAliveClie
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _active && !_error ? '라이브 스트리밍 중' : _error ? '스트림 연결 실패' : '일시 정지',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  _active && !_error ? '라이브 스트리밍 중'
+                      : _error ? '스트림 연결 실패' : '일시 정지',
+                  style: TextStyle(color: subColor, fontSize: 13),
                 ),
                 const Spacer(),
-                const Text('~8fps', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                Text('~8fps', style: TextStyle(color: dimColor, fontSize: 12)),
               ],
             ),
           ),
@@ -138,17 +151,20 @@ class _StreamScreenState extends State<StreamScreen> with AutomaticKeepAliveClie
         children: [
           const Icon(Icons.videocam_off, color: Colors.white38, size: 64),
           const SizedBox(height: 16),
-          const Text('스트림에 연결할 수 없습니다', style: TextStyle(color: Colors.white54)),
+          const Text('스트림에 연결할 수 없습니다',
+              style: TextStyle(color: Colors.white54, fontSize: 14)),
           const SizedBox(height: 8),
-          const Text(
-            '엣지 서버가 실행 중인지 확인하세요',
-            style: TextStyle(color: Colors.white38, fontSize: 12),
-          ),
+          const Text('엣지 서버가 실행 중인지 확인하세요',
+              style: TextStyle(color: Colors.white38, fontSize: 12)),
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _startStream,
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4FC3F7)),
-            child: const Text('재연결', style: TextStyle(color: Colors.black87)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('재연결'),
           ),
         ],
       );

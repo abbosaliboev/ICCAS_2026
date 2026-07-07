@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
+  // Light
   static const bg = Color(0xFFFAF9F6);
   static const surface = Color(0xFFFFFFFF);
   static const border = Color(0xFFE8E4DC);
@@ -24,14 +25,36 @@ class AppColors {
   AppColors._();
 }
 
+class DarkColors {
+  static const bg      = Color(0xFF111318);
+  static const surface = Color(0xFF1C1E24);
+  static const border  = Color(0xFF2E3038);
+  static const textPrimary   = Color(0xFFEBEBF5);
+  static const textSecondary = Color(0xFFAEAEB2);
+  static const textTertiary  = Color(0xFF636366);
+  static const primary    = Color(0xFF64AAFF);
+  static const primaryTint = Color(0xFF1A2A3F);
+  static const success    = Color(0xFF30D158);
+  static const successTint = Color(0xFF0D2A1A);
+  static const danger     = Color(0xFFFF453A);
+  static const dangerTint  = Color(0xFF2A0F0D);
+  static const warning     = Color(0xFFFFD60A);
+  static const warningText  = Color(0xFFFFD60A);
+  static const warningTint  = Color(0xFF2A220A);
+  static const chip = Color(0xFF2C2E36);
+  DarkColors._();
+}
+
 class AppTheme {
   static ThemeData get light => ThemeData(
         useMaterial3: true,
+        brightness: Brightness.light,
         scaffoldBackgroundColor: AppColors.bg,
         colorScheme: const ColorScheme.light(
           primary: AppColors.primary,
           surface: AppColors.surface,
           onSurface: AppColors.textPrimary,
+          error: AppColors.danger,
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.surface,
@@ -64,20 +87,64 @@ class AppTheme {
         dialogTheme: const DialogThemeData(
           backgroundColor: AppColors.surface,
           titleTextStyle: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
+              color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
           contentTextStyle: TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
       );
+
+  static ThemeData get dark => ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: DarkColors.bg,
+        colorScheme: const ColorScheme.dark(
+          primary: DarkColors.primary,
+          surface: DarkColors.surface,
+          onSurface: DarkColors.textPrimary,
+          error: DarkColors.danger,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: DarkColors.surface,
+          foregroundColor: DarkColors.textPrimary,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          titleTextStyle: TextStyle(
+            color: DarkColors.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+          iconTheme: IconThemeData(color: DarkColors.textSecondary),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: DarkColors.surface,
+          selectedItemColor: DarkColors.primary,
+          unselectedItemColor: DarkColors.textTertiary,
+          elevation: 8,
+          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+          unselectedLabelStyle: TextStyle(fontSize: 11),
+        ),
+        cardTheme: CardThemeData(
+          color: DarkColors.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: DarkColors.border),
+          ),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: DarkColors.surface,
+          titleTextStyle: const TextStyle(
+              color: DarkColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+          contentTextStyle: const TextStyle(color: DarkColors.textSecondary, fontSize: 14),
+        ),
+      );
+
   AppTheme._();
 }
 
-BoxDecoration cardDeco({double radius = 16}) => BoxDecoration(
-      color: AppColors.surface,
+BoxDecoration cardDeco({double radius = 16, bool dark = false}) => BoxDecoration(
+      color: dark ? DarkColors.surface : AppColors.surface,
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: AppColors.border),
+      border: Border.all(color: dark ? DarkColors.border : AppColors.border),
     );
 
 InputDecoration lightInputDeco(String label, {IconData? icon}) => InputDecoration(

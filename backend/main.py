@@ -579,8 +579,8 @@ async def transcribe_speech(file: UploadFile = File(...), user=Depends(auth_user
 # Proxying here lets the browser load the stream from the same origin (port 8000),
 # avoiding CORS issues and the need to expose port 8081 to the network separately.
 
-EDGE_STREAM_URL     = os.environ.get("EDGE_STREAM_URL",     "http://localhost:8081/video")
-EDGE_SNAPSHOT_URL   = os.environ.get("EDGE_SNAPSHOT_URL",  "http://localhost:8081/snapshot")
+EDGE_STREAM_URL     = os.environ.get("EDGE_STREAM_URL",    "http://192.168.0.53:8081/video")
+EDGE_SNAPSHOT_URL   = os.environ.get("EDGE_SNAPSHOT_URL", "http://192.168.0.53:8081/snapshot")
 
 
 @app.get("/api/stream/video")
@@ -643,7 +643,8 @@ async def stream_sse():
 
 # ── safe zone ────────────────────────────────────────────────────────────────
 
-SAFE_ZONE_PATH = BASE.parent / "fall_iccas" / "safe_zone.json"
+SAFE_ZONE_PATH  = BASE.parent / "fall_iccas" / "safe_zone.json"
+CAM_CONFIG_PATH = BASE.parent / "fall_iccas" / "camera_config.json"
 
 class SafeZoneReq(BaseModel):
     zones: list
@@ -673,6 +674,24 @@ def clear_safe_zone(user=Depends(auth_user)):
     if SAFE_ZONE_PATH.exists():
         SAFE_ZONE_PATH.unlink()
     return {"ok": True}
+
+
+@app.get("/api/device/config")
+def get_device_config(dev=Depends(auth_device)):
+    """Edge server polls this every ~10s to get safe zones + camera type."""
+    zones = []
+    if SAFE_ZONE_PATH.exists():
+        try:
+            zones = json.loads(SAFE_ZONE_PATH.read_text()).get("zones", [])
+        except Exception:
+            pass
+    cam_type = "front"
+    if CAM_CONFIG_PATH.exists():
+        try:
+            cam_type = json.loads(CAM_CONFIG_PATH.read_text()).get("camera_type", "front")
+        except Exception:
+            pass
+    return {"zones": zones, "camera_type": cam_type}
 
 
 # ── heatmap (stub — returns static data) ─────────────────────────────────────
