@@ -77,17 +77,31 @@ def analyze_motion(
 def plot_motion(combined: pd.DataFrame) -> None:
     import matplotlib.pyplot as plt
 
-    time = combined["time"]
+    # Times New Roman + 읽기 좋은 폰트 크기 (포스터용)
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams["mathtext.fontset"] = "stix"
+    plt.rcParams["axes.titlesize"] = 18
+    plt.rcParams["axes.labelsize"] = 15
+    plt.rcParams["xtick.labelsize"] = 13
+    plt.rcParams["ytick.labelsize"] = 13
+    plt.rcParams["legend.fontsize"] = 13
+
+    # 시간축을 0에서 시작하도록 정규화
+    time = combined["time"] - combined["time"].iloc[0]
     extra = combined.attrs.get("plot_series", {})
-    figure, axes = plt.subplots(3, 1, figsize=(14, 14))
-    axes[0].plot(time, combined["raw_position"], label="Raw Position")
-    axes[0].plot(time, combined["filtered_position"], label="Filtered Position")
-    axes[1].plot(time, extra.get("raw_velocity"), label="Raw Velocity")
-    axes[1].plot(time, extra.get("position_velocity"), label="Velocity from Filtered Position")
-    axes[1].plot(time, combined["velocity_pixel_s"], label="Filtered Velocity")
-    axes[2].plot(time, extra.get("raw_acceleration"), label="Raw Acceleration")
-    axes[2].plot(time, extra.get("position_acceleration"), label="Acceleration from Filtered Position")
-    axes[2].plot(time, combined["acceleration_pixel_s2"], label="Filtered Acceleration")
+    # Okabe-Ito colorblind-safe palette (역할별 색 통일)
+    raw_color = "#56B4E9"       # sky blue: 원본 데이터
+    derived_color = "#D55E00"   # vermillion: 필터 위치 기반 파생값
+    filtered_color = "#009E73"  # bluish green: 최종 필터 결과 (강조)
+    figure, axes = plt.subplots(3, 1, figsize=(9, 14))
+    axes[0].plot(time, combined["raw_position"], label="Raw Position", color=raw_color)
+    axes[0].plot(time, combined["filtered_position"], label="Filtered Position", linewidth=2.5, color=filtered_color)
+    axes[1].plot(time, extra.get("raw_velocity"), label="Raw Velocity", color=raw_color)
+    axes[1].plot(time, extra.get("position_velocity"), label="Velocity from Filtered Position", color=derived_color)
+    axes[1].plot(time, combined["velocity_pixel_s"], label="Filtered Velocity", linewidth=2.5, color=filtered_color)
+    axes[2].plot(time, extra.get("raw_acceleration"), label="Raw Acceleration", color=raw_color)
+    axes[2].plot(time, extra.get("position_acceleration"), label="Acceleration from Filtered Position", color=derived_color)
+    axes[2].plot(time, combined["acceleration_pixel_s2"], label="Filtered Acceleration", linewidth=2.5, color=filtered_color)
     for axis, title, unit in zip(
         axes,
         ("Mid-Hip Position", "Velocity", "Acceleration"),
@@ -96,7 +110,8 @@ def plot_motion(combined: pd.DataFrame) -> None:
         axis.set_title(title)
         axis.set_xlabel("Time (s)")
         axis.set_ylabel(unit)
+        axis.set_xlim(left=0)
         axis.grid()
         axis.legend()
-    figure.tight_layout()
+    figure.tight_layout(h_pad=5, rect=[0, 0.02, 1, 0.98])
     plt.show()
