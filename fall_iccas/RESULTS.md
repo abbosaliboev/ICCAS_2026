@@ -29,7 +29,7 @@
 | Inturi 2022 | 1D-CNN+LSTM | 94.4 | 99.0 | 98.6 | ❌ |
 | Raza 2023 | Vision Transformer | 97.2 | — | 97.4 | ❌ |
 | TCNTE 2025 | TCN+Transformer | 95.4 | 99.7 | 99.6 | Orin NX, 19 fps |
-| **MobiCare (ours)** | **ST-GCN + Physics** | **97.3** | **99.5** | **99.19** | **Orin NX + mobile app** |
+| **MobiCare (ours)** | **ST-GCN + Physics** | **97.3** | **99.5** | **99.19** | **Orin NX, ~30 fps (69 fps pipeline) + app** |
 
 > Ours: subject-stratified split. Competitive accuracy; **Sensitivity 97.3% exceeds TCNTE (95.4%)** — fewer missed falls, the safety-critical metric. Unique to our work: physics-informed rescue (real-world robustness, ~0 latency) + a full deployed system (edge + caregiver mobile app + safe-zone). Competitor numbers: Yu et al. 2025 (TCNTE), Table 5.
 
@@ -113,7 +113,7 @@ Saved to: `experiments/subject1_to_17/loso/`
 | Ramirez 2021 | Random Forest | 98.8 | 99.5 | 99.3 | ❌ |
 | Inturi 2022 | 1D-CNN+LSTM | 94.4 | 99.0 | 98.6 | ❌ |
 | TCNTE 2025 | TCN+Transformer | 95.4 | 99.7 | 99.6 | Orin NX, 19 fps |
-| **MobiCare (본 연구)** | **ST-GCN + Physics** | **97.3** | **99.5** | **99.19** | **Orin NX + 모바일 앱** |
+| **MobiCare (본 연구)** | **ST-GCN + Physics** | **97.3** | **99.5** | **99.19** | **Orin NX, ~30 fps (69 fps 파이프라인) + 앱** |
 
 > 본 연구는 subject-stratified split. 정확도 경쟁력 있음, **Sensitivity 97.3%로 TCNTE(95.4%)보다 높음** (낙상 놓침 적음). 차별점: physics 기반 rescue(실환경 강건성, ~0 지연) + 완전한 배포 시스템(엣지 + 보호자 모바일 앱 + safe-zone).
 
