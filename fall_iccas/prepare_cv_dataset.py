@@ -176,13 +176,19 @@ def get_trials(root, subjects=None):
 
 
 def main():
+    global CAMERA
     parser = argparse.ArgumentParser(description="Extract YOLO keypoints into sliding-window arrays.")
     parser.add_argument("--subjects", type=int, nargs="+", default=None,
                         help="Subject IDs to include (e.g. 1 2). Default: all.")
     parser.add_argument("--out-dir", default=None,
                         help="Output directory for X.npy / y.npy / meta.csv. "
                              "Default: <script_dir>/cv_dataset")
+    parser.add_argument("--camera", default=CAMERA,
+                        help=f"Camera view substring to extract (default: {CAMERA}). "
+                             "Use 'Camera2' for the second viewpoint.")
     args = parser.parse_args()
+
+    CAMERA = args.camera
 
     subjects = set(args.subjects) if args.subjects else None
     out_dir  = args.out_dir or os.path.join(os.path.dirname(__file__), "cv_dataset")
@@ -191,6 +197,7 @@ def main():
     subj_label = f"Subject{sorted(subjects)}" if subjects else "All subjects"
     print(f"Dataset dir : {DATASET_DIR}")
     print(f"Subjects    : {subj_label}")
+    print(f"Camera      : {CAMERA}")
     print(f"Output dir  : {out_dir}")
     print(f"Device      : {DEVICE}\n")
 

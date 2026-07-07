@@ -239,6 +239,10 @@ def main():
     ap.add_argument("--out-dir", default=None,
                     help="Output directory for per-fold checkpoints + summary")
     ap.add_argument("--patience", type=int, default=15)
+    ap.add_argument("--test-subjects", type=int, nargs="+", default=None,
+                    help="Only run folds for these test subjects (pilot mode). "
+                         "Fold numbering stays consistent with the full run. "
+                         "Default: all subjects.")
     args = ap.parse_args()
 
     base     = os.path.dirname(__file__)
@@ -267,8 +271,14 @@ def main():
         def flush(self):    _orig_out.flush();  tee_file.flush()
     sys.stdout = Tee()
 
+    test_set = set(args.test_subjects) if args.test_subjects else None
+    if test_set:
+        print(f"Pilot mode: only folds for test subjects {sorted(test_set)}")
+
     fold_results = []
     for i, test_subj in enumerate(unique_subjects, 1):
+        if test_set and int(test_subj) not in test_set:
+            continue
         torch.cuda.empty_cache()
         result = run_fold(i, test_subj, X, y, subjects, args.patience, out_dir)
         fold_results.append(result)

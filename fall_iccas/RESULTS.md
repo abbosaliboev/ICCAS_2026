@@ -335,6 +335,138 @@ Key observations:
 
 Saved to: `experiments/subject1_to_10/loso/`
 
+---
+
+### Run 12 — 2026-07-07 (LOSO, Subject 1–17, cross-subject) — FULL DATASET
+
+**Evaluation:** Leave-One-Subject-Out (17 folds). Full UP-Fall dataset (18,823 windows, FALL=2,688 / NO-FALL=16,135). This is the primary paper result.
+
+Per-fold Fall F1:
+
+| Fold | Test Subj | ST-GCN F1 | Two-stage F1 |
+|---|---|---|---|
+| 1 | Subject 1 | 0.6810 | 0.6777 |
+| 2 | Subject 2 | 0.5619 | 0.5720 |
+| 3 | Subject 3 | 0.5905 | 0.5905 |
+| 4 | Subject 4 | 0.7397 | 0.7055 |
+| 5 | Subject 5 | 0.5866 | 0.5962 |
+| 6 | Subject 6 | 0.5674 | 0.5481 |
+| 7 | Subject 7 | 0.6323 | 0.7404 |
+| 8 | Subject 8 | 0.7493 | 0.6986 |
+| 9 | Subject 9 | 0.6012 | 0.6073 |
+| 10 | Subject 10 | 0.6286 | 0.6368 |
+| 11 | Subject 11 | 0.5641 | 0.5685 |
+| 12 | Subject 12 | 0.6469 | 0.7665 |
+| 13 | Subject 13 | 0.6009 | 0.5982 |
+| 14 | Subject 14 | 0.4786 | 0.4556 |
+| 15 | Subject 15 | 0.6667 | 0.6667 |
+| 16 | Subject 16 | 0.6195 | 0.6195 |
+| 17 | Subject 17 | 0.5652 | 0.5786 |
+| **Mean** | | **0.6165 ± 0.0654** | **0.6251 ± 0.0750** |
+
+Aggregated confusion matrices (all 17 folds):
+```
+Stage 1 (ST-GCN)                Two-stage (Physics Rescue)
+              Pred NF   Pred F                 Pred NF   Pred F
+True NO-FALL  13470     2665     True NO-FALL  13793     2342
+True FALL       327     2361     True FALL       428     2260
+Recall=87.8% Prec=47.0%          Recall=84.1% Prec=49.1%
+Acc=84.1%                        Acc=85.3%
+```
+
+Key observations:
+- **Precision is the bottleneck, not recall.** Stage 1 misses only 327/2688 falls (recall 87.8%) but raises 2665 false positives (precision 47.0%). F1 is dragged down almost entirely by FP on unseen subjects.
+- 10→17 subjects did **not** improve LOSO F1 (0.623→0.617 Stage 1) — performance has plateaued; the ceiling is precision/generalization, not training-data volume.
+- **Heavy-interpolation hypothesis rejected:** S12/S15 (Activity 11 mostly zero-frame on Camera1) were among the *best* folds (0.77 / 0.67), so YOLO detection dropout on lying poses is not the main F1 driver.
+- Worst folds: S14 (0.48), S6 (0.55), S2/S11/S17 (~0.56–0.57) — all dominated by false positives, not missed falls.
+- Physics Rescue is mixed: strongly helps S7 (0.63→0.74) and S12 (0.65→0.77), hurts S8 (0.75→0.70) and S14 (0.48→0.46). Net +0.009 F1 — marginal, because per-fold physics thresholds tuned on val subjects don't always transfer.
+
+Per-activity FP breakdown (analyze_loso.py, baseline thr=0.5, aggregated over 17 folds):
+
+| ADL activity | FP | windows | FP rate |
+|---|---|---|---|
+| A6 walking | 89 | 3559 | 2.5% |
+| A7 standing | 26 | 3529 | 0.7% |
+| A8 sitting | 0 | 3506 | 0.0% |
+| A9 picking-object | 2 | 515 | 0.4% |
+| A10 jumping | 0 | 1704 | 0.0% |
+| **A11 laying** | **2548** | **3322** | **76.7%** |
+
+**Decisive finding: 2548 of 2665 false positives (96%) come from Activity 11 (laying down).** The vertical→horizontal transition of voluntarily lying on a bed is nearly indistinguishable from a fall in pose space, so ST-GCN flags it. This is the entire precision problem.
+
+Post-processing levers do NOT fix it (analyze_loso.py, thr + min-run-length tuned on val, applied to test): mean F1 0.6165 → 0.6236 (+0.007 only). Temporal voting selected r=1 on every fold because A11 false alarms are *sustained runs* (the whole lay-down segment), not isolated spikes — run-length filtering cannot remove them. Threshold tuning was noisy (helped S7 +0.12/S12 +0.10, hurt S8 −0.07/S4 −0.03), a val-overfit wash.
+
+**Kinematic veto tested and rejected (veto_experiment.py, feature_separability.py).** Peak-velocity distributions of true falls and A11 laying overlap completely (fall P50=0.138 vs A11 P50=0.087; at P90 A11=1.72 *exceeds* fall=1.22). An oracle single-feature threshold (tuned directly on data — an upper bound) separates fall-vs-A11 only weakly:
+
+| feature | oracle acc | AUC |
+|---|---|---|
+| max_velocity | 0.604 | 0.589 |
+| max_abs_acc | 0.577 | 0.572 |
+| hip_drop | 0.614 | 0.608 |
+| (majority baseline) | 0.553 | — |
+
+All near-random (AUC≈0.5). A val-tuned velocity veto removed only 18 FP / lost 5 falls (F1 +0.001). **Conclusion: no kinematic feature on the frontal Camera1 view can distinguish controlled laying from falling** — the information is not present in a single frontal viewpoint. This empirically confirms CLAUDE.md's warning against physics veto and, more importantly, explains it.
+
+Next steps:
+- **Second camera (Camera2) — the principled fix.** A second viewpoint provides the vertical-descent information the frontal view lacks, which should disambiguate laying from falling (the source of 96% of FP). All Camera2 data is downloaded. Plan: extract Camera2 keypoints, run LOSO on Camera2 alone first (cheapest test of whether the second view helps), then two-camera fusion (concatenate/two-stream) for the final model. Hypothesis, to be verified — not guaranteed.
+- Add LSTM/TCN baselines for the paper comparison table.
+
+Saved to: `experiments/subject1_to_17/loso/` (loso_results.txt, loso_summary.json)
+
+---
+
+### Run 13 — 2026-07-07 (Camera2 pilot, 3 folds) — motivates two-camera fusion
+
+Camera2 (second viewpoint) keypoints extracted for all 17 subjects (18,823 windows, identical to Camera1). Notably, Camera2 had almost no zero-frame interpolation on A11 laying (Camera1 lost 600–1000+ frames/trial there) — the second view sees lying people far better.
+
+Kinematic separability on Camera2 is still near-random (velocity AUC 0.537, accel 0.528, drop 0.570) — a kinematic veto cannot work on either view. But the ST-GCN itself uses full skeleton geometry, so a pilot LOSO on the 3 worst Camera1 folds (S11, S14, S17) was run on Camera2:
+
+| Test subj | Camera1 S1 F1 | Camera2 S1 F1 | Δ |
+|---|---|---|---|
+| S11 | 0.564 | 0.494 | −0.070 |
+| S14 | 0.479 | 0.614 | +0.135 |
+| S17 | 0.565 | 0.687 | +0.122 |
+| mean | 0.536 | 0.598 | +0.062 |
+
+Aggregate over the 3 folds: false positives **603 → 365 (−39%)**, precision **39.8% → 49.4%**, recall 82.9% → 74.2%. Camera2 attacks the precision problem but loses some recall.
+
+**Complementary errors across views (the key finding):**
+- Camera1 FP: A11 laying = 76.7% rate (96% of all FP); walking/jumping ≈ 0.
+- Camera2 FP: A11 laying rate drops to 33.9%, but new FP appear on A6 walking (13%), A10 jumping (11%), A7 standing (5.8%).
+
+The two views fail on *different* activities, so score-level fusion (Camera1's recall + Camera2's precision, combined per-window and tuned on val) is expected to beat either camera alone. This is the planned primary contribution.
+
+Next: full 17-fold Camera2 LOSO, then two-camera score-level fusion (both datasets share identical window ordering, so per-window probabilities can be fused directly).
+
+Saved to: `experiments/subject1_to_17_cam2/loso_pilot/`
+
+---
+
+### Run 14 — 2026-07-07 (Two-camera score-level fusion, 17-fold LOSO) — MAIN RESULT
+
+Full Camera2 LOSO (all 17 folds) then score-level fusion of Camera1 + Camera2 per-window fall probabilities. Fusion rule (weighted-avg / AND / OR) tuned on val per fold, applied to held-out test subject. `fuse_cameras.py`.
+
+| Metric | Camera1 (front) | Camera2 (side) | **Fusion** |
+|---|---|---|---|
+| mean Fall F1 | 0.6165 | 0.5178 | **0.6772** |
+| aggregate F1 | 0.612 | 0.502 | **0.671** |
+| Precision | 0.470 | 0.395 | **0.592** |
+| Recall | 0.878 | 0.689 | 0.775 |
+| Specificity | 0.835 | 0.825 | **0.911** |
+| Accuracy | 0.841 | 0.805 | **0.892** |
+| FP | 2665 | 2831 | **1438** |
+| FN | 327 | 837 | 604 |
+
+**Key result: two-camera fusion cuts false positives by 46% (2665→1438) and raises precision 0.47→0.59, specificity 0.84→0.91, accuracy 0.84→0.89, and Fall F1 0.62→0.68 — all under strict 17-fold LOSO.** The A11 laying false positives (96% of Camera1 FP) are largely removed because a fall must now be plausible from *both* viewpoints.
+
+Notes:
+- Camera2 (side view) ALONE is worse than Camera1 (front): F1 0.52 vs 0.62, consistent with UP-Fall literature (front view has fewer occlusions). Its value is purely complementary — fusion, not replacement.
+- Tradeoff: recall drops 87.8%→77.5% (FN 327→604). Fusion trades some sensitivity for large precision/false-alarm gains — appropriate for deployment (alarm fatigue), but the missed-fall rate should be reported honestly.
+- Fusion beats both cameras on ~11/17 folds; loses to Camera1 on S1/S4/S8 (where Camera1 was already strong and the weak Camera2 dragged the average down).
+- Weighted-average was the winning rule on 16/17 folds (AND on S16 only).
+
+Saved to: `experiments/subject1_to_17_cam2/loso/fuse_cameras.json`
+
 <a name="korean"></a>
 # 🇰🇷 한국어
 
