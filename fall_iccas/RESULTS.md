@@ -20,6 +20,23 @@
 - Two-camera fusion cuts LOSO false positives by 46% (see Run 14).
 - Real-time on **Jetson Orin NX** (see `FPS_BENCHMARK.md`).
 
+### How train / test are split (and why the numbers differ)
+
+There are two ways to split the data:
+
+**1. Subject-dependent — what most papers use.** Mix all people's data together, then split into train and test. The *same person* ends up in both. The model has already "seen" that person, so the score looks high (our **99.19%**). Our windows also overlap in time, and a random split can put almost-identical windows in both train and test — extra leakage that inflates the number.
+
+**2. Cross-subject / LOSO — the honest way.** Take *one whole person out*, train on the other 16, and test only on that unseen person. The model has never seen them — this shows how it works on a *new* patient (our **0.68** fusion).
+
+**Why do papers use the first (easier) way?**
+- It gives higher numbers — looks better on paper.
+- It's easier — more data left for training.
+- Many fall datasets have very few people, so removing a whole person leaves too little to train on.
+- Everyone does it, so they copy it to "compare fairly."
+- The catch: it overstates real-world performance, because the model is tested on someone it already knew.
+
+**What we do:** report *both* — subject-dependent (0.97) to line up with those papers, and LOSO (0.68) as the honest number for a real new patient. Your friends are right that the first way tests on "seen" data; that is exactly why we also did the second.
+
 ## Benchmark vs prior work (UP-Fall, front view)
 
 | Study | Method | Sens | Spec | Acc | Edge deployment |
@@ -104,6 +121,23 @@ Saved to: `experiments/subject1_to_17/loso/`
 - Subject-stratified는 대부분의 UP-Fall 논문이 쓰는 방식, LOSO는 더 엄격한 교차 피험자 평가.
 - Physics rescue가 오탐을 줄임 (FP 31 → 12, −61%).
 - **Jetson Orin NX**에서 실시간 동작 (`FPS_BENCHMARK.md`).
+
+### 학습/평가 분할 방식 (그리고 수치가 다른 이유)
+
+데이터를 나누는 방법은 두 가지입니다:
+
+**1. 피험자 의존 — 대부분 논문이 쓰는 방식.** 모든 사람 데이터를 섞은 뒤 train/test로 나눕니다. *같은 사람*이 양쪽에 다 들어갑니다. 모델이 이미 그 사람을 "봤기" 때문에 점수가 높게 나옵니다(**99.19%**). 게다가 우리 윈도우는 시간상 겹치는데, 무작위로 나누면 거의 같은 윈도우가 train과 test에 동시에 들어갈 수 있어 점수가 더 부풀려집니다.
+
+**2. 교차 피험자 / LOSO — 정직한 방식.** *한 사람 전체를 빼고* 나머지 16명으로 학습한 뒤, 그 처음 보는 사람만으로 평가합니다. 모델이 한 번도 본 적 없는 사람 → *새 환자*에서의 실제 성능(융합 **0.68**).
+
+**왜 논문들은 (더 쉬운) 첫 번째 방식을 쓸까?**
+- 수치가 더 높게 나옵니다 — 논문에 보기 좋습니다.
+- 더 쉽습니다 — 학습에 쓸 데이터가 더 많이 남습니다.
+- 낙상 데이터셋은 사람 수가 매우 적어서, 한 사람을 통째로 빼면 학습 데이터가 너무 적어집니다.
+- 다들 그렇게 하니까 "공정한 비교"를 위해 따라 합니다.
+- 함정: 모델이 이미 아는 사람으로 평가하므로 실환경 성능을 과대평가합니다.
+
+**우리 방식:** *둘 다* 보고합니다 — 선행 논문과 맞추기 위한 피험자 의존(0.97), 그리고 실제 새 환자 기준의 정직한 수치인 LOSO(0.68). 친구분들 말처럼 첫 번째 방식은 "본" 데이터로 평가하는 것이며, 그래서 우리는 두 번째도 함께 했습니다.
 
 ## 선행 연구 대비 벤치마크 (UP-Fall, front view)
 
