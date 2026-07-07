@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../strings.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -40,126 +42,148 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF16213E),
-        title: const Text('서버 설정', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(s.serverSettingsTitle),
+        leading: const BackButton(),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── 백엔드 서버 ──────────────────────────────────────────
-            const Text(
-              '백엔드 서버 URL',
-              style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+            // ── Backend URL ───────────────────────────────────────────────
+            Text(
+              s.backendUrlLabel,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              '인증·이벤트·리포트 등 앱 기능 서버 (예: 192.168.0.57)',
-              style: TextStyle(color: Colors.white38, fontSize: 12),
+            Text(
+              s.backendUrlHelp,
+              style: const TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 12,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             TextField(
               controller: _urlCtrl,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+              ),
               keyboardType: TextInputType.url,
-              decoration: InputDecoration(
-                hintText: 'http://192.168.x.x:8000',
-                hintStyle: const TextStyle(color: Colors.white38),
-                prefixIcon: const Icon(Icons.dns, color: Colors.white38),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.08),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF4FC3F7)),
-                ),
+              decoration: lightInputDeco(
+                'http://192.168.x.x:8000',
+                icon: Icons.dns_outlined,
               ),
             ),
+
             const SizedBox(height: 24),
 
-            // ── 엣지 디바이스 ─────────────────────────────────────────
-            const Text(
-              '엣지 디바이스 URL',
-              style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              '카메라 영상·AI 낙상감지 디바이스 (예: 192.168.0.53)',
-              style: TextStyle(color: Colors.white38, fontSize: 12),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _edgeUrlCtrl,
-              style: const TextStyle(color: Colors.white),
-              keyboardType: TextInputType.url,
-              decoration: InputDecoration(
-                hintText: 'http://192.168.x.x:8080',
-                hintStyle: const TextStyle(color: Colors.white38),
-                prefixIcon: const Icon(Icons.videocam, color: Colors.white38),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.08),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF4FC3F7)),
-                ),
+            // ── Edge URL ──────────────────────────────────────────────────
+            Text(
+              s.edgeUrlLabel,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 4),
+            Text(
+              s.edgeUrlHelp,
+              style: const TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _edgeUrlCtrl,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+              ),
+              keyboardType: TextInputType.url,
+              decoration: lightInputDeco(
+                'http://192.168.x.x:8000',
+                icon: Icons.videocam_outlined,
+              ),
+            ),
+
+            const SizedBox(height: 28),
 
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 52,
               child: ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _saved ? Colors.green : const Color(0xFF4FC3F7),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  backgroundColor: _saved
+                      ? AppColors.success
+                      : AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
                 ),
                 child: Text(
-                  _saved ? '저장 완료!' : '저장',
+                  _saved ? s.savedDone : s.save,
                   style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+
+            const SizedBox(height: 28),
+
+            // ── Info box ──────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                color: AppColors.primaryTint,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.white38, size: 16),
-                      SizedBox(width: 6),
-                      Text('연결 방법', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                      const Icon(
+                        Icons.info_outline,
+                        color: AppColors.primary,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        s.connectionGuideTitle,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    '• 백엔드 서버: 이 PC (192.168.0.57)\n'
-                    '• 엣지 디바이스: Jetson 등 카메라 장치 (192.168.0.53)\n'
-                    '• 모두 같은 WiFi에 연결되어 있어야 합니다.',
-                    style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.6),
+                  Text(
+                    s.connectionGuideBody,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      height: 1.7,
+                    ),
                   ),
                 ],
               ),

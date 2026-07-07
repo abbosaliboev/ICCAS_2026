@@ -233,14 +233,17 @@ def assign_device_to_user(device_token: str, user_id: str, stream_url: str = "")
 
 # ── fall event helpers ────────────────────────────────────────────────────────
 
-def create_fall_event(event_id, device_id, user_id, timestamp, category, clip_path=""):
+def create_fall_event(event_id, device_id, user_id, timestamp, category, clip_path="",
+                      direction="", estimated_injury=""):
     now = datetime.now().isoformat()
     conn = get_conn()
     conn.execute("""
         INSERT OR IGNORE INTO fall_events
-          (id, device_id, user_id, timestamp, category, video_path, is_acknowledged, created_at)
-        VALUES (?,?,?,?,?,?,0,?)
-    """, (event_id, device_id, user_id, timestamp, category, clip_path, now))
+          (id, device_id, user_id, timestamp, category, direction, estimated_injury,
+           video_path, is_acknowledged, created_at)
+        VALUES (?,?,?,?,?,?,?,?,0,?)
+    """, (event_id, device_id, user_id, timestamp, category, direction, estimated_injury,
+          clip_path, now))
     conn.commit()
     conn.close()
 

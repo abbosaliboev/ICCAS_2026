@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../app_theme.dart';
+import '../strings.dart';
 import 'register_screen.dart';
 import 'settings_screen.dart';
 
@@ -28,7 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _error = null);
     try {
-      await context.read<AuthProvider>().login(_userCtrl.text.trim(), _passCtrl.text);
+      await context.read<AuthProvider>().login(
+        _userCtrl.text.trim(),
+        _passCtrl.text,
+      );
     } catch (e) {
       setState(() => _error = e.toString());
     }
@@ -37,98 +42,128 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final s = S.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white70),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
             child: Form(
               key: _formKey,
               child: Column(
                 children: [
-                  const Icon(Icons.monitor_heart, size: 72, color: Color(0xFF4FC3F7)),
-                  const SizedBox(height: 12),
+                  // Logo
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(
+                      Icons.shield_rounded,
+                      size: 40,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const Text(
                     'MobiCare',
                     style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    '독거 노인 낙상 감지 시스템',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                  const SizedBox(height: 4),
+                  Text(
+                    s.loginTagline,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 40),
+
+                  // Fields
                   TextFormField(
                     controller: _userCtrl,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDeco('아이디', Icons.person),
-                    validator: (v) => v!.isEmpty ? '아이디를 입력하세요' : null,
+                    decoration: lightInputDeco(
+                      s.usernameHint,
+                      icon: Icons.person_outline,
+                    ),
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    validator: (v) => v!.isEmpty ? s.usernameRequired : null,
                     textInputAction: TextInputAction.next,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   TextFormField(
                     controller: _passCtrl,
                     obscureText: _obscure,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDeco('비밀번호', Icons.lock).copyWith(
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscure ? Icons.visibility_off : Icons.visibility,
-                          color: Colors.white54,
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    decoration:
+                        lightInputDeco(
+                          s.passwordHint,
+                          icon: Icons.lock_outline,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: AppColors.textTertiary,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                          ),
                         ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
-                    ),
-                    validator: (v) => v!.isEmpty ? '비밀번호를 입력하세요' : null,
+                    validator: (v) => v!.isEmpty ? s.passwordRequired : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
+
                   if (_error != null) ...[
                     const SizedBox(height: 12),
                     Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.withOpacity(0.4)),
+                        color: AppColors.dangerTint,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.danger.withOpacity(0.3),
+                        ),
                       ),
                       child: Text(
                         _error!,
-                        style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 13,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
                   ],
+
                   const SizedBox(height: 24),
+
+                  // Login button
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
+                    height: 54,
                     child: ElevatedButton(
                       onPressed: auth.loading ? null : _submit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4FC3F7),
-                        foregroundColor: Colors.black87,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.primary.withOpacity(
+                          0.5,
                         ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
                       ),
                       child: auth.loading
                           ? const SizedBox(
@@ -136,22 +171,68 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 22,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                color: Colors.black54,
+                                color: Colors.white,
                               ),
                             )
-                          : const Text('로그인', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          : Text(
+                              s.loginBtn,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  TextButton(
+                  const SizedBox(height: 12),
+
+                  // Register button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterScreen(),
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        s.registerBtn,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Server settings
+                  TextButton.icon(
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     ),
-                    child: const Text(
-                      '계정이 없으신가요? 회원가입',
-                      style: TextStyle(color: Color(0xFF4FC3F7)),
+                    icon: const Icon(
+                      Icons.dns_outlined,
+                      size: 16,
+                      color: AppColors.textTertiary,
                     ),
+                    label: Text(
+                      s.serverSettingsTitle,
+                      style: const TextStyle(
+                        color: AppColors.textTertiary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
                   ),
                 ],
               ),
@@ -161,21 +242,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
-  InputDecoration _inputDeco(String label, IconData icon) => InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54),
-        prefixIcon: Icon(icon, color: Colors.white38),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.08),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF4FC3F7)),
-        ),
-        errorStyle: const TextStyle(color: Colors.orangeAccent),
-      );
 }

@@ -3,13 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../providers/auth_provider.dart';
-
-const _kAlertMessage =
-    '낙상이 감지되었습니다. '
-    '보호자에게 연락 및 119 신고를 원하시면 "연락"이라고 말씀해주세요. '
-    '괜찮으시면 "아니"라고 말씀해주세요. '
-    '15초 간 응답이 없으시면 자동으로 119 문자 신고 및 보호자에게 연락 조치가 진행됩니다.';
+import '../strings.dart';
 
 class FallResponseOverlay extends StatefulWidget {
   final String eventId;
@@ -34,7 +30,7 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
   bool _ttsPlaying = true;
   bool _listening = false;
   bool _responded = false;
-  String _statusText = 'TTS 재생 중...';
+  String _statusText = '';
 
   @override
   void initState() {
@@ -51,19 +47,22 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
   }
 
   Future<void> _startTts() async {
-    await _tts.setLanguage('ko-KR');
+    final s = S.read(context);
+    _statusText = s.fallAlertTtsPlaying;
+
+    await _tts.setLanguage(s.isKorean ? 'ko-KR' : 'en-US');
     await _tts.setSpeechRate(0.45);
     await _tts.setVolume(1.0);
     _tts.setCompletionHandler(() {
       if (!mounted || _responded) return;
       setState(() {
         _ttsPlaying = false;
-        _statusText = '"연락" 또는 "아니"라고 말씀해주세요';
+        _statusText = S.read(context).fallAlertVoicePrompt;
       });
       _startCountdown();
       _startListening();
     });
-    await _tts.speak(_kAlertMessage);
+    await _tts.speak(s.fallAlertTtsMessage);
   }
 
   void _startCountdown() {
@@ -84,9 +83,7 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
     if (_responded) return;
     final available = await _stt.initialize(
       onStatus: (status) {
-        if (status == 'done' && !_responded && mounted) {
-          _startListening();
-        }
+        if (status == 'done' && !_responded && mounted) _startListening();
       },
     );
     if (!available || !mounted || _responded) return;
@@ -94,14 +91,30 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
     _stt.listen(
       onResult: (result) {
         if (!mounted || _responded) return;
-        final text = result.recognizedWords;
-        if (text.contains('연락') || text.contains('네') || text.contains('예')) {
+        final text = result.recognizedWords.toLowerCase();
+        final s = S.read(context);
+        final wantsHelp = s.isKorean
+            ? text.contains('연락') || text.contains('네') || text.contains('예')
+            : text.contains('help') ||
+                text.contains('yes') ||
+                text.contains('call') ||
+                text.contains('emergency');
+        final isOk = s.isKorean
+            ? text.contains('아니') || text.contains('괜찮') || text.contains('아냐')
+            : text.contains('no') ||
+                text.contains('okay') ||
+                text.contains('ok') ||
+                text.contains('fine') ||
+                text.contains("i'm ok") ||
+                text.contains('im ok');
+
+        if (wantsHelp) {
           _handleResponse(emergency: true);
-        } else if (text.contains('아니') || text.contains('괜찮') || text.contains('아냐')) {
+        } else if (isOk) {
           _handleResponse(emergency: false);
         }
       },
-      localeId: 'ko_KR',
+      localeId: S.read(context).isKorean ? 'ko_KR' : 'en_US',
       listenFor: const Duration(seconds: 14),
       pauseFor: const Duration(seconds: 4),
     );
@@ -115,20 +128,21 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
     await _stt.stop();
     if (mounted) setState(() => _listening = false);
 
+    final s = S.read(context);
     if (emergency) {
-      if (mounted) setState(() => _statusText = '연락 중...');
+      if (mounted) setState(() => _statusText = s.fallAlertContacting);
       try {
         final api = context.read<AuthProvider>().api;
         await Future.wait([
           api.notifyGuardianSms(widget.eventId),
           api.notifyEmergencySms(widget.eventId),
         ]);
-        if (mounted) setState(() => _statusText = '✅ 보호자 및 119에 연락 완료');
+        if (mounted) setState(() => _statusText = s.fallAlertContacted);
       } catch (_) {
-        if (mounted) setState(() => _statusText = '⚠️ 연락 처리 중 오류 발생');
+        if (mounted) setState(() => _statusText = s.fallAlertContactError);
       }
     } else {
-      if (mounted) setState(() => _statusText = '✅ 취소되었습니다. 안전하세요!');
+      if (mounted) setState(() => _statusText = s.fallAlertCanceled);
     }
 
     await Future.delayed(const Duration(seconds: 2));
@@ -137,145 +151,221 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
+
     return Material(
-      color: Colors.black.withOpacity(0.94),
+      color: const Color(0xFF280A08).withOpacity(0.92),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Warning icon
-              Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.18),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.redAccent, width: 2.5),
-                ),
-                child: const Icon(Icons.warning_rounded, color: Colors.redAccent, size: 52),
-              ),
-              const SizedBox(height: 32),
-
-              // Message box
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.redAccent.withOpacity(0.35)),
-                ),
-                child: const Text(
-                  _kAlertMessage,
-                  style: TextStyle(color: Colors.white, fontSize: 16, height: 1.65),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // Status text
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Text(
-                  _statusText,
-                  key: ValueKey(_statusText),
-                  style: TextStyle(
-                    color: _ttsPlaying ? Colors.blue.shade200 : Colors.greenAccent,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-
-              // Cancel button — available immediately, no need to wait for TTS to finish
-              if (_ttsPlaying) ...[
-                const SizedBox(height: 28),
-                SizedBox(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Alert card ────────────────────────────────────────────
+                Container(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _responded ? null : () => _handleResponse(emergency: false),
-                    icon: const Icon(Icons.check_circle),
-                    label: const Text('괜찮아요 (취소)', style: TextStyle(fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                ),
-              ],
-
-              // Countdown + buttons (shown after TTS)
-              if (!_ttsPlaying) ...[
-                const SizedBox(height: 24),
-                Text(
-                  '$_remaining초',
-                  style: TextStyle(
-                    color: _remaining <= 5 ? Colors.redAccent : Colors.white,
-                    fontSize: 52,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: _remaining / 15,
-                    backgroundColor: Colors.white12,
-                    color: _remaining <= 5 ? Colors.redAccent : Colors.orangeAccent,
-                    minHeight: 10,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _responded ? null : () => _handleResponse(emergency: true),
-                        icon: const Icon(Icons.phone),
-                        label: const Text('연락하기', style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _responded ? null : () => _handleResponse(emergency: false),
-                        icon: const Icon(Icons.check_circle),
-                        label: const Text('괜찮아요', style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_listening) ...[
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Column(
                     children: [
-                      const Icon(Icons.mic, color: Colors.greenAccent, size: 18),
-                      const SizedBox(width: 6),
-                      const Text(
-                        '마이크 활성화 중',
-                        style: TextStyle(color: Colors.greenAccent, fontSize: 13),
+                      // Red header
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(
+                          color: AppColors.dangerTint,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        child: Column(
+                          children: [
+                            // Glowing icon
+                            Container(
+                              width: 68,
+                              height: 68,
+                              decoration: BoxDecoration(
+                                color: AppColors.danger,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.danger.withOpacity(0.4),
+                                    blurRadius: 20,
+                                    spreadRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.warning_rounded,
+                                  color: Colors.white, size: 36),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              s.fallAlertTitle,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.dangerPressed,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              s.fallAlertMeta,
+                              style: const TextStyle(
+                                  color: AppColors.dangerPressed, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Body
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            // Status text
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: Text(
+                                _statusText.isEmpty
+                                    ? s.fallAlertTtsPlaying
+                                    : _statusText,
+                                key: ValueKey(_statusText),
+                                style: TextStyle(
+                                  color: _ttsPlaying
+                                      ? AppColors.primary
+                                      : AppColors.success,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+
+                            // Countdown (after TTS)
+                            if (!_ttsPlaying) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                s.fallAlertSeconds(_remaining),
+                                style: TextStyle(
+                                  color: _remaining <= 5
+                                      ? AppColors.danger
+                                      : AppColors.textPrimary,
+                                  fontSize: 44,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: LinearProgressIndicator(
+                                  value: _remaining / 15,
+                                  backgroundColor: AppColors.chip,
+                                  color: _remaining <= 5
+                                      ? AppColors.danger
+                                      : AppColors.warning,
+                                  minHeight: 8,
+                                ),
+                              ),
+                            ],
+
+                            const SizedBox(height: 20),
+
+                            // 119 button (primary)
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton.icon(
+                                onPressed: _responded
+                                    ? null
+                                    : () => _handleResponse(emergency: true),
+                                icon: const Icon(Icons.phone),
+                                label: Text(
+                                  s.fallAlertReport119,
+                                  style: const TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.w700),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.danger,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Guardian button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton.icon(
+                                onPressed: _responded
+                                    ? null
+                                    : () => _handleResponse(emergency: true),
+                                icon: const Icon(Icons.people_outline),
+                                label: Text(
+                                  s.fallAlertContactGuardian,
+                                  style: const TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.w700),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // OK button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: TextButton(
+                                onPressed: _responded
+                                    ? null
+                                    : () => _handleResponse(emergency: false),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.textSecondary,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: Text(
+                                  s.fallAlertConfirmed,
+                                  style: const TextStyle(
+                                      fontSize: 15, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ),
+
+                            if (_listening) ...[
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.mic,
+                                      color: AppColors.success, size: 14),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    s.fallAlertMicActive,
+                                    style: const TextStyle(
+                                        color: AppColors.success, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ],
-            ],
+            ),
           ),
         ),
       ),

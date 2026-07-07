@@ -3,17 +3,18 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
+import '../strings.dart';
 
 class _Zone {
   final double x, y, w, h;
   _Zone(this.x, this.y, this.w, this.h);
   Map<String, dynamic> toJson() => {'x': x, 'y': y, 'w': w, 'h': h};
   static _Zone fromJson(Map<String, dynamic> j) => _Zone(
-        (j['x'] as num).toDouble(),
-        (j['y'] as num).toDouble(),
-        (j['w'] as num).toDouble(),
-        (j['h'] as num).toDouble(),
+        (j['x'] as num).toDouble(), (j['y'] as num).toDouble(),
+        (j['w'] as num).toDouble(), (j['h'] as num).toDouble(),
       );
 }
 
@@ -30,8 +31,8 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   bool _saving = false;
   String _cameraType = 'front';
   String? _message;
+  bool _isError = false;
 
-  // drawing state
   Offset? _drawStart;
   Offset? _drawCurrent;
   final GlobalKey _canvasKey = GlobalKey();
@@ -44,7 +45,6 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
 
   Future<void> _load() async {
     final api = context.read<AuthProvider>().api;
-    // load saved zones + camera type
     try {
       final data = await api.getSafeZone();
       final zones = (data['zones'] as List?)
@@ -54,8 +54,6 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
       final cam = data['camera_type'] as String? ?? 'front';
       if (mounted) setState(() { _zones = zones; _cameraType = cam; });
     } catch (_) {}
-
-    // load snapshot
     await _fetchSnapshot();
   }
 
@@ -109,52 +107,68 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
     if (rw > 0.01 && rh > 0.01) {
       setState(() {
         _zones.add(_Zone(
-          x1.min(x2) / size.width,
-          y1.min(y2) / size.height,
-          rw,
-          rh,
+          _dmin(x1, x2) / size.width,
+          _dmin(y1, y2) / size.height,
+          rw, rh,
         ));
       });
     }
     setState(() { _drawStart = null; _drawCurrent = null; });
   }
 
+  double _dmin(double a, double b) => a < b ? a : b;
+
   Future<void> _save() async {
+    final s = S.read(context);
     setState(() { _saving = true; _message = null; });
     try {
       final api = context.read<AuthProvider>().api;
       await api.setSafeZone(_zones.map((z) => z.toJson()).toList());
       await api.setCameraType(_cameraType);
-      setState(() => _message = '안전 구역이 저장되었습니다');
+      setState(() { _message = s.safeZoneSaved; _isError = false; });
     } catch (e) {
-      setState(() => _message = '저장 실패: $e');
+      setState(() { _message = s.saveFailed(e); _isError = true; });
     } finally {
       setState(() => _saving = false);
     }
   }
 
   Future<void> _clear() async {
+    final s = S.read(context);
     try {
       await context.read<AuthProvider>().api.clearSafeZone();
-      setState(() { _zones.clear(); _message = '구역이 삭제되었습니다'; });
+      setState(() { _zones.clear(); _message = s.safeZoneCleared; _isError = false; });
     } catch (e) {
-      setState(() => _message = '삭제 실패: $e');
+      setState(() { _message = s.deleteFailed(e); _isError = true; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final s      = S.of(context);
+    final isDark  = context.watch<ThemeProvider>().isDark;
+    final bg      = isDark ? DarkColors.bg      : AppColors.bg;
+    final surface = isDark ? DarkColors.surface  : Colors.white;
+    final border  = isDark ? DarkColors.border   : AppColors.border;
+    final primary = isDark ? DarkColors.primary  : AppColors.primary;
+    final textPri = isDark ? DarkColors.textPrimary  : AppColors.textPrimary;
+    final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF16213E),
-        title: const Text('안전 구역 설정', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: surface,
+        foregroundColor: textPri,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Text(s.safeZoneTitle,
+            style: TextStyle(color: textPri, fontWeight: FontWeight.w700)),
+        iconTheme: IconThemeData(color: textPri),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white54),
+            icon: Icon(Icons.refresh, color: textSec),
             onPressed: _fetchSnapshot,
-            tooltip: '스냅샷 새로고침',
+            tooltip: s.snapshotRefresh,
           ),
         ],
       ),
@@ -163,43 +177,41 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // description
+            // ── Info banner ───────────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.08),
+                color: primary.withOpacity(0.07),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                border: Border.all(color: primary.withOpacity(0.2)),
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue, size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      '침대나 소파 등 낙상 감지를 제외할 구역을\n카메라 화면 위에 드래그하여 지정하세요.',
-                      style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // camera type selector
-            const Text('카메라 유형', style: TextStyle(color: Colors.white54, fontSize: 12)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _camChip('front', Icons.videocam, '정면 카메라'),
+              child: Row(children: [
+                Icon(Icons.info_outline, color: primary, size: 18),
                 const SizedBox(width: 10),
-                _camChip('top', Icons.camera_alt, 'CCTV (천장)'),
-              ],
+                Expanded(
+                  child: Text(
+                    s.safeZoneInfo,
+                    style: TextStyle(color: textPri, fontSize: 13, height: 1.5),
+                  ),
+                ),
+              ]),
             ),
             const SizedBox(height: 20),
 
-            // snapshot + drawing canvas
-            const Text('구역 그리기', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            // ── Camera type selector ──────────────────────────────────────
+            Text(s.cameraTypeLabel, style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Row(children: [
+              _camChip(isDark, surface, border, primary, textPri, textSec,
+                  'front', Icons.videocam_outlined, s.frontCameraLabel),
+              const SizedBox(width: 10),
+              _camChip(isDark, surface, border, primary, textPri, textSec,
+                  'top', Icons.camera_alt_outlined, s.ceilingCameraLabel),
+            ]),
+            const SizedBox(height: 20),
+
+            // ── Canvas ────────────────────────────────────────────────────
+            Text(s.drawZoneLabel, style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             AspectRatio(
               aspectRatio: 16 / 9,
@@ -207,37 +219,38 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                 decoration: BoxDecoration(
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white12),
+                  border: Border.all(color: border),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: _loadingSnapshot
-                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                    ? Center(child: CircularProgressIndicator(
+                        color: primary, strokeWidth: 2))
                     : GestureDetector(
                         key: _canvasKey,
                         onPanStart: _onPanStart,
                         onPanUpdate: _onPanUpdate,
                         onPanEnd: _onPanEnd,
                         child: CustomPaint(
-                          painter: _ZonePainter(
+                          foregroundPainter: _ZonePainter(
                             zones: _zones,
                             drawStart: _drawStart,
                             drawCurrent: _drawCurrent,
+                            primaryColor: primary,
                           ),
                           child: _snapshot != null
-                              ? Image.memory(
-                                  _snapshot!,
+                              ? Image.memory(_snapshot!,
                                   fit: BoxFit.cover,
                                   width: double.infinity,
-                                  height: double.infinity,
-                                )
-                              : const Center(
+                                  height: double.infinity)
+                              : Center(
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.videocam_off, color: Colors.white24, size: 40),
-                                      SizedBox(height: 8),
-                                      Text('카메라 연결 없음\n구역 그리기는 가능합니다',
-                                          style: TextStyle(color: Colors.white24, fontSize: 12),
+                                      const Icon(Icons.videocam_off,
+                                          color: Colors.white24, size: 40),
+                                      const SizedBox(height: 8),
+                                      Text(s.noCameraMsg,
+                                          style: const TextStyle(color: Colors.white24, fontSize: 12),
                                           textAlign: TextAlign.center),
                                     ],
                                   ),
@@ -251,14 +264,14 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _zones.isEmpty ? '구역 없음' : '${_zones.length}개 구역 지정됨',
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  _zones.isEmpty ? s.noZoneLabel : s.zoneCount(_zones.length),
+                  style: TextStyle(color: textSec, fontSize: 12),
                 ),
                 if (_zones.isNotEmpty)
                   GestureDetector(
                     onTap: () => setState(() => _zones.removeLast()),
-                    child: const Text('마지막 구역 취소',
-                        style: TextStyle(color: Colors.orange, fontSize: 12)),
+                    child: Text(s.cancelLastZone,
+                        style: const TextStyle(color: AppColors.warning, fontSize: 12)),
                   ),
               ],
             ),
@@ -268,15 +281,20 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _message!.contains('실패')
-                      ? Colors.red.withOpacity(0.1)
-                      : Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: _isError
+                      ? Colors.red.withOpacity(0.08)
+                      : Colors.green.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _isError
+                        ? Colors.red.withOpacity(0.3)
+                        : Colors.green.withOpacity(0.3),
+                  ),
                 ),
                 child: Text(
                   _message!,
                   style: TextStyle(
-                    color: _message!.contains('실패') ? Colors.redAccent : Colors.greenAccent,
+                    color: _isError ? Colors.red : Colors.green,
                     fontSize: 13,
                   ),
                   textAlign: TextAlign.center,
@@ -285,127 +303,114 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
             ],
 
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _saving ? null : _clear,
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                    label: const Text('구역 삭제', style: TextStyle(color: Colors.redAccent)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.redAccent.withOpacity(0.4)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _saving ? null : _clear,
+                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+                  label: Text(s.delete, style: const TextStyle(color: Colors.redAccent)),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.redAccent.withOpacity(0.4)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving
-                        ? const SizedBox(
-                            width: 16, height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54))
-                        : const Icon(Icons.save),
-                    label: Text(_saving ? '저장 중...' : '저장'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4FC3F7),
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(width: 16, height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.save, size: 18),
+                  label: Text(_saving ? s.saving : s.save),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ]),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _camChip(String value, IconData icon, String label) => Expanded(
+  Widget _camChip(bool isDark, Color surface, Color border, Color primary,
+      Color textPri, Color textSec,
+      String value, IconData icon, String label) =>
+      Expanded(
         child: GestureDetector(
           onTap: () => setState(() => _cameraType = value),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
               color: _cameraType == value
-                  ? const Color(0xFF4FC3F7).withOpacity(0.15)
-                  : Colors.white.withOpacity(0.05),
+                  ? primary.withOpacity(0.10)
+                  : (isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03)),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: _cameraType == value
-                    ? const Color(0xFF4FC3F7)
-                    : Colors.white12,
+                color: _cameraType == value ? primary : border,
               ),
             ),
-            child: Column(
-              children: [
-                Icon(icon,
-                    color: _cameraType == value
-                        ? const Color(0xFF4FC3F7)
-                        : Colors.white38,
-                    size: 22),
-                const SizedBox(height: 4),
-                Text(label,
-                    style: TextStyle(
-                      color: _cameraType == value
-                          ? const Color(0xFF4FC3F7)
-                          : Colors.white38,
-                      fontSize: 12,
-                    )),
-              ],
-            ),
+            child: Column(children: [
+              Icon(icon,
+                  color: _cameraType == value ? primary : textSec,
+                  size: 22),
+              const SizedBox(height: 4),
+              Text(label,
+                  style: TextStyle(
+                    color: _cameraType == value ? primary : textSec,
+                    fontSize: 12, fontWeight: FontWeight.w500,
+                  )),
+            ]),
           ),
         ),
       );
 }
 
-// ── Painter ───────────────────────────────────────────────────────────────────
+// ── Painter ────────────────────────────────────────────────────────────────────
 
 class _ZonePainter extends CustomPainter {
   final List<_Zone> zones;
   final Offset? drawStart;
   final Offset? drawCurrent;
+  final Color primaryColor;
 
-  _ZonePainter({required this.zones, this.drawStart, this.drawCurrent});
+  _ZonePainter({required this.zones, this.drawStart, this.drawCurrent,
+    required this.primaryColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final fill = Paint()
-      ..color = Colors.blue.withOpacity(0.25)
+      ..color = primaryColor.withOpacity(0.2)
       ..style = PaintingStyle.fill;
     final stroke = Paint()
-      ..color = Colors.blue.shade300
+      ..color = primaryColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 
     for (final z in zones) {
       final rect = Rect.fromLTWH(
-        z.x * size.width,
-        z.y * size.height,
-        z.w * size.width,
-        z.h * size.height,
+        z.x * size.width, z.y * size.height,
+        z.w * size.width, z.h * size.height,
       );
       canvas.drawRect(rect, fill);
       canvas.drawRect(rect, stroke);
     }
 
-    // in-progress drawing
     if (drawStart != null && drawCurrent != null) {
       final rect = Rect.fromPoints(drawStart!, drawCurrent!);
-      final dFill = Paint()
-        ..color = Colors.orange.withOpacity(0.2)
-        ..style = PaintingStyle.fill;
-      final dStroke = Paint()
-        ..color = Colors.orange
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..strokeCap = StrokeCap.round;
-      canvas.drawRect(rect, dFill);
-      canvas.drawRect(rect, dStroke);
+      canvas.drawRect(rect,
+          Paint()..color = Colors.orange.withOpacity(0.2)..style = PaintingStyle.fill);
+      canvas.drawRect(rect,
+          Paint()..color = Colors.orange..style = PaintingStyle.stroke..strokeWidth = 2);
     }
   }
 
@@ -414,8 +419,4 @@ class _ZonePainter extends CustomPainter {
       old.zones != zones ||
       old.drawStart != drawStart ||
       old.drawCurrent != drawCurrent;
-}
-
-extension _DoubleMin on double {
-  double min(double other) => this < other ? this : other;
 }

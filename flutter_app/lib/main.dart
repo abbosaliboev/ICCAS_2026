@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/theme_provider.dart';
+import 'providers/settings_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'app_theme.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthProvider()..init(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..init()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
+      ],
       child: const MobiCareApp(),
     ),
   );
@@ -18,17 +26,24 @@ class MobiCareApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider    = context.watch<ThemeProvider>();
+    final settingsProvider = context.watch<SettingsProvider>();
     return MaterialApp(
       title: 'MobiCare',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF4FC3F7),
-          surface: Color(0xFF16213E),
-        ),
-        scaffoldBackgroundColor: const Color(0xFF1A1A2E),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeProvider.themeMode,
+      locale: settingsProvider.locale,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ko'), Locale('en'), Locale('es'),
+        Locale('fr'), Locale('ru'), Locale('zh'),
+      ],
       home: const _RootRouter(),
     );
   }
@@ -40,16 +55,42 @@ class _RootRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final isDark = context.watch<ThemeProvider>().isDark;
+    final bg = isDark ? DarkColors.bg : AppColors.bg;
+    final textColor = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
+    final primary = isDark ? DarkColors.primary : AppColors.primary;
+
     if (auth.loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF1A1A2E),
+      return Scaffold(
+        backgroundColor: bg,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.monitor_heart, size: 64, color: Color(0xFF4FC3F7)),
-              SizedBox(height: 20),
-              CircularProgressIndicator(color: Color(0xFF4FC3F7), strokeWidth: 2),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: primary,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Icon(Icons.shield_rounded, size: 44, color: Colors.white),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'MobiCare',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(color: primary, strokeWidth: 2.5),
+              ),
             ],
           ),
         ),
