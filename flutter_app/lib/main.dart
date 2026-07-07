@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'app_theme.dart';
 
 void main() {
   runApp(
@@ -21,14 +22,7 @@ class MobiCareApp extends StatelessWidget {
     return MaterialApp(
       title: 'MobiCare',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF4FC3F7),
-          surface: Color(0xFF16213E),
-        ),
-        scaffoldBackgroundColor: const Color(0xFF1A1A2E),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
       home: const _RootRouter(),
     );
   }
@@ -41,15 +35,39 @@ class _RootRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     if (auth.loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF1A1A2E),
+      return Scaffold(
+        backgroundColor: AppColors.bg,
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.monitor_heart, size: 64, color: Color(0xFF4FC3F7)),
-              SizedBox(height: 20),
-              CircularProgressIndicator(color: Color(0xFF4FC3F7), strokeWidth: 2),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Icon(Icons.shield_rounded, size: 44, color: Colors.white),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'MobiCare',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                  strokeWidth: 2.5,
+                ),
+              ),
             ],
           ),
         ),

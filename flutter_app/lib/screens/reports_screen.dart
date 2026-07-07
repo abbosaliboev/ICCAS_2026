@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../models/fall_event.dart';
 import 'event_detail_screen.dart';
@@ -52,13 +53,9 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
           case _Period.all:
             return true;
         }
-      } catch (_) {
-        return true;
-      }
+      } catch (_) { return true; }
     }).toList();
   }
-
-  // ── stats ────────────────────────────────────────────────────────────────
 
   int get _totalCount => _filtered.length;
   int get _severeCount => _filtered.where((e) => e.isSevere).length;
@@ -74,25 +71,21 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
     }
     if (hourCounts.isEmpty) return '—';
     final peak = hourCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
-    return '$peak시';
+    final end = (peak + 2).clamp(0, 23);
+    return '오후 $peak~${end}시';
   }
 
   String get _lastOccurrence {
     if (_filtered.isEmpty) return '—';
     try {
-      final sorted = [..._filtered]
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      final sorted = [..._filtered]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
       final dt = DateTime.parse(sorted.first.timestamp).toLocal();
       final diff = DateTime.now().difference(dt);
       if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
       if (diff.inHours < 24) return '${diff.inHours}시간 전';
-      return '${diff.inDays}일 전';
-    } catch (_) {
-      return '—';
-    }
+      return '오늘 ${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
+    } catch (_) { return '—'; }
   }
-
-  // ── bar chart data (daily, last N days) ──────────────────────────────────
 
   List<_DayBar> get _chartData {
     final days = _period == _Period.today ? 1
@@ -117,101 +110,145 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
     super.build(context);
     final filtered = _filtered;
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF16213E),
-        title: const Text('리포트', style: TextStyle(color: Colors.white)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white54),
-            onPressed: _load,
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF4FC3F7)))
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // ── Period tabs ─────────────────────────────────────────
-                  _PeriodTabs(
-                    selected: _period,
-                    onChanged: (p) => setState(() => _period = p),
-                  ),
-                  const SizedBox(height: 16),
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2))
+            : RefreshIndicator(
+                color: AppColors.primary,
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  children: [
+                    // ── Title ───────────────────────────────────────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '리포트',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary),
+                          onPressed: _load,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
-                  // ── Stats cards ─────────────────────────────────────────
-                  Row(
-                    children: [
-                      _StatCard('총 낙상', '$_totalCount회', Icons.warning_rounded, Colors.redAccent),
-                      const SizedBox(width: 10),
-                      _StatCard('위험 시간대', _peakHour, Icons.access_time, Colors.orangeAccent),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _StatCard('중증', '$_severeCount회', Icons.local_hospital, Colors.red.shade700),
-                      const SizedBox(width: 10),
-                      _StatCard('마지막 발생', _lastOccurrence, Icons.history, Colors.blue.shade300),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── Bar chart ────────────────────────────────────────────
-                  if (_period != _Period.today) ...[
-                    _sectionLabel('일별 낙상 현황'),
-                    const SizedBox(height: 10),
-                    Container(
-                      height: 160,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF16213E),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white.withOpacity(0.07)),
-                      ),
-                      child: _BarChart(data: _chartData),
+                    // ── Period segment ──────────────────────────────────────
+                    _PeriodSegment(
+                      selected: _period,
+                      onChanged: (p) => setState(() => _period = p),
                     ),
                     const SizedBox(height: 20),
-                  ],
 
-                  // ── Events list ──────────────────────────────────────────
-                  _sectionLabel('낙상 목록 (${filtered.length}건)'),
-                  const SizedBox(height: 10),
-                  if (filtered.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.04),
-                        borderRadius: BorderRadius.circular(12),
+                    // ── Stats grid 2×2 ──────────────────────────────────────
+                    Row(
+                      children: [
+                        _StatCard(
+                          label: '총 낙상 수',
+                          value: '$_totalCount건',
+                          valueColor: AppColors.textPrimary,
+                        ),
+                        const SizedBox(width: 10),
+                        _StatCard(
+                          label: '중증 이벤트',
+                          value: '$_severeCount건',
+                          valueColor: _severeCount > 0 ? AppColors.danger : AppColors.textPrimary,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        _StatCard(
+                          label: '위험 시간대',
+                          value: _peakHour,
+                          valueColor: AppColors.textPrimary,
+                        ),
+                        const SizedBox(width: 10),
+                        _StatCard(
+                          label: '마지막 발생',
+                          value: _lastOccurrence,
+                          valueColor: AppColors.textPrimary,
+                          smallValue: true,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Bar chart ────────────────────────────────────────────
+                    if (_period != _Period.today) ...[
+                      const Text(
+                        '일별 낙상 현황',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                      child: const Center(
-                        child: Text('해당 기간 낙상 이벤트 없음',
-                            style: TextStyle(color: Colors.white38)),
+                      const SizedBox(height: 10),
+                      Container(
+                        height: 160,
+                        padding: const EdgeInsets.all(14),
+                        decoration: cardDeco(radius: 16),
+                        child: _BarChart(data: _chartData),
                       ),
-                    )
-                  else
-                    ...filtered.map((e) => _EventTile(event: e)),
-                ],
+                      const SizedBox(height: 20),
+                    ],
+
+                    // ── Events list ──────────────────────────────────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '낙상 목록',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '${filtered.length}건',
+                          style: const TextStyle(
+                              color: AppColors.textTertiary, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (filtered.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: cardDeco(radius: 14),
+                        child: const Center(
+                          child: Text(
+                            '해당 기간 낙상 이벤트 없음',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ),
+                      )
+                    else
+                      ...filtered.map((e) => _EventTile(event: e)),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
-
-  Widget _sectionLabel(String text) => Text(
-        text,
-        style: const TextStyle(color: Colors.white54, fontSize: 12),
-      );
 }
 
-// ── Period tabs ───────────────────────────────────────────────────────────────
+// ── Period segment tabs ───────────────────────────────────────────────────────
 
-class _PeriodTabs extends StatelessWidget {
+class _PeriodSegment extends StatelessWidget {
   final _Period selected;
   final ValueChanged<_Period> onChanged;
-  const _PeriodTabs({required this.selected, required this.onChanged});
+  const _PeriodSegment({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -222,9 +259,10 @@ class _PeriodTabs extends StatelessWidget {
       _Period.all: '전체',
     };
     return Container(
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.chip,
+        borderRadius: BorderRadius.circular(100),
       ),
       child: Row(
         children: _Period.values.map((p) {
@@ -233,22 +271,19 @@ class _PeriodTabs extends StatelessWidget {
             child: GestureDetector(
               onTap: () => onChanged(p),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFF4FC3F7).withOpacity(0.2) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: active
-                      ? Border.all(color: const Color(0xFF4FC3F7).withOpacity(0.6))
-                      : null,
+                  color: active ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(100),
                 ),
                 child: Text(
                   labels[p]!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: active ? const Color(0xFF4FC3F7) : Colors.white38,
-                    fontSize: 12,
-                    fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                    color: active ? Colors.white : AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.normal,
                   ),
                 ),
               ),
@@ -263,31 +298,40 @@ class _PeriodTabs extends StatelessWidget {
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
-  final String label, value;
-  final IconData icon;
-  final Color color;
-  const _StatCard(this.label, this.value, this.icon, this.color);
+  final String label;
+  final String value;
+  final Color valueColor;
+  final bool smallValue;
+
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    this.smallValue = false,
+  });
 
   @override
   Widget build(BuildContext context) => Expanded(
         child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF16213E),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.07)),
-          ),
+          padding: const EdgeInsets.all(16),
+          decoration: cardDeco(radius: 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 20),
+              Text(
+                label,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 8),
-              Text(value,
-                  style: TextStyle(
-                      color: color, fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              Text(
+                value,
+                style: TextStyle(
+                  color: valueColor,
+                  fontSize: smallValue ? 18 : 26,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ],
           ),
         ),
@@ -324,44 +368,58 @@ class _BarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
-    final barPaint = Paint()..color = const Color(0xFF4FC3F7).withOpacity(0.7);
-    final zeroPaint = Paint()..color = Colors.white12;
-    final textStyle = const TextStyle(color: Colors.white38, fontSize: 9);
 
-    final barW = (size.width / data.length) * 0.6;
-    final gap = size.width / data.length;
+    final zeroPaint = Paint()..color = AppColors.chip;
     const labelH = 20.0;
     final chartH = size.height - labelH;
+    final barW = (size.width / data.length) * 0.55;
+    final gap = size.width / data.length;
 
     for (int i = 0; i < data.length; i++) {
       final d = data[i];
       final x = gap * i + gap / 2;
-      final barH = maxCount == 0 ? 0.0 : (d.count / maxCount) * (chartH - 10);
+      final ratio = maxCount == 0 ? 0.0 : d.count / maxCount;
+      final barH = (ratio * (chartH - 12)).clamp(0.0, chartH);
 
-      // bar
+      // bar color: grey → amber → red based on ratio
+      final Color barColor;
+      if (d.count == 0) {
+        barColor = AppColors.chip;
+      } else if (ratio < 0.4) {
+        barColor = AppColors.textTertiary;
+      } else if (ratio < 0.7) {
+        barColor = AppColors.warning;
+      } else {
+        barColor = AppColors.danger;
+      }
+
       final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x - barW / 2, chartH - barH, barW, barH.clamp(2.0, chartH)),
-        const Radius.circular(3),
+        Rect.fromLTWH(x - barW / 2, chartH - barH, barW, barH.clamp(3.0, chartH)),
+        const Radius.circular(4),
       );
-      canvas.drawRRect(rect, d.count > 0 ? barPaint : zeroPaint);
+      canvas.drawRRect(rect, d.count > 0 ? (Paint()..color = barColor) : zeroPaint);
 
-      // count label above bar
       if (d.count > 0) {
         final tp = TextPainter(
-          text: TextSpan(text: '${d.count}', style: textStyle),
+          text: TextSpan(
+            text: '${d.count}',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+          ),
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(canvas, Offset(x - tp.width / 2, chartH - barH - 14));
       }
 
-      // date label below
       final showLabel = data.length <= 10 || i % (data.length ~/ 7 + 1) == 0;
       if (showLabel) {
         final label = data.length <= 7
             ? '${d.date.month}/${d.date.day}'
             : '${d.date.day}일';
         final tp = TextPainter(
-          text: TextSpan(text: label, style: textStyle),
+          text: TextSpan(
+            text: label,
+            style: const TextStyle(color: AppColors.textTertiary, fontSize: 9),
+          ),
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(canvas, Offset(x - tp.width / 2, chartH + 4));
@@ -389,20 +447,22 @@ class _EventTile extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF16213E),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: event.isSevere
-                  ? Colors.red.withOpacity(0.3)
-                  : Colors.orange.withOpacity(0.3),
-            ),
-          ),
+          decoration: cardDeco(radius: 14),
           child: Row(
             children: [
-              Icon(Icons.person_off,
-                  color: event.isSevere ? Colors.redAccent : Colors.orangeAccent,
-                  size: 20),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: event.isSevere ? AppColors.dangerTint : AppColors.warningTint,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.person_off_outlined,
+                  color: event.isSevere ? AppColors.danger : AppColors.warning,
+                  size: 20,
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -411,30 +471,32 @@ class _EventTile extends StatelessWidget {
                     Text(
                       event.isSevere ? '심각한 낙상' : '낙상 의심',
                       style: TextStyle(
-                        color: event.isSevere ? Colors.redAccent : Colors.orangeAccent,
-                        fontWeight: FontWeight.bold,
+                        color: event.isSevere ? AppColors.danger : AppColors.warningText,
+                        fontWeight: FontWeight.w700,
                         fontSize: 13,
                       ),
                     ),
-                    Text(_formatTs(event.timestamp),
-                        style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                    Text(
+                      _formatTs(event.timestamp),
+                      style: const TextStyle(color: AppColors.textTertiary, fontSize: 11),
+                    ),
                   ],
                 ),
               ),
               if (event.isAcknowledged)
-                const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16)
+                const Icon(Icons.check_circle, color: AppColors.success, size: 18)
               else
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6),
+                    color: AppColors.dangerTint,
+                    borderRadius: BorderRadius.circular(100),
                   ),
                   child: const Text('미확인',
-                      style: TextStyle(color: Colors.redAccent, fontSize: 10)),
+                      style: TextStyle(color: AppColors.danger, fontSize: 10, fontWeight: FontWeight.w700)),
                 ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+              const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 18),
             ],
           ),
         ),
@@ -443,10 +505,8 @@ class _EventTile extends StatelessWidget {
   String _formatTs(String ts) {
     try {
       final dt = DateTime.parse(ts).toLocal();
-      return '${dt.year}.${dt.month.toString().padLeft(2,'0')}.${dt.day.toString().padLeft(2,'0')} '
-          '${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
-    } catch (_) {
-      return ts;
-    }
+      return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')} '
+          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) { return ts; }
   }
 }

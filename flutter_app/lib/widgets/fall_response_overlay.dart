@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:provider/provider.dart';
+import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 
 const _kAlertMessage =
@@ -68,10 +69,7 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
 
   void _startCountdown() {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) {
-        t.cancel();
-        return;
-      }
+      if (!mounted) { t.cancel(); return; }
       setState(() => _remaining--);
       if (_remaining <= 0) {
         t.cancel();
@@ -84,9 +82,7 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
     if (_responded) return;
     final available = await _stt.initialize(
       onStatus: (status) {
-        if (status == 'done' && !_responded && mounted) {
-          _startListening();
-        }
+        if (status == 'done' && !_responded && mounted) _startListening();
       },
     );
     if (!available || !mounted || _responded) return;
@@ -123,12 +119,12 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
           api.notifyGuardianSms(widget.eventId),
           api.notifyEmergencySms(widget.eventId),
         ]);
-        if (mounted) setState(() => _statusText = '✅ 보호자 및 119에 연락 완료');
+        if (mounted) setState(() => _statusText = '보호자 및 119에 연락 완료');
       } catch (_) {
-        if (mounted) setState(() => _statusText = '⚠️ 연락 처리 중 오류 발생');
+        if (mounted) setState(() => _statusText = '연락 처리 중 오류 발생');
       }
     } else {
-      if (mounted) setState(() => _statusText = '✅ 취소되었습니다. 안전하세요!');
+      if (mounted) setState(() => _statusText = '취소되었습니다. 안전하세요!');
     }
 
     await Future.delayed(const Duration(seconds: 2));
@@ -138,125 +134,215 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withOpacity(0.94),
+      color: const Color(0xFF280A08).withOpacity(0.92),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Warning icon
-              Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.18),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.redAccent, width: 2.5),
-                ),
-                child: const Icon(Icons.warning_rounded, color: Colors.redAccent, size: 52),
-              ),
-              const SizedBox(height: 32),
-
-              // Message box
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.redAccent.withOpacity(0.35)),
-                ),
-                child: const Text(
-                  _kAlertMessage,
-                  style: TextStyle(color: Colors.white, fontSize: 16, height: 1.65),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // Status text
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Text(
-                  _statusText,
-                  key: ValueKey(_statusText),
-                  style: TextStyle(
-                    color: _ttsPlaying ? Colors.blue.shade200 : Colors.greenAccent,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Alert card ────────────────────────────────────────────
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                ),
-              ),
-
-              // Countdown + buttons (shown after TTS)
-              if (!_ttsPlaying) ...[
-                const SizedBox(height: 24),
-                Text(
-                  '$_remaining초',
-                  style: TextStyle(
-                    color: _remaining <= 5 ? Colors.redAccent : Colors.white,
-                    fontSize: 52,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: _remaining / 15,
-                    backgroundColor: Colors.white12,
-                    color: _remaining <= 5 ? Colors.redAccent : Colors.orangeAccent,
-                    minHeight: 10,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _responded ? null : () => _handleResponse(emergency: true),
-                        icon: const Icon(Icons.phone),
-                        label: const Text('연락하기', style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _responded ? null : () => _handleResponse(emergency: false),
-                        icon: const Icon(Icons.check_circle),
-                        label: const Text('괜찮아요', style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_listening) ...[
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Column(
                     children: [
-                      const Icon(Icons.mic, color: Colors.greenAccent, size: 18),
-                      const SizedBox(width: 6),
-                      const Text(
-                        '마이크 활성화 중',
-                        style: TextStyle(color: Colors.greenAccent, fontSize: 13),
+                      // Red header
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: const BoxDecoration(
+                          color: AppColors.dangerTint,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        child: Column(
+                          children: [
+                            // Glowing icon
+                            Container(
+                              width: 68,
+                              height: 68,
+                              decoration: BoxDecoration(
+                                color: AppColors.danger,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.danger.withOpacity(0.4),
+                                    blurRadius: 20,
+                                    spreadRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.warning_rounded,
+                                  color: Colors.white, size: 36),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text(
+                              '낙상이 감지되었습니다',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.dangerPressed,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              '방금 전 · 중증',
+                              style: TextStyle(
+                                  color: AppColors.dangerPressed, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Body
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            // Status text
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: Text(
+                                _statusText,
+                                key: ValueKey(_statusText),
+                                style: TextStyle(
+                                  color: _ttsPlaying
+                                      ? AppColors.primary
+                                      : AppColors.success,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+
+                            // Countdown (after TTS)
+                            if (!_ttsPlaying) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                '$_remaining초',
+                                style: TextStyle(
+                                  color: _remaining <= 5
+                                      ? AppColors.danger
+                                      : AppColors.textPrimary,
+                                  fontSize: 44,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: LinearProgressIndicator(
+                                  value: _remaining / 15,
+                                  backgroundColor: AppColors.chip,
+                                  color: _remaining <= 5
+                                      ? AppColors.danger
+                                      : AppColors.warning,
+                                  minHeight: 8,
+                                ),
+                              ),
+                            ],
+
+                            const SizedBox(height: 20),
+
+                            // 119 button (primary)
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton.icon(
+                                onPressed: _responded
+                                    ? null
+                                    : () => _handleResponse(emergency: true),
+                                icon: const Icon(Icons.phone),
+                                label: const Text(
+                                  '119 신고하기',
+                                  style: TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.w700),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.danger,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Guardian button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton.icon(
+                                onPressed: _responded
+                                    ? null
+                                    : () => _handleResponse(emergency: true),
+                                icon: const Icon(Icons.people_outline),
+                                label: const Text(
+                                  '보호자에게 연락',
+                                  style: TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.w700),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // OK button
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: TextButton(
+                                onPressed: _responded
+                                    ? null
+                                    : () => _handleResponse(emergency: false),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.textSecondary,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                ),
+                                child: const Text(
+                                  '확인했습니다',
+                                  style: TextStyle(
+                                      fontSize: 15, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ),
+
+                            if (_listening) ...[
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.mic, color: AppColors.success, size: 14),
+                                  const SizedBox(width: 5),
+                                  const Text(
+                                    '마이크 활성화 중',
+                                    style: TextStyle(
+                                        color: AppColors.success, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ],
-            ],
+            ),
           ),
         ),
       ),
