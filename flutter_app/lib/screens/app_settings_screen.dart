@@ -144,24 +144,19 @@ class AppSettingsScreen extends StatelessWidget {
 
   Widget _accountCard(BuildContext context, S s, dynamic user, String initial,
       bool isDark, Color primary) {
-    final surface = isDark ? DarkColors.surface : AppColors.surface;
     final border  = isDark ? DarkColors.border  : AppColors.border;
     final textP   = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
     final textS   = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
     final accentBg = user.isGuardian
-        ? (isDark ? const Color(0xFF2A1F1A) : AppColors.accentTint)
+        ? (isDark ? DarkColors.accentTint : AppColors.accentTint)
         : (isDark ? DarkColors.primaryTint  : AppColors.primaryTint);
     final accentFg = user.isGuardian
-        ? (isDark ? DarkColors.primary : AppColors.accent)
+        ? (isDark ? DarkColors.accent : AppColors.accent)
         : primary;
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: border),
-      ),
+      decoration: cardDeco(radius: 18, dark: isDark),
       child: Row(
         children: [
           CircleAvatar(
@@ -192,7 +187,7 @@ class AppSettingsScreen extends StatelessWidget {
                 context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
             style: OutlinedButton.styleFrom(
               foregroundColor: primary,
-              side: BorderSide(color: isDark ? DarkColors.border : AppColors.border),
+              side: BorderSide(color: border),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               minimumSize: Size.zero,
@@ -212,11 +207,7 @@ class AppSettingsScreen extends StatelessWidget {
       Color primary, Color chipBg, Color textP, Color textS) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? DarkColors.surface : AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? DarkColors.border : AppColors.border),
-      ),
+      decoration: cardDeco(radius: 14, dark: isDark),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -279,14 +270,9 @@ class AppSettingsScreen extends StatelessWidget {
 
   Widget _languagePicker(BuildContext context, S s, SettingsProvider settingsP,
       bool isDark, Color textP, Color textS, Color chipBg, Color primary) {
-    final surface = isDark ? DarkColors.surface : AppColors.surface;
-    final border  = isDark ? DarkColors.border  : AppColors.border;
-
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          color: surface, borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: border)),
+      decoration: cardDeco(radius: 14, dark: isDark),
       child: Row(
         children: [
           Container(
@@ -395,8 +381,6 @@ class AppSettingsScreen extends StatelessWidget {
 
   Widget _emergencyContactRow(BuildContext context, S s, SettingsProvider settingsP,
       bool isDark, Color textP, Color textS, Color primary) {
-    final surface = isDark ? DarkColors.surface : AppColors.surface;
-    final border  = isDark ? DarkColors.border  : AppColors.border;
     final chipBg  = isDark ? DarkColors.chip    : AppColors.chip;
     final hasContact = settingsP.contactPhone.isNotEmpty;
 
@@ -404,9 +388,7 @@ class AppSettingsScreen extends StatelessWidget {
       onTap: () => _showContactDialog(context, settingsP, isDark, primary),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-            color: surface, borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: border)),
+        decoration: cardDeco(radius: 14, dark: isDark),
         child: Row(
           children: [
             Container(
@@ -499,14 +481,9 @@ class AppSettingsScreen extends StatelessWidget {
 
   Widget _cameraTypeRow(BuildContext context, S s, SettingsProvider settingsP,
       bool isDark, Color textP, Color textS, Color chipBg, Color primary) {
-    final surface = isDark ? DarkColors.surface : AppColors.surface;
-    final border  = isDark ? DarkColors.border  : AppColors.border;
-
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          color: surface, borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: border)),
+      decoration: cardDeco(radius: 14, dark: isDark),
       child: Row(
         children: [
           Container(
@@ -674,8 +651,6 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surface = isDark ? DarkColors.surface : AppColors.surface;
-    final border  = isDark ? DarkColors.border  : AppColors.border;
     final chipBg  = isDark ? DarkColors.chip    : AppColors.chip;
     final textP   = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
     final textS   = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
@@ -686,9 +661,7 @@ class _SettingsRow extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-            color: surface, borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: border)),
+        decoration: cardDeco(radius: 14, dark: isDark),
         child: Row(
           children: [
             Container(

@@ -1,49 +1,59 @@
 import 'package:flutter/material.dart';
 
+// ── Design system ─────────────────────────────────────────────────────────────
+// One brand hue (blue) plus three fixed-meaning semantic hues — danger (severe),
+// warning (mild/needs attention), success (safe/confirmed) — and a single
+// secondary hue (violet) reserved for the guardian role badge. Every screen
+// pulls from this same set; don't introduce ad-hoc colors in individual
+// screens — extend this file instead so severity/role colors stay consistent
+// app-wide.
+
 class AppColors {
   // Light
-  static const bg = Color(0xFFFBF8F4);
-  static const surface = Color(0xFFFFFEFC);
-  static const border = Color(0xFFEAE5DC);
-  static const textPrimary = Color(0xFF2B2A28);
-  static const textSecondary = Color(0xFF6B6660);
-  static const textTertiary = Color(0xFF948E85);
-  static const primary = Color(0xFF6366F1);
-  static const primaryPressed = Color(0xFF4F46E5);
-  static const primaryTint = Color(0xFFEEF2FF);
-  static const success = Color(0xFF1A9460);
-  static const successTint = Color(0xFFE7F7EE);
-  static const danger = Color(0xFFD94035);
-  static const dangerPressed = Color(0xFFB82A21);
-  static const dangerTint = Color(0xFFFDEBEA);
-  static const warning = Color(0xFFEF9D2E);
-  static const warningText = Color(0xFFAD6E16);
-  static const warningTint = Color(0xFFFDF3E3);
-  static const accent = Color(0xFFE88A30);
-  static const accentTint = Color(0xFFFCEED8);
-  static const chip = Color(0xFFF2EFE9);
+  static const bg = Color(0xFFF7F9FC);
+  static const surface = Color(0xFFFFFFFF);
+  static const border = Color(0xFFE4E9F2);
+  static const textPrimary = Color(0xFF101828);
+  static const textSecondary = Color(0xFF667085);
+  static const textTertiary = Color(0xFF98A2B3);
+  static const primary = Color(0xFF2563EB);
+  static const primaryPressed = Color(0xFF1D4ED8);
+  static const primaryTint = Color(0xFFEBF2FE);
+  static const success = Color(0xFF16A34A);
+  static const successTint = Color(0xFFEDFBF1);
+  static const danger = Color(0xFFDC2626);
+  static const dangerPressed = Color(0xFFB91C1C);
+  static const dangerTint = Color(0xFFFDECEC);
+  static const warning = Color(0xFFD97706);
+  static const warningText = Color(0xFF92400E);
+  static const warningTint = Color(0xFFFEF6E7);
+  // secondary hue — guardian role badge only, not severity
+  static const accent = Color(0xFF7C3AED);
+  static const accentTint = Color(0xFFF1EBFC);
+  static const chip = Color(0xFFEEF1F6);
   AppColors._();
 }
 
 class DarkColors {
-  static const bg      = Color(0xFF111318);
-  static const surface = Color(0xFF1C1E24);
-  static const border  = Color(0xFF2E3038);
-  static const textPrimary   = Color(0xFFEBEBF5);
-  static const textSecondary = Color(0xFFAEAEB2);
-  static const textTertiary  = Color(0xFF636366);
-  static const primary    = Color(0xFF818CF8);
-  static const primaryTint = Color(0xFF1E1B4B);
-  static const success    = Color(0xFF30D158);
-  static const successTint = Color(0xFF0D2A1A);
-  static const danger     = Color(0xFFFF453A);
-  static const dangerTint  = Color(0xFF2A0F0D);
-  static const warning     = Color(0xFFFFD60A);
-  static const warningText  = Color(0xFFFFD60A);
-  static const warningTint  = Color(0xFF2A220A);
-  static const accent     = Color(0xFFFF9A3C);
-  static const accentTint  = Color(0xFF3A2010);
-  static const chip = Color(0xFF2C2E36);
+  static const bg      = Color(0xFF0B1220);
+  static const surface = Color(0xFF161E2E);
+  static const border  = Color(0xFF283449);
+  static const textPrimary   = Color(0xFFF0F3F9);
+  static const textSecondary = Color(0xFF94A0B8);
+  static const textTertiary  = Color(0xFF64748B);
+  static const primary    = Color(0xFF5B93F5);
+  static const primaryTint = Color(0xFF17233F);
+  static const success    = Color(0xFF3DBB6C);
+  static const successTint = Color(0xFF122A1D);
+  static const danger     = Color(0xFFF0554A);
+  static const dangerTint  = Color(0xFF301213);
+  static const warning     = Color(0xFFE0A030);
+  static const warningText  = Color(0xFFE0A030);
+  static const warningTint  = Color(0xFF2E2410);
+  // secondary hue — guardian role badge only, not severity
+  static const accent     = Color(0xFFA284EE);
+  static const accentTint  = Color(0xFF241C3D);
+  static const chip = Color(0xFF212C42);
   DarkColors._();
 }
 
@@ -143,14 +153,23 @@ class AppTheme {
   AppTheme._();
 }
 
-BoxDecoration cardDeco({double radius = 16, bool dark = false}) => BoxDecoration(
+/// Layered shadow (tight contact shadow + soft ambient shadow) reads as a
+/// single crisp, gently elevated surface — the standard two-layer technique
+/// modern design systems use instead of one flat drop shadow.
+BoxDecoration cardDeco({double radius = 16, bool dark = false, bool bordered = true}) => BoxDecoration(
       color: dark ? DarkColors.surface : AppColors.surface,
       borderRadius: BorderRadius.circular(radius),
+      border: bordered ? Border.all(color: dark ? DarkColors.border : AppColors.border) : null,
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(dark ? 0.18 : 0.06),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
+          color: Colors.black.withOpacity(dark ? 0.24 : 0.04),
+          blurRadius: 2,
+          offset: const Offset(0, 1),
+        ),
+        BoxShadow(
+          color: Colors.black.withOpacity(dark ? 0.20 : 0.05),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
         ),
       ],
     );

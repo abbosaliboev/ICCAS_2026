@@ -92,6 +92,22 @@ class TwoStageDetector:
         preds = self.predict_batch(x, seq_numpy[np.newaxis])
         return int(preds[0])
 
+    def predict_one_debug(
+        self,
+        x_tensor: torch.Tensor,
+        seq_numpy: np.ndarray,
+    ) -> tuple:
+        """Like predict_one, but also returns the raw Stage-1 probability (for diagnostics/logging)."""
+        x = x_tensor.unsqueeze(0).to(self.device)
+        prob = float(self._stage1_probs(x)[0])
+        if prob >= self.stage1_threshold:
+            pred = 1
+        elif prob >= self.rescue_threshold:
+            pred = self.physics.predict(seq_numpy)
+        else:
+            pred = 0
+        return pred, prob
+
     # ── threshold search ──────────────────────────────────────────────────────
 
     def tune_thresholds(

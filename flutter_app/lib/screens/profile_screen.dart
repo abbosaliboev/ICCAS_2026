@@ -163,14 +163,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: user.isGuardian
-                      ? Colors.purple.withOpacity(0.12)
+                      ? (isDark ? DarkColors.accentTint : AppColors.accentTint)
                       : primary.withOpacity(0.10),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   user.isGuardian ? s.guardianRole : s.careRecipientRole,
                   style: TextStyle(
-                    color: user.isGuardian ? Colors.purple : primary,
+                    color: user.isGuardian
+                        ? (isDark ? DarkColors.accent : AppColors.accent)
+                        : primary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -310,12 +312,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () => auth.logout(),
-                  icon: const Icon(Icons.logout, color: Colors.redAccent, size: 18),
+                  icon: Icon(Icons.logout, color: isDark ? DarkColors.danger : AppColors.danger, size: 18),
                   label: Text(s.logoutLabel,
-                      style: const TextStyle(color: Colors.redAccent)),
+                      style: TextStyle(color: isDark ? DarkColors.danger : AppColors.danger)),
                   style: OutlinedButton.styleFrom(
-                    side:
-                        BorderSide(color: Colors.redAccent.withOpacity(0.4)),
+                    side: BorderSide(
+                        color: (isDark ? DarkColors.danger : AppColors.danger).withOpacity(0.4)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),

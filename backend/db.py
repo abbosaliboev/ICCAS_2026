@@ -215,6 +215,16 @@ def update_device_stream_url(device_id: str, stream_url: str):
     conn.close()
 
 
+def get_latest_device():
+    """Most recently active device — used by the stream proxy to find the edge
+    device's self-reported address without requiring per-request device selection."""
+    conn = get_conn()
+    row  = conn.execute("SELECT * FROM devices WHERE stream_url IS NOT NULL AND stream_url != '' "
+                         "ORDER BY last_seen DESC LIMIT 1").fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
 def assign_device_to_user(device_token: str, user_id: str, stream_url: str = ""):
     conn = get_conn()
     now  = datetime.now().isoformat()

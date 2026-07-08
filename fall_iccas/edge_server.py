@@ -126,6 +126,20 @@ def start_mjpeg_server(port: int):
     log.info(f"MJPEG stream at http://0.0.0.0:{port}/video")
 
 
+def get_lan_ip() -> str:
+    """Best-effort LAN IP of this machine (the interface used for outbound
+    traffic) — doesn't actually send anything, just asks the OS for the route."""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
 # ── backend HTTP client ───────────────────────────────────────────────────────
 class BackendClient:
     def __init__(self, base_url: str, device_token: str):
@@ -146,6 +160,24 @@ class BackendClient:
         except Exception as e:
             log.debug(f"Config fetch failed: {e}")
         return {}
+
+    def report_stream_url(self, stream_url: str):
+        """Self-report this device's reachable MJPEG stream address so the
+        backend's stream proxy can find it without manual EDGE_STREAM_URL config
+        (useful when the edge server and backend run on different machines)."""
+        try:
+            r = requests.post(
+                f"{self.base}/api/device/stream-url",
+                json={"stream_url": stream_url},
+                headers=self.headers,
+                timeout=3,
+            )
+            if r.status_code == 200:
+                log.info(f"Reported stream URL to backend: {stream_url}")
+            else:
+                log.debug(f"Stream URL report got {r.status_code}")
+        except Exception as e:
+            log.debug(f"Stream URL report failed: {e}")
 
     def post_fall(self, event_id: str, category: str, timestamp: str) -> bool:
         payload = {
@@ -168,10 +200,10 @@ class BackendClient:
             log.warning(f"Cannot reach backend: {e}")
         return False
 
-    def upload_video(self, event_id: str, video_path: str):
+    def upload_video(self, event_id: str, video_path: str) -> bool:
         if not os.path.exists(video_path):
             log.warning(f"Video file not found: {video_path}")
-            return
+            return False
         try:
             with open(video_path, "rb") as f:
                 r = requests.post(
@@ -182,10 +214,11 @@ class BackendClient:
                 )
             if r.status_code in (200, 201):
                 log.info(f"Video uploaded for {event_id}")
-            else:
-                log.warning(f"Video upload got {r.status_code}: {r.text[:100]}")
+                return True
+            log.warning(f"Video upload got {r.status_code}: {r.text[:100]}")
         except Exception as e:
             log.warning(f"Video upload failed: {e}")
+        return False
 
     def resolve_fall(self, event_id: str):
         try:
@@ -341,7 +374,14 @@ def save_and_upload_clip(event_id: str, frames, clip_dir: str, client: BackendCl
         writer.release()
 
     log.info(f"Saved pre-fall clip: {clip_path} ({len(frames)} frames, {out_fps:.1f} fps)")
-    client.upload_video(event_id, clip_path)
+    if client.upload_video(event_id, clip_path):
+        # backend now holds the durable copy — don't let clips pile up on the edge device
+        try:
+            os.remove(clip_path)
+        except OSError as e:
+            log.warning(f"Could not remove local clip {clip_path}: {e}")
+    else:
+        log.warning(f"Keeping local clip {clip_path} — upload failed, will not retry automatically")
 
 
 # ── main loop ─────────────────────────────────────────────────────────────────
@@ -393,6 +433,8 @@ def main():
     clip_dir = args.clip_dir if os.path.isabs(args.clip_dir) else os.path.join(base, args.clip_dir)
     Path(clip_dir).mkdir(parents=True, exist_ok=True)
     client   = BackendClient(args.backend, args.device_token)
+    stream_url = f"http://{get_lan_ip()}:{args.stream_port}"
+    client.report_stream_url(stream_url)
 
     # resolve camera source — V4L2 for local indices, FFMPEG for RTSP/HTTP URLs
     src = int(args.source) if args.source.isdigit() else args.source
@@ -524,9 +566,11 @@ def main():
         person_visible = float(kp[:, 2].max()) > 0.15
         no_person_frames = 0 if person_visible else no_person_frames + 1
 
-        # reload config (safe zones + camera type) from backend API every 15 s
+        # reload config (safe zones + camera type) from backend API every 15 s;
+        # also re-report our stream URL in case the backend restarted and lost it
         if time.time() - last_cfg_reload > 15:
             load_config()
+            client.report_stream_url(stream_url)
             last_cfg_reload = time.time()
 
         # check if mid-hip is inside a safe zone
@@ -601,15 +645,24 @@ def main():
             near_edge = n_vis >= 1 and (vis_kp[:, 0].min() < edge_margin or vis_kp[:, 0].max() > 1 - edge_margin)
             if n_vis >= 9 and h_span <= h_span_thresh and not near_edge:
                 t_stgcn0 = time.time()
-                pred = detector.predict_one(x_t.squeeze(0), seq)
+                pred, stage1_prob = detector.predict_one_debug(x_t.squeeze(0), seq)
                 t_stgcn1 = time.time()
                 stgcn_fps = 0.9 * stgcn_fps + 0.1 / max(t_stgcn1 - t_stgcn0, 1e-6)
+                if pred == 1:
+                    log.info(f"FALL vote — stage1_prob={stage1_prob:.3f} (stage1_t={detector.stage1_threshold:.2f}, rescue_t={detector.rescue_threshold:.2f})")
 
             # personal standing baseline
             if not fall_active and is_standing(kp):
                 baseline_hip = 0.88 * baseline_hip + 0.12 * float(kp[[11,12],1].mean()) if baseline_hip > 0 else float(kp[[11,12],1].mean())
 
-            if pred == 1 and not in_safe_zone:
+            # posture veto: shoulders well above hips means the torso is upright
+            # (standing or sitting straight) — a real fall never leaves the torso vertical,
+            # so this overrides Stage-1 regardless of how confident the model is
+            upright = is_standing(kp)
+            if pred == 1 and upright:
+                log.info("FALL vote vetoed — torso upright (standing/sitting), not a fall")
+
+            if pred == 1 and not in_safe_zone and not upright:
                 fall_streak += 1
             else:
                 if not fall_active:

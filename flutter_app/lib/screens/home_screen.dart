@@ -767,8 +767,12 @@ class _RecentEventTile extends StatelessWidget {
     final textPri   = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
     final textTer   = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
     final isSevere  = event.isSevere;
-    final badgeBg   = isSevere ? AppColors.accentTint  : AppColors.warningTint;
-    final badgeText = isSevere ? AppColors.accent       : AppColors.warningText;
+    final severeColor = isDark ? DarkColors.danger : AppColors.danger;
+    final severeTint  = isDark ? DarkColors.dangerTint : AppColors.dangerTint;
+    final mildColor   = isDark ? DarkColors.warningText : AppColors.warningText;
+    final mildTint    = isDark ? DarkColors.warningTint : AppColors.warningTint;
+    final badgeBg   = isSevere ? severeTint  : mildTint;
+    final badgeText = isSevere ? severeColor : mildColor;
     final label     = isSevere ? s.severe : s.mild;
 
     return GestureDetector(
@@ -786,12 +790,12 @@ class _RecentEventTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isSevere ? AppColors.accentTint : AppColors.warningTint,
+                color: badgeBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.personal_injury_outlined,
-                color: isSevere ? AppColors.accent : AppColors.warningText,
+                color: badgeText,
                 size: 22,
               ),
             ),
@@ -809,7 +813,7 @@ class _RecentEventTile extends StatelessWidget {
                     event.isAcknowledged ? s.confirmed : s.needsConfirm,
                     style: TextStyle(
                       fontSize: 12,
-                      color: event.isAcknowledged ? textTer : AppColors.accent,
+                      color: event.isAcknowledged ? textTer : badgeText,
                     ),
                   ),
                 ],

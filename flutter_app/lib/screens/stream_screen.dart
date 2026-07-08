@@ -165,9 +165,10 @@ class _StreamScreenState extends State<StreamScreen>
                   height: 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    // status bar is always dark-toned regardless of app theme
                     color: _active && !_error
-                        ? Colors.greenAccent
-                        : Colors.redAccent,
+                        ? DarkColors.success
+                        : DarkColors.danger,
                   ),
                 ),
                 const SizedBox(width: 8),

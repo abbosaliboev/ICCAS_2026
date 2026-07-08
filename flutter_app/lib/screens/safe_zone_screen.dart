@@ -243,6 +243,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                             drawStart: _drawStart,
                             drawCurrent: _drawCurrent,
                             primaryColor: primary,
+                            drawColor: isDark ? DarkColors.warning : AppColors.warning,
                           ),
                           child: _snapshot != null
                               ? Image.memory(_snapshot!,
@@ -342,12 +343,14 @@ class _ZonePainter extends CustomPainter {
   final Offset? drawStart;
   final Offset? drawCurrent;
   final Color primaryColor;
+  final Color drawColor;
 
   _ZonePainter({
     required this.zones,
     this.drawStart,
     this.drawCurrent,
     required this.primaryColor,
+    required this.drawColor,
   });
 
   @override
@@ -374,12 +377,12 @@ class _ZonePainter extends CustomPainter {
       canvas.drawRect(
           rect,
           Paint()
-            ..color = Colors.orange.withOpacity(0.2)
+            ..color = drawColor.withOpacity(0.2)
             ..style = PaintingStyle.fill);
       canvas.drawRect(
           rect,
           Paint()
-            ..color = Colors.orange
+            ..color = drawColor
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2);
     }

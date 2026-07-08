@@ -108,6 +108,8 @@ class S {
   // ── Events screen — bulk delete ───────────────────────────────────────────
   String get selectBtn => _t('선택', 'Select');
   String get cancelSelect => _t('취소', 'Cancel');
+  String get selectAll => _t('전체 선택', 'Select All');
+  String get deselectAll => _t('전체 해제', 'Deselect All');
   String get deleteSelectedBtn => _t('선택 항목 삭제', 'Delete Selected');
   String selectedCount(int n) => _ko ? '${n}개 선택됨' : '$n selected';
   String deleteSelectedTitle(int n) => _ko ? '${n}개 삭제' : 'Delete $n Items';

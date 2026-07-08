@@ -589,12 +589,33 @@ async def transcribe_speech(file: UploadFile = File(...), user=Depends(auth_user
 
 
 # ── MJPEG stream proxy ────────────────────────────────────────────────────────
-# Edge server runs on the same machine at localhost:8081.
+# The edge server (edge_server.py) may run on a different machine than this
+# backend. edge_server.py self-reports its own reachable address on startup via
+# POST /api/device/stream-url, so this is normally zero-config. EDGE_STREAM_URL /
+# EDGE_SNAPSHOT_URL (settable in backend/.env) are only a fallback for before any
+# device has reported in, or for edge servers running an older version.
 # Proxying here lets the browser load the stream from the same origin (port 8000),
 # avoiding CORS issues and the need to expose port 8081 to the network separately.
 
 EDGE_STREAM_URL     = os.environ.get("EDGE_STREAM_URL",     "http://localhost:8081/video")
 EDGE_SNAPSHOT_URL   = os.environ.get("EDGE_SNAPSHOT_URL",  "http://localhost:8081/snapshot")
+
+
+def _edge_stream_url() -> str:
+    """Prefer the edge device's self-reported address (POST /api/device/stream-url,
+    sent automatically by edge_server.py on startup) — falls back to the static
+    EDGE_STREAM_URL env var only if no device has reported in yet."""
+    dev = db.get_latest_device()
+    if dev and dev.get("stream_url"):
+        return dev["stream_url"].rstrip("/") + "/video"
+    return EDGE_STREAM_URL
+
+
+def _edge_snapshot_url() -> str:
+    dev = db.get_latest_device()
+    if dev and dev.get("stream_url"):
+        return dev["stream_url"].rstrip("/") + "/snapshot"
+    return EDGE_SNAPSHOT_URL
 
 
 @app.get("/api/stream/video")
@@ -604,7 +625,7 @@ async def proxy_stream():
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(connect=3.0, read=None, write=None, pool=None)
             ) as client:
-                async with client.stream("GET", EDGE_STREAM_URL) as r:
+                async with client.stream("GET", _edge_stream_url()) as r:
                     async for chunk in r.aiter_bytes(chunk_size=4096):
                         yield chunk
         except Exception as exc:
@@ -624,7 +645,7 @@ async def stream_snapshot():
     from fastapi.responses import Response
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(2.0)) as client:
-            r = await client.get(EDGE_SNAPSHOT_URL)
+            r = await client.get(_edge_snapshot_url())
             return Response(content=r.content, media_type="image/jpeg",
                             headers={"Cache-Control": "no-cache, no-store"})
     except Exception:
@@ -637,10 +658,11 @@ async def stream_sse():
     import asyncio, base64
 
     async def _generate():
+        snapshot_url = _edge_snapshot_url()
         async with httpx.AsyncClient(timeout=httpx.Timeout(2.0)) as client:
             while True:
                 try:
-                    r = await client.get(EDGE_SNAPSHOT_URL)
+                    r = await client.get(snapshot_url)
                     if r.status_code == 200:
                         b64 = base64.b64encode(r.content).decode()
                         yield f"data: {b64}\n\n"
@@ -676,6 +698,20 @@ def get_device_config(dev=Depends(auth_device)):
         except Exception:
             pass
     return {"zones": zones, "camera_type": cam_type}
+
+
+class DeviceStreamUrlReq(BaseModel):
+    stream_url: str
+
+@app.post("/api/device/stream-url")
+def report_device_stream_url(body: DeviceStreamUrlReq, dev=Depends(auth_device)):
+    """Edge server self-reports its own reachable stream URL on startup (and
+    periodically) — lets the app's stream proxy find it without the operator
+    having to manually configure EDGE_STREAM_URL when edge and backend run on
+    different machines."""
+    db.update_device_stream_url(dev["id"], body.stream_url)
+    return {"ok": True}
+
 
 class SafeZoneReq(BaseModel):
     zones: list

@@ -354,6 +354,10 @@ class _RoleCard extends StatelessWidget {
             color: isSelected ? iconColor : AppColors.border,
             width: isSelected ? 2 : 1,
           ),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 2, offset: const Offset(0, 1)),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 16, offset: const Offset(0, 6)),
+          ],
         ),
         child: Row(
           children: [

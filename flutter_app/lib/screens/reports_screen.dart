@@ -226,27 +226,15 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           value: s.countEntries(_totalCount),
                           valueColor: textPri,
                           isDark: isDark,
-                          icon: Icons.history_rounded,
-                          iconTint: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
-                          iconColor: isDark ? DarkColors.primary : AppColors.primary,
                         ),
                         const SizedBox(width: 10),
                         _StatCard(
                           label: s.severeEvents,
                           value: s.countEntries(_severeCount),
                           valueColor: _severeCount > 0
-                              ? (isDark ? DarkColors.accent : AppColors.accent)
+                              ? (isDark ? DarkColors.danger : AppColors.danger)
                               : textPri,
                           isDark: isDark,
-                          icon: _severeCount > 0
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_outline_rounded,
-                          iconTint: _severeCount > 0
-                              ? (isDark ? DarkColors.accentTint : AppColors.accentTint)
-                              : (isDark ? DarkColors.successTint : AppColors.successTint),
-                          iconColor: _severeCount > 0
-                              ? (isDark ? DarkColors.accent : AppColors.accent)
-                              : (isDark ? DarkColors.success : AppColors.success),
                         ),
                       ],
                     ),
@@ -259,9 +247,6 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           valueColor: textPri,
                           isDark: isDark,
                           smallValue: true,
-                          icon: Icons.schedule_rounded,
-                          iconTint: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
-                          iconColor: isDark ? DarkColors.primary : AppColors.primary,
                         ),
                         const SizedBox(width: 10),
                         _StatCard(
@@ -270,9 +255,6 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           valueColor: textPri,
                           isDark: isDark,
                           smallValue: true,
-                          icon: Icons.access_time_rounded,
-                          iconTint: isDark ? DarkColors.chip : AppColors.chip,
-                          iconColor: isDark ? DarkColors.textSecondary : AppColors.textSecondary,
                         ),
                       ],
                     ),
@@ -288,7 +270,7 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                                 minHeight: 6,
                                 backgroundColor: isDark ? DarkColors.chip : AppColors.chip,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                    isDark ? DarkColors.accent : AppColors.accent),
+                                    isDark ? DarkColors.danger : AppColors.danger),
                               ),
                             ),
                           ),
@@ -320,6 +302,7 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           chipColor: chip,
                           textSecColor: textSec,
                           textTerColor: textTer,
+                          barColor: primary,
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -459,18 +442,12 @@ class _StatCard extends StatelessWidget {
   final Color valueColor;
   final bool isDark;
   final bool smallValue;
-  final IconData icon;
-  final Color iconTint;
-  final Color iconColor;
 
   const _StatCard({
     required this.label,
     required this.value,
     required this.valueColor,
     required this.isDark,
-    required this.icon,
-    required this.iconTint,
-    required this.iconColor,
     this.smallValue = false,
   });
 
@@ -484,19 +461,9 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: iconTint,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: iconColor, size: 16),
-            ),
-            const SizedBox(height: 8),
             Text(label,
                 style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               value,
               style: TextStyle(
@@ -526,12 +493,14 @@ class _BarChart extends StatelessWidget {
   final Color chipColor;
   final Color textSecColor;
   final Color textTerColor;
+  final Color barColor;
   const _BarChart({
     required this.data,
     required this.isKo,
     required this.chipColor,
     required this.textSecColor,
     required this.textTerColor,
+    required this.barColor,
   });
 
   @override
@@ -545,6 +514,7 @@ class _BarChart extends StatelessWidget {
         chipColor: chipColor,
         textSecColor: textSecColor,
         textTerColor: textTerColor,
+        barColor: barColor,
       ),
       size: Size.infinite,
     );
@@ -558,6 +528,7 @@ class _BarChartPainter extends CustomPainter {
   final Color chipColor;
   final Color textSecColor;
   final Color textTerColor;
+  final Color barColor;
 
   _BarChartPainter({
     required this.data,
@@ -566,6 +537,7 @@ class _BarChartPainter extends CustomPainter {
     required this.chipColor,
     required this.textSecColor,
     required this.textTerColor,
+    required this.barColor,
   });
 
   @override
@@ -584,22 +556,17 @@ class _BarChartPainter extends CustomPainter {
       final ratio = maxCount == 0 ? 0.0 : d.count / maxCount;
       final barH = (ratio * (chartH - 12)).clamp(0.0, chartH);
 
-      final Color barColor;
-      if (d.count == 0) {
-        barColor = chipColor;
-      } else if (ratio < 0.4) {
-        barColor = textTerColor;
-      } else if (ratio < 0.7) {
-        barColor = AppColors.warning;
-      } else {
-        barColor = AppColors.accent;
-      }
+      // single brand hue, lighter for lower-frequency days — height already
+      // encodes the value, so color doesn't need to add a second dimension
+      final barPaintColor = d.count == 0
+          ? chipColor
+          : Color.lerp(barColor.withOpacity(0.45), barColor, ratio)!;
 
       final rect = RRect.fromRectAndRadius(
         Rect.fromLTWH(x - barW / 2, chartH - barH, barW, barH.clamp(3.0, chartH)),
         const Radius.circular(4),
       );
-      canvas.drawRRect(rect, d.count > 0 ? (Paint()..color = barColor) : zeroPaint);
+      canvas.drawRRect(rect, d.count > 0 ? (Paint()..color = barPaintColor) : zeroPaint);
 
       if (d.count > 0) {
         final tp = TextPainter(
@@ -632,7 +599,8 @@ class _BarChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(_BarChartPainter old) =>
       old.data != data || old.maxCount != maxCount ||
-      old.chipColor != chipColor || old.textSecColor != textSecColor;
+      old.chipColor != chipColor || old.textSecColor != textSecColor ||
+      old.barColor != barColor;
 }
 
 // ── Event tile ────────────────────────────────────────────────────────────────
@@ -646,6 +614,11 @@ class _EventTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final s       = S.of(context);
     final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
+    final severeColor = isDark ? DarkColors.danger : AppColors.danger;
+    final mildColor   = isDark ? DarkColors.warningText : AppColors.warningText;
+    final successColor = isDark ? DarkColors.success : AppColors.success;
+    final successTint  = isDark ? DarkColors.successTint : AppColors.successTint;
+    final statusColor = event.isSevere ? severeColor : mildColor;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -653,21 +626,16 @@ class _EventTile extends StatelessWidget {
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: cardDeco(radius: 14, dark: isDark),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 3,
+              height: 32,
               decoration: BoxDecoration(
-                color: event.isSevere ? AppColors.accentTint : AppColors.warningTint,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.person_off_outlined,
-                color: event.isSevere ? AppColors.accent : AppColors.warning,
-                size: 20,
+                color: statusColor,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(width: 12),
@@ -678,7 +646,7 @@ class _EventTile extends StatelessWidget {
                   Text(
                     event.isSevere ? s.severeFall : s.fallSuspect,
                     style: TextStyle(
-                      color: event.isSevere ? AppColors.accent : AppColors.warningText,
+                      color: statusColor,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -690,20 +658,18 @@ class _EventTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (event.isAcknowledged)
-              const Icon(Icons.check_circle, color: AppColors.success, size: 18)
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.accentTint,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Text(s.unconfirmed,
-                    style: const TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.w700)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: event.isAcknowledged ? successTint : statusColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(100),
               ),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right, color: textTer, size: 18),
+              child: Text(event.isAcknowledged ? s.confirmed : s.unconfirmed,
+                  style: TextStyle(
+                      color: event.isAcknowledged ? successColor : statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700)),
+            ),
           ],
         ),
       ),

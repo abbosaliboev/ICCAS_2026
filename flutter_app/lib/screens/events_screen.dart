@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
@@ -23,11 +24,13 @@ class _EventsScreenState extends State<EventsScreen>
   String _filter = 'all'; // 'all' | 'severe' | 'mild'
 
   bool _selectMode = false;
+  bool _deleting = false;
   final Set<String> _selectedIds = {};
 
   int _page = 0;
   bool _hasMore = true;
   late ScrollController _scrollCtrl;
+  StreamSubscription? _wsSub;
 
   @override
   bool get wantKeepAlive => true;
@@ -37,11 +40,22 @@ class _EventsScreenState extends State<EventsScreen>
     super.initState();
     _scrollCtrl = ScrollController()..addListener(_onScroll);
     _load();
+    // list is kept alive inside an IndexedStack, so it never rebuilds on tab
+    // switch — listen for live fall events to stay in sync with the backend
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ws = context.read<AuthProvider>().ws;
+      _wsSub = ws?.events.listen((event) {
+        if (mounted && (event.isFallDetected || event.isFallResolved)) {
+          _load();
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
     _scrollCtrl.dispose();
+    _wsSub?.cancel();
     super.dispose();
   }
 
@@ -115,6 +129,19 @@ class _EventsScreenState extends State<EventsScreen>
     });
   }
 
+  void _toggleSelectAll() {
+    final allIds = _filtered.map((e) => e.id).toSet();
+    setState(() {
+      if (_selectedIds.containsAll(allIds)) {
+        _selectedIds.clear();
+      } else {
+        _selectedIds
+          ..clear()
+          ..addAll(allIds);
+      }
+    });
+  }
+
   Future<void> _deleteSelected() async {
     final s     = S.read(context);
     final count = _selectedIds.length;
@@ -154,18 +181,19 @@ class _EventsScreenState extends State<EventsScreen>
 
     final ids = List<String>.from(_selectedIds);
     final api = context.read<AuthProvider>().api;
-    setState(() => _loading = true);
+    setState(() => _deleting = true);
     try {
       await api.deleteEvents(ids);
       if (!mounted) return;
       _exitSelectMode();
-      _load();
+      await _load();
       AppToast.show(context, s.deleteSuccessMsg(ids.length), type: ToastType.success);
     } catch (_) {
       if (mounted) {
-        setState(() => _loading = false);
         AppToast.show(context, s.deletePartialFail, type: ToastType.warning);
       }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
     }
   }
 
@@ -183,7 +211,9 @@ class _EventsScreenState extends State<EventsScreen>
 
     return Scaffold(
       backgroundColor: bg,
-      body: SafeArea(
+      body: Stack(
+        children: [
+        SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -214,6 +244,18 @@ class _EventsScreenState extends State<EventsScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_selectMode) ...[
+                        TextButton(
+                          onPressed: filtered.isEmpty ? null : _toggleSelectAll,
+                          child: Text(
+                              filtered.isNotEmpty &&
+                                      _selectedIds.containsAll(
+                                          filtered.map((e) => e.id))
+                                  ? s.deselectAll
+                                  : s.selectAll,
+                              style: TextStyle(
+                                  color: filtered.isEmpty ? textSec : primary,
+                                  fontWeight: FontWeight.w600)),
+                        ),
                         TextButton(
                           onPressed: _exitSelectMode,
                           child: Text(s.cancelSelect,
@@ -332,6 +374,17 @@ class _EventsScreenState extends State<EventsScreen>
             ),
           ],
         ),
+        ),
+        if (_deleting)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.25),
+              child: Center(
+                child: CircularProgressIndicator(color: primary, strokeWidth: 3),
+              ),
+            ),
+          ),
+        ],
       ),
 
       // ── Delete action bar (select mode) ──────────────────────────────────
@@ -448,8 +501,12 @@ class _EventCard extends StatelessWidget {
     final textTer  = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
     final primary  = isDark ? DarkColors.primary       : AppColors.primary;
     final isSevere = event.isSevere;
-    final badgeBg  = isSevere ? AppColors.accentTint : AppColors.warningTint;
-    final badgeFg  = isSevere ? AppColors.accent     : AppColors.warningText;
+    final severeColor = isDark ? DarkColors.danger : AppColors.danger;
+    final severeTint  = isDark ? DarkColors.dangerTint : AppColors.dangerTint;
+    final mildColor   = isDark ? DarkColors.warningText : AppColors.warningText;
+    final mildTint    = isDark ? DarkColors.warningTint : AppColors.warningTint;
+    final badgeBg  = isSevere ? severeTint  : mildTint;
+    final badgeFg  = isSevere ? severeColor : mildColor;
     final label    = isSevere ? s.severe : s.mild;
 
     return GestureDetector(
@@ -499,12 +556,12 @@ class _EventCard extends StatelessWidget {
                 height: 48,
                 margin: const EdgeInsets.only(right: 14),
                 decoration: BoxDecoration(
-                  color: isSevere ? AppColors.accentTint : AppColors.warningTint,
+                  color: badgeBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.personal_injury_outlined,
-                  color: isSevere ? AppColors.accent : AppColors.warningText,
+                  color: badgeFg,
                   size: 24,
                 ),
               ),
@@ -527,7 +584,7 @@ class _EventCard extends StatelessWidget {
                       fontSize: 12,
                       color: event.isAcknowledged
                           ? textTer
-                          : AppColors.accent,
+                          : badgeFg,
                     ),
                   ),
                 ],
