@@ -7,6 +7,8 @@ import '../strings.dart';
 import '../widgets/app_toast.dart';
 import 'event_detail_screen.dart';
 
+const _kPageSize = 30;
+
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
   @override
@@ -23,22 +25,67 @@ class _EventsScreenState extends State<EventsScreen>
   bool _selectMode = false;
   final Set<String> _selectedIds = {};
 
+  int _page = 0;
+  bool _hasMore = true;
+  late ScrollController _scrollCtrl;
+
   @override
   bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
+    _scrollCtrl = ScrollController()..addListener(_onScroll);
     _load();
   }
 
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200 && !_loading && _hasMore) {
+      _loadMore();
+    }
+  }
+
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _page = 0; _hasMore = true; });
     try {
-      final events = await context.read<AuthProvider>().api.getFallEvents();
-      if (mounted) setState(() => _events = events);
+      final events = await context.read<AuthProvider>().api
+          .getFallEvents(limit: _kPageSize, offset: 0);
+      if (mounted) {
+        setState(() {
+          _events = events;
+          _hasMore = events.length >= _kPageSize;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || !_hasMore) return;
+    setState(() => _loading = true);
+    try {
+      final nextPage = _page + 1;
+      final events = await context.read<AuthProvider>().api
+          .getFallEvents(limit: _kPageSize, offset: nextPage * _kPageSize);
+      if (mounted) {
+        setState(() {
+          _page = nextPage;
+          _events = [..._events, ...events];
+          if (events.length < _kPageSize) _hasMore = false;
+        });
+      }
+    } catch (_) {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -105,28 +152,20 @@ class _EventsScreenState extends State<EventsScreen>
 
     if (confirm != true || !mounted) return;
 
-    final ids    = List<String>.from(_selectedIds);
-    final api    = context.read<AuthProvider>().api;
-    int failed   = 0;
-
-    for (final id in ids) {
-      try {
-        await api.deleteEvent(id);
-      } catch (_) {
-        failed++;
+    final ids = List<String>.from(_selectedIds);
+    final api = context.read<AuthProvider>().api;
+    setState(() => _loading = true);
+    try {
+      await api.deleteEvents(ids);
+      if (!mounted) return;
+      _exitSelectMode();
+      _load();
+      AppToast.show(context, s.deleteSuccessMsg(ids.length), type: ToastType.success);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loading = false);
+        AppToast.show(context, s.deletePartialFail, type: ToastType.warning);
       }
-    }
-
-    if (!mounted) return;
-    _exitSelectMode();
-    _load();
-
-    final successCount = ids.length - failed;
-    if (failed == 0) {
-      AppToast.show(context, s.deleteSuccessMsg(successCount),
-          type: ToastType.success);
-    } else {
-      AppToast.show(context, s.deletePartialFail, type: ToastType.warning);
     }
   }
 
@@ -233,7 +272,7 @@ class _EventsScreenState extends State<EventsScreen>
 
             // ── List ────────────────────────────────────────────────────────
             Expanded(
-              child: _loading
+              child: (_loading && _events.isEmpty)
                   ? Center(
                       child: CircularProgressIndicator(
                           color: primary, strokeWidth: 2))
@@ -248,34 +287,46 @@ class _EventsScreenState extends State<EventsScreen>
                               color: primary,
                               onRefresh: _load,
                               child: ListView.builder(
+                                controller: _scrollCtrl,
                                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
-                                itemCount: filtered.length,
-                                itemBuilder: (ctx, i) => _EventCard(
-                                  event: filtered[i],
-                                  isDark: isDark,
-                                  selectMode: _selectMode,
-                                  selected: _selectedIds.contains(filtered[i].id),
-                                  onTap: () async {
-                                    if (_selectMode) {
-                                      _toggleSelect(filtered[i].id);
-                                    } else {
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => EventDetailScreen(
-                                              eventId: filtered[i].id),
-                                        ),
-                                      );
-                                      _load();
-                                    }
-                                  },
-                                  onLongPress: _selectMode
-                                      ? null
-                                      : () {
-                                          _enterSelectMode();
-                                          _toggleSelect(filtered[i].id);
-                                        },
-                                ),
+                                itemCount: filtered.length + (_hasMore ? 1 : 0),
+                                itemBuilder: (ctx, i) {
+                                  if (i == filtered.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                            color: primary, strokeWidth: 2),
+                                      ),
+                                    );
+                                  }
+                                  return _EventCard(
+                                    event: filtered[i],
+                                    isDark: isDark,
+                                    selectMode: _selectMode,
+                                    selected: _selectedIds.contains(filtered[i].id),
+                                    onTap: () async {
+                                      if (_selectMode) {
+                                        _toggleSelect(filtered[i].id);
+                                      } else {
+                                        await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => EventDetailScreen(
+                                                eventId: filtered[i].id),
+                                          ),
+                                        );
+                                        _load();
+                                      }
+                                    },
+                                    onLongPress: _selectMode
+                                        ? null
+                                        : () {
+                                            _enterSelectMode();
+                                            _toggleSelect(filtered[i].id);
+                                          },
+                                  );
+                                },
                               ),
                             ),
             ),

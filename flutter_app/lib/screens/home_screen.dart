@@ -367,6 +367,7 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
   List<Map<String, double>> _zones = [];
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
+  int _lastZonesVersion = -1;
 
   @override
   void initState() {
@@ -432,6 +433,13 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
   Widget build(BuildContext context) {
     final s      = S.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final zonesVersion = context.watch<SettingsProvider>().zonesVersion;
+    if (zonesVersion != _lastZonesVersion) {
+      _lastZonesVersion = zonesVersion;
+      _zoneTimer?.cancel();
+      _zoneTimer = Timer.periodic(const Duration(seconds: 15), (_) => _loadZones());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadZones());
+    }
     return GestureDetector(
       onTap: () => Navigator.push(
         context,

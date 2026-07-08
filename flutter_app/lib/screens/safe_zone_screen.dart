@@ -31,6 +31,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   Uint8List? _snapshot;
   bool _loadingSnapshot = true;
   bool _saving = false;
+  bool _drawing = false;
 
   Offset? _drawStart;
   Offset? _drawCurrent;
@@ -82,6 +83,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
     final box = _canvasKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
     setState(() {
+      _drawing = true;
       _drawStart = box.globalToLocal(d.globalPosition);
       _drawCurrent = _drawStart;
     });
@@ -94,24 +96,30 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   }
 
   void _onPanEnd(DragEndDetails _) {
+    if (!_drawing) return;
+    _drawing = false;
     final size = _canvasSize;
-    if (size == Size.zero || _drawStart == null || _drawCurrent == null) return;
+    if (size == Size.zero || _drawStart == null || _drawCurrent == null) {
+      setState(() { _drawStart = null; _drawCurrent = null; });
+      return;
+    }
     final x1 = _drawStart!.dx.clamp(0.0, size.width);
     final y1 = _drawStart!.dy.clamp(0.0, size.height);
     final x2 = _drawCurrent!.dx.clamp(0.0, size.width);
     final y2 = _drawCurrent!.dy.clamp(0.0, size.height);
     final rw = (x2 - x1).abs() / size.width;
     final rh = (y2 - y1).abs() / size.height;
-    if (rw > 0.01 && rh > 0.01) {
-      setState(() {
+    setState(() {
+      if (rw > 0.01 && rh > 0.01) {
         _zones.add(_Zone(
           _dmin(x1, x2) / size.width,
           _dmin(y1, y2) / size.height,
           rw, rh,
         ));
-      });
-    }
-    setState(() { _drawStart = null; _drawCurrent = null; });
+      }
+      _drawStart = null;
+      _drawCurrent = null;
+    });
   }
 
   double _dmin(double a, double b) => a < b ? a : b;
@@ -124,7 +132,10 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
       final camType = context.read<SettingsProvider>().cameraType;
       await api.setSafeZone(_zones.map((z) => z.toJson()).toList());
       await api.setCameraType(camType);
-      if (mounted) AppToast.show(context, s.safeZoneSaved, type: ToastType.success);
+      if (mounted) {
+        context.read<SettingsProvider>().bumpZonesVersion();
+        AppToast.show(context, s.safeZoneSaved, type: ToastType.success);
+      }
     } catch (e) {
       if (mounted) AppToast.show(context, s.saveFailed(e), type: ToastType.error);
     } finally {
@@ -137,7 +148,10 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
     try {
       await context.read<AuthProvider>().api.clearSafeZone();
       setState(() => _zones.clear());
-      if (mounted) AppToast.show(context, s.safeZoneCleared, type: ToastType.success);
+      if (mounted) {
+        context.read<SettingsProvider>().bumpZonesVersion();
+        AppToast.show(context, s.safeZoneCleared, type: ToastType.success);
+      }
     } catch (e) {
       if (mounted) AppToast.show(context, s.deleteFailed(e), type: ToastType.error);
     }
@@ -153,6 +167,8 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
     final primary = isDark ? DarkColors.primary  : AppColors.primary;
     final textPri = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
     final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+    final dangerTint = isDark ? DarkColors.dangerTint : AppColors.dangerTint;
+    final danger     = isDark ? DarkColors.danger     : AppColors.danger;
 
     return Scaffold(
       backgroundColor: bg,
@@ -275,14 +291,14 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
 
             Row(children: [
               Expanded(
-                child: OutlinedButton.icon(
+                child: ElevatedButton.icon(
                   onPressed: _saving ? null : _clear,
-                  icon: const Icon(Icons.delete_outline,
-                      color: Colors.redAccent, size: 18),
-                  label: Text(s.delete,
-                      style: const TextStyle(color: Colors.redAccent)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.redAccent.withOpacity(0.4)),
+                  icon: Icon(Icons.delete_outline, color: danger, size: 18),
+                  label: Text(s.delete, style: TextStyle(color: danger)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: dangerTint,
+                    foregroundColor: danger,
+                    elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),

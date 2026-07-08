@@ -12,10 +12,18 @@ class SettingsProvider extends ChangeNotifier {
   String _contactName  = '';
   String _contactPhone = '';
 
+  int _zonesVersion = 0;
+
   String get localeCode   => _localeCode;
   String get cameraType   => _cameraType;
   String get contactName  => _contactName;
   String get contactPhone => _contactPhone;
+  int get zonesVersion => _zonesVersion;
+
+  void bumpZonesVersion() {
+    _zonesVersion++;
+    notifyListeners();
+  }
 
   Locale get locale => Locale(_localeCode);
 

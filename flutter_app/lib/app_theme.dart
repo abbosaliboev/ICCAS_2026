@@ -2,26 +2,26 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Light
-  static const bg = Color(0xFFFAF9F6);
-  static const surface = Color(0xFFFFFFFF);
-  static const border = Color(0xFFE8E4DC);
+  static const bg = Color(0xFFFBF8F4);
+  static const surface = Color(0xFFFFFEFC);
+  static const border = Color(0xFFEAE5DC);
   static const textPrimary = Color(0xFF2B2A28);
   static const textSecondary = Color(0xFF6B6660);
   static const textTertiary = Color(0xFF948E85);
-  static const primary = Color(0xFF2D6EE8);
-  static const primaryPressed = Color(0xFF1F4FB0);
-  static const primaryTint = Color(0xFFEAF1FD);
-  static const success = Color(0xFF1E9E5C);
+  static const primary = Color(0xFF2563C9);
+  static const primaryPressed = Color(0xFF1A4899);
+  static const primaryTint = Color(0xFFEBF0FB);
+  static const success = Color(0xFF1A9460);
   static const successTint = Color(0xFFE7F7EE);
-  static const danger = Color(0xFFE5342A);
+  static const danger = Color(0xFFD94035);
   static const dangerPressed = Color(0xFFB82A21);
   static const dangerTint = Color(0xFFFDEBEA);
-  static const warning = Color(0xFFF2A93D);
-  static const warningText = Color(0xFFB9791F);
+  static const warning = Color(0xFFEF9D2E);
+  static const warningText = Color(0xFFAD6E16);
   static const warningTint = Color(0xFFFDF3E3);
   static const accent = Color(0xFFE2967A);
   static const accentTint = Color(0xFFFBEEE8);
-  static const chip = Color(0xFFF1EFEA);
+  static const chip = Color(0xFFF2EFE9);
   AppColors._();
 }
 
@@ -144,7 +144,13 @@ class AppTheme {
 BoxDecoration cardDeco({double radius = 16, bool dark = false}) => BoxDecoration(
       color: dark ? DarkColors.surface : AppColors.surface,
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: dark ? DarkColors.border : AppColors.border),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(dark ? 0.18 : 0.06),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
     );
 
 InputDecoration lightInputDeco(String label, {IconData? icon}) => InputDecoration(

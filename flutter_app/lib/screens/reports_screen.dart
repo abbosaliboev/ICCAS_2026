@@ -226,13 +226,27 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           value: s.countEntries(_totalCount),
                           valueColor: textPri,
                           isDark: isDark,
+                          icon: Icons.history_rounded,
+                          iconTint: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
+                          iconColor: isDark ? DarkColors.primary : AppColors.primary,
                         ),
                         const SizedBox(width: 10),
                         _StatCard(
                           label: s.severeEvents,
                           value: s.countEntries(_severeCount),
-                          valueColor: _severeCount > 0 ? AppColors.danger : textPri,
+                          valueColor: _severeCount > 0
+                              ? (isDark ? DarkColors.danger : AppColors.danger)
+                              : textPri,
                           isDark: isDark,
+                          icon: _severeCount > 0
+                              ? Icons.warning_amber_rounded
+                              : Icons.check_circle_outline_rounded,
+                          iconTint: _severeCount > 0
+                              ? (isDark ? DarkColors.dangerTint : AppColors.dangerTint)
+                              : (isDark ? DarkColors.successTint : AppColors.successTint),
+                          iconColor: _severeCount > 0
+                              ? (isDark ? DarkColors.danger : AppColors.danger)
+                              : (isDark ? DarkColors.success : AppColors.success),
                         ),
                       ],
                     ),
@@ -245,6 +259,9 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           valueColor: textPri,
                           isDark: isDark,
                           smallValue: true,
+                          icon: Icons.schedule_rounded,
+                          iconTint: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
+                          iconColor: isDark ? DarkColors.primary : AppColors.primary,
                         ),
                         const SizedBox(width: 10),
                         _StatCard(
@@ -253,9 +270,36 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           valueColor: textPri,
                           isDark: isDark,
                           smallValue: true,
+                          icon: Icons.access_time_rounded,
+                          iconTint: isDark ? DarkColors.chip : AppColors.chip,
+                          iconColor: isDark ? DarkColors.textSecondary : AppColors.textSecondary,
                         ),
                       ],
                     ),
+                    if (_totalCount > 0) ...[
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: LinearProgressIndicator(
+                                value: _severeCount / _totalCount,
+                                minHeight: 6,
+                                backgroundColor: isDark ? DarkColors.chip : AppColors.chip,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    isDark ? DarkColors.danger : AppColors.danger),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Severe rate: ${(_severeCount / _totalCount * 100).round()}%',
+                            style: TextStyle(color: textSec, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 20),
 
                     // ── Bar chart ────────────────────────────────────────────
@@ -285,14 +329,15 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                     Row(
                       children: [
                         Expanded(
-                          child: OutlinedButton.icon(
+                          child: ElevatedButton.icon(
                             onPressed: filtered.isEmpty ? null : () => _exportCsv(isKo: isKo),
                             icon: const Icon(Icons.download_outlined, size: 16),
                             label: Text(s.exportCsv,
                                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                            style: OutlinedButton.styleFrom(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primary.withOpacity(0.12),
                               foregroundColor: primary,
-                              side: BorderSide(color: primary),
+                              elevation: 0,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -300,14 +345,15 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: OutlinedButton.icon(
+                          child: ElevatedButton.icon(
                             onPressed: filtered.isEmpty ? null : () => _emailReport(isKo: isKo),
                             icon: const Icon(Icons.email_outlined, size: 16),
                             label: Text(s.emailReport,
                                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                            style: OutlinedButton.styleFrom(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primary.withOpacity(0.12),
                               foregroundColor: primary,
-                              side: BorderSide(color: primary),
+                              elevation: 0,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -413,12 +459,18 @@ class _StatCard extends StatelessWidget {
   final Color valueColor;
   final bool isDark;
   final bool smallValue;
+  final IconData icon;
+  final Color iconTint;
+  final Color iconColor;
 
   const _StatCard({
     required this.label,
     required this.value,
     required this.valueColor,
     required this.isDark,
+    required this.icon,
+    required this.iconTint,
+    required this.iconColor,
     this.smallValue = false,
   });
 
@@ -432,9 +484,19 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: iconTint,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 16),
+            ),
+            const SizedBox(height: 8),
             Text(label,
                 style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
               value,
               style: TextStyle(

@@ -167,8 +167,8 @@ class ApiService {
 
   // ── fall events ───────────────────────────────────────────────────────────
 
-  Future<List<FallEvent>> getFallEvents() async {
-    final data = await _get('/api/fall-events') as List;
+  Future<List<FallEvent>> getFallEvents({int limit = 30, int offset = 0}) async {
+    final data = await _get('/api/fall-events?limit=$limit&offset=$offset') as List;
     return data.map((e) => FallEvent.fromJson(e)).toList();
   }
 
@@ -181,6 +181,9 @@ class ApiService {
       _post('/api/fall-events/$eventId/acknowledge', {});
 
   Future<void> deleteEvent(String eventId) => _delete('/api/fall-events/$eventId');
+
+  Future<void> deleteEvents(List<String> ids) =>
+      _post('/api/fall-events/batch-delete', {'ids': ids});
 
   Future<Map<String, dynamic>> getEmergencyReport(String eventId) =>
       _get('/api/fall-events/$eventId/emergency-report') as Future<Map<String, dynamic>>;

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -16,11 +15,9 @@ class StreamScreen extends StatefulWidget {
 
 class _StreamScreenState extends State<StreamScreen>
     with AutomaticKeepAliveClientMixin {
-  Timer? _timer;
   Uint8List? _frame;
   bool _error = false;
   bool _active = false;
-  bool _fetching = false;
   int _failures = 0;
 
   @override
@@ -33,27 +30,28 @@ class _StreamScreenState extends State<StreamScreen>
   }
 
   void _startStream() {
-    _timer?.cancel();
-    setState(() {
-      _active = true;
-      _error = false;
-      _failures = 0;
-    });
-    _fetchFrame();
-    _timer = Timer.periodic(
-      const Duration(milliseconds: 300),
-      (_) => _fetchFrame(),
-    );
+    _active = true;
+    _error = false;
+    _failures = 0;
+    setState(() {});
+    _fetchLoop();
   }
 
   void _stopStream() {
-    _timer?.cancel();
     setState(() => _active = false);
   }
 
+  Future<void> _fetchLoop() async {
+    while (mounted && _active) {
+      await _fetchFrame();
+      if (mounted && _active) {
+        await Future.delayed(const Duration(milliseconds: 150));
+      }
+    }
+  }
+
   Future<void> _fetchFrame() async {
-    if (!mounted || !_active || _fetching) return;
-    _fetching = true;
+    if (!mounted || !_active) return;
     final auth = context.read<AuthProvider>();
     final url = auth.api.snapshotUrl();
     try {
@@ -74,8 +72,6 @@ class _StreamScreenState extends State<StreamScreen>
       }
     } catch (_) {
       if (mounted) _markFailure();
-    } finally {
-      _fetching = false;
     }
   }
 
@@ -88,7 +84,7 @@ class _StreamScreenState extends State<StreamScreen>
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _active = false;
     super.dispose();
   }
 

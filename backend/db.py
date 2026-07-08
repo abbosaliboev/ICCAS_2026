@@ -248,16 +248,16 @@ def create_fall_event(event_id, device_id, user_id, timestamp, category, clip_pa
     conn.close()
 
 
-def get_fall_events(user_id: str = None, limit: int = 50):
+def get_fall_events(user_id: str = None, limit: int = 30, offset: int = 0):
     conn  = get_conn()
     if user_id:
         rows = conn.execute(
-            "SELECT * FROM fall_events WHERE user_id=? ORDER BY created_at DESC LIMIT ?",
-            (user_id, limit)
+            "SELECT * FROM fall_events WHERE user_id=? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (user_id, limit, offset)
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT * FROM fall_events ORDER BY created_at DESC LIMIT ?", (limit,)
+            "SELECT * FROM fall_events ORDER BY created_at DESC LIMIT ? OFFSET ?", (limit, offset)
         ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -280,6 +280,16 @@ def update_fall_event_video(event_id: str, video_path: str):
 def delete_fall_event(event_id: str):
     conn = get_conn()
     conn.execute("DELETE FROM fall_events WHERE id=?", (event_id,))
+    conn.commit()
+    conn.close()
+
+
+def delete_fall_events(ids: list):
+    if not ids:
+        return
+    conn = get_conn()
+    placeholders = ",".join("?" * len(ids))
+    conn.execute(f"DELETE FROM fall_events WHERE id IN ({placeholders})", ids)
     conn.commit()
     conn.close()
 

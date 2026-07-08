@@ -343,12 +343,15 @@ async def upload_clip(event_id: str, file: UploadFile = File(...), dev=Depends(a
 
 
 @app.get("/api/fall-events")
-def list_fall_events(user=Depends(auth_user)):
+def list_fall_events(
+    user=Depends(auth_user),
+    limit: int = Query(30, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
     if user["role"] == "guardian":
         events = db.get_guardian_events(user["id"])
-    else:
-        events = db.get_fall_events(user["id"])
-    return events
+        return events[offset:offset + limit]
+    return db.get_fall_events(user["id"], limit=limit, offset=offset)
 
 
 @app.get("/api/fall-events/{event_id}")
@@ -401,6 +404,22 @@ async def resolve_fall(event_id: str, dev=Depends(auth_device)):
 def ack_event(event_id: str, user=Depends(auth_user)):
     db.acknowledge_fall_event(event_id)
     return {"ok": True}
+
+
+class BatchDeleteReq(BaseModel):
+    ids: list[str]
+
+@app.post("/api/fall-events/batch-delete")
+def batch_delete_events(body: BatchDeleteReq, user=Depends(auth_user)):
+    for event_id in body.ids:
+        ev = db.get_fall_event(event_id)
+        if ev:
+            for key in ("video_path", "thumbnail_path"):
+                p = ev.get(key)
+                if p and Path(p).exists():
+                    Path(p).unlink(missing_ok=True)
+    db.delete_fall_events(body.ids)
+    return {"ok": True, "deleted": len(body.ids)}
 
 
 @app.delete("/api/fall-events/{event_id}")
