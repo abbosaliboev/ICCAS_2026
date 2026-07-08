@@ -569,6 +569,9 @@ def main():
                     smooth_bbox = bx.copy().astype(float)
                 else:
                     smooth_bbox = 0.6 * smooth_bbox + 0.4 * bx
+        # person has been gone for a bit — drop the stale box instead of freezing it on screen
+        if no_person_frames > 5:
+            smooth_bbox = None
 
         # draw red bounding box when fall active and we have a stable bbox
         if fall_active and smooth_bbox is not None:
@@ -592,7 +595,11 @@ def main():
             h_span = float(vis_kp[:, 1].max() - vis_kp[:, 1].min()) if n_vis >= 4 else 0.0
             # top-down camera: skeleton height span much smaller (person seen from above)
             h_span_thresh = 0.35 if camera_type == "top" else 0.80
-            if n_vis >= 9 and h_span <= h_span_thresh:
+            # skip inference while person is clipped by the frame edge (walking past camera) —
+            # a half-visible skeleton is unreliable and reads as a distorted/falling pose
+            edge_margin = 0.03
+            near_edge = n_vis >= 1 and (vis_kp[:, 0].min() < edge_margin or vis_kp[:, 0].max() > 1 - edge_margin)
+            if n_vis >= 9 and h_span <= h_span_thresh and not near_edge:
                 t_stgcn0 = time.time()
                 pred = detector.predict_one(x_t.squeeze(0), seq)
                 t_stgcn1 = time.time()
