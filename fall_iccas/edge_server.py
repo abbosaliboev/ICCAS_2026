@@ -168,29 +168,6 @@ class BackendClient:
             log.warning(f"Cannot reach backend: {e}")
         return False
 
-    def upload_screenshot(self, event_id: str, img_path: str):
-        for attempt in range(3):
-            if os.path.exists(img_path):
-                break
-            time.sleep(0.5)
-        if not os.path.exists(img_path):
-            log.warning(f"Screenshot file not found: {img_path}")
-            return
-        try:
-            with open(img_path, "rb") as f:
-                r = requests.post(
-                    f"{self.base}/api/fall-events/{event_id}/screenshot",
-                    files={"file": (os.path.basename(img_path), f, "image/jpeg")},
-                    headers=self.headers,
-                    timeout=10,
-                )
-            if r.status_code in (200, 201):
-                log.info(f"Screenshot uploaded for {event_id}")
-            else:
-                log.warning(f"Screenshot upload got {r.status_code}: {r.text[:100]}")
-        except Exception as e:
-            log.warning(f"Screenshot upload failed: {e}")
-
     def upload_video(self, event_id: str, video_path: str):
         if not os.path.exists(video_path):
             log.warning(f"Video file not found: {video_path}")
@@ -377,14 +354,14 @@ def main():
     ap.add_argument("--backend",      default="http://localhost:8000", help="Backend server URL")
     ap.add_argument("--device-token", default="edge-device-001", help="Device token for backend auth")
     ap.add_argument("--stream-port",  type=int, default=8081,  help="MJPEG HTTP port (default 8081)")
-    ap.add_argument("--snap-dir",     default="snapshots",     help="Directory to save fall screenshots")
     ap.add_argument("--clip-dir",     default="clips",         help="Directory to save fall video clips")
     ap.add_argument("--preclip-seconds", type=float, default=5.0, help="Seconds of video to keep before a fall")
     ap.add_argument("--clip-buffer-fps", type=float, default=19.0, help="Max FPS stored in pre-fall clip buffer")
-    ap.add_argument("--stage1-threshold", type=float, default=0.55, help="ST-GCN confident FALL threshold")
-    ap.add_argument("--rescue-threshold", type=float, default=0.50, help="Physics rescue lower probability threshold")
+    ap.add_argument("--stage1-threshold", type=float, default=None, help="ST-GCN confident FALL threshold (default: tuned value from checkpoints/two_stage_config.json)")
+    ap.add_argument("--rescue-threshold", type=float, default=None, help="Physics rescue lower probability threshold (default: tuned value from checkpoints/two_stage_config.json)")
     ap.add_argument("--confirm",      type=int, default=3,     help="Consecutive FALL windows to confirm (default 3)")
     ap.add_argument("--min-lock",     type=float, default=5.0, help="Min seconds to hold FALL alert")
+    ap.add_argument("--event-cooldown", type=float, default=30.0, help="Min seconds between two fall events (default 30s)")
     ap.add_argument("--stand-streak", type=int, default=2,     help="Standing windows to auto-reset")
     ap.add_argument("--display",      action="store_true",     help="Show cv2 window (requires display)")
     ap.add_argument("--tensorrt",     action="store_true",     help="Use TensorRT engine for YOLO (Jetson)")
@@ -413,9 +390,7 @@ def main():
 
     start_mjpeg_server(args.stream_port)
 
-    snap_dir = args.snap_dir if os.path.isabs(args.snap_dir) else os.path.join(base, args.snap_dir)
     clip_dir = args.clip_dir if os.path.isabs(args.clip_dir) else os.path.join(base, args.clip_dir)
-    Path(snap_dir).mkdir(parents=True, exist_ok=True)
     Path(clip_dir).mkdir(parents=True, exist_ok=True)
     client   = BackendClient(args.backend, args.device_token)
 
@@ -457,6 +432,7 @@ def main():
     lying_streak  = 0
     no_person_frames = 0
     current_event_id = None
+    last_event_time  = 0.0    # time.time() of the last created fall event — enforces --event-cooldown
     smooth_bbox      = None   # EMA-smoothed [x1,y1,x2,y2] from YOLO boxes
 
     # camera type + safe zones — fetched from backend API every 15s, local file fallback
@@ -633,37 +609,27 @@ def main():
                     fall_streak = 0
 
             if fall_streak >= args.confirm and not fall_active:
-                event_id         = datetime.now().strftime('%Y%m%d%H%M%S')
-                event_created = client.post_fall(event_id, "severe", datetime.now().isoformat())
-                if not event_created:
-                    log.warning(f"FALL detected locally but backend event was not created: {event_id}")
-                    fall_streak = max(args.confirm - 1, 0)
+                if time.time() - last_event_time < args.event_cooldown:
+                    fall_streak = args.confirm  # hold at threshold, re-fire as soon as cooldown clears
                 else:
-                    fall_active  = True
-                    fall_lock_t  = time.time() + args.min_lock
-                    stand_streak = 0
-                    current_event_id = event_id
-                    log.info("FALL DETECTED — backend event created, alert active")
-                    clip_frames = [(ts, f.copy()) for ts, f in pre_clip_buf]
-                    threading.Thread(
-                        target=save_and_upload_clip,
-                        args=(event_id, clip_frames, clip_dir, client),
-                        daemon=True,
-                    ).start()
-                    ss_path = os.path.join(snap_dir, f"{event_id}.jpg")
-                    ss_frame = cv2.resize(frame, (1280, 720), interpolation=cv2.INTER_LINEAR)
-                    # draw bbox on screenshot (fall_active just set, bbox not yet on frame)
-                    if smooth_bbox is not None:
-                        _sx = 1280 / w; _sy = 720 / h
-                        _bx1 = max(0,    int(smooth_bbox[0]*_sx) - 12)
-                        _by1 = max(0,    int(smooth_bbox[1]*_sy) - 12)
-                        _bx2 = min(1280, int(smooth_bbox[2]*_sx) + 12)
-                        _by2 = min(720,  int(smooth_bbox[3]*_sy) + 12)
-                        cv2.rectangle(ss_frame, (_bx1, _by1), (_bx2, _by2), (0, 0, 255), 3)
-                        cv2.putText(ss_frame, "FALL", (_bx1, max(_by1-8, 20)),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2, cv2.LINE_AA)
-                    cv2.imwrite(ss_path, ss_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                    threading.Thread(target=client.upload_screenshot, args=(event_id, ss_path), daemon=True).start()
+                    event_id      = datetime.now().strftime('%Y%m%d%H%M%S')
+                    event_created = client.post_fall(event_id, "severe", datetime.now().isoformat())
+                    if not event_created:
+                        log.warning(f"FALL detected locally but backend event was not created: {event_id}")
+                        fall_streak = max(args.confirm - 1, 0)
+                    else:
+                        fall_active  = True
+                        fall_lock_t  = time.time() + args.min_lock
+                        stand_streak = 0
+                        current_event_id = event_id
+                        last_event_time  = time.time()
+                        log.info("FALL DETECTED — backend event created, alert active")
+                        clip_frames = [(ts, f.copy()) for ts, f in pre_clip_buf]
+                        threading.Thread(
+                            target=save_and_upload_clip,
+                            args=(event_id, clip_frames, clip_dir, client),
+                            daemon=True,
+                        ).start()
 
         # auto-reset
         if fall_active and time.time() > fall_lock_t:
