@@ -21,7 +21,6 @@ from typing import Optional
 from fastapi import (FastAPI, WebSocket, WebSocketDisconnect,
                      HTTPException, UploadFile, File, Header, Depends, Query)
 from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
@@ -45,9 +44,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve web app from static/
-STATIC = BASE / "static"
-app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
 
 # ── WebSocket broadcast ───────────────────────────────────────────────────────
@@ -181,17 +177,10 @@ def _can_access_event(user: dict, ev: dict, target: dict = None) -> bool:
         return bool(target and target.get("guardian_id") == user.get("id"))
     return False
 
-_NO_CACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
-
-@app.get("/app", include_in_schema=False)
-@app.get("/app/{path:path}", include_in_schema=False)
-async def spa(path: str = ""):
-    return FileResponse(str(STATIC / "index.html"), headers=_NO_CACHE)
-
-
+# Web UI removed — the mobile app is the only client now.
 @app.get("/", include_in_schema=False)
 async def root():
-    return FileResponse(str(STATIC / "index.html"), headers=_NO_CACHE)
+    return {"service": "MobiCare backend", "client": "mobile app"}
 
 
 # ── auth ──────────────────────────────────────────────────────────────────────
@@ -650,31 +639,6 @@ async def stream_snapshot():
                             headers={"Cache-Control": "no-cache, no-store"})
     except Exception:
         raise HTTPException(503, "Stream unavailable")
-
-
-@app.get("/api/stream/sse")
-async def stream_sse():
-    """SSE stream of base64-encoded JPEG frames — universally supported including iOS Safari."""
-    import asyncio, base64
-
-    async def _generate():
-        snapshot_url = _edge_snapshot_url()
-        async with httpx.AsyncClient(timeout=httpx.Timeout(2.0)) as client:
-            while True:
-                try:
-                    r = await client.get(snapshot_url)
-                    if r.status_code == 200:
-                        b64 = base64.b64encode(r.content).decode()
-                        yield f"data: {b64}\n\n"
-                except Exception:
-                    yield "data: error\n\n"
-                await asyncio.sleep(0.1)   # 10 fps
-
-    return StreamingResponse(
-        _generate(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
 
 
 # ── safe zone ────────────────────────────────────────────────────────────────

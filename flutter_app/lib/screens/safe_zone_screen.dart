@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -32,6 +31,12 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   bool _loadingSnapshot = true;
   bool _saving = false;
   bool _drawing = false;
+
+  // View/edit state machine: drawing and destructive actions only exist in
+  // edit mode; Save (or Cancel) returns to view mode. _zonesBackup restores
+  // the server state when the user cancels.
+  bool _editing = false;
+  List<_Zone> _zonesBackup = [];
 
   Offset? _drawStart;
   Offset? _drawCurrent;
@@ -124,37 +129,52 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
 
   double _dmin(double a, double b) => a < b ? a : b;
 
+  void _enterEdit() {
+    setState(() {
+      _zonesBackup = List.of(_zones);
+      _editing = true;
+    });
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _zones = List.of(_zonesBackup);
+      _drawStart = null;
+      _drawCurrent = null;
+      _drawing = false;
+      _editing = false;
+    });
+  }
+
   Future<void> _save() async {
     final s = S.read(context);
     setState(() => _saving = true);
     try {
       final api     = context.read<AuthProvider>().api;
       final camType = context.read<SettingsProvider>().cameraType;
+      // an empty list clears the zones server-side, so a separate clear API
+      // call is unnecessary — Clear only edits the local working copy
       await api.setSafeZone(_zones.map((z) => z.toJson()).toList());
       await api.setCameraType(camType);
       if (mounted) {
         context.read<SettingsProvider>().bumpZonesVersion();
         AppToast.show(context, s.safeZoneSaved, type: ToastType.success);
+        setState(() => _editing = false); // success → back to view mode
       }
     } catch (e) {
+      // stay in edit mode so the drawn zones aren't lost and Save can be retried
       if (mounted) AppToast.show(context, s.saveFailed(e), type: ToastType.error);
     } finally {
       setState(() => _saving = false);
     }
   }
 
-  Future<void> _clear() async {
-    final s = S.read(context);
-    try {
-      await context.read<AuthProvider>().api.clearSafeZone();
-      setState(() => _zones.clear());
-      if (mounted) {
-        context.read<SettingsProvider>().bumpZonesVersion();
-        AppToast.show(context, s.safeZoneCleared, type: ToastType.success);
-      }
-    } catch (e) {
-      if (mounted) AppToast.show(context, s.deleteFailed(e), type: ToastType.error);
-    }
+  void _clear() {
+    setState(() {
+      _zones.clear();
+      _drawStart = null;
+      _drawCurrent = null;
+    });
   }
 
   @override
@@ -234,9 +254,11 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                             color: primary, strokeWidth: 2))
                     : GestureDetector(
                         key: _canvasKey,
-                        onPanStart: _onPanStart,
-                        onPanUpdate: _onPanUpdate,
-                        onPanEnd: _onPanEnd,
+                        // drawing only in edit mode — casual touches while
+                        // viewing must not create zones
+                        onPanStart: _editing ? _onPanStart : null,
+                        onPanUpdate: _editing ? _onPanUpdate : null,
+                        onPanEnd: _editing ? _onPanEnd : null,
                         child: CustomPaint(
                           foregroundPainter: _ZonePainter(
                             zones: _zones,
@@ -279,7 +301,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                       : s.zoneCount(_zones.length),
                   style: TextStyle(color: textSec, fontSize: 12),
                 ),
-                if (_zones.isNotEmpty)
+                if (_editing && _zones.isNotEmpty)
                   GestureDetector(
                     onTap: () => setState(() => _zones.removeLast()),
                     child: Text(s.cancelLastZone,
@@ -290,34 +312,12 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
             ),
             const SizedBox(height: 20),
 
-            Row(children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _saving ? null : _clear,
-                  icon: Icon(Icons.delete_outline, color: danger, size: 18),
-                  label: Text(s.delete, style: TextStyle(color: danger)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: dangerTint,
-                    foregroundColor: danger,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.save, size: 18),
-                  label: Text(_saving ? s.saving : s.save),
+            // View mode: single Edit button. Edit mode: Cancel / Clear / Save.
+            if (!_editing)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loadingSnapshot ? null : _enterEdit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primary,
                     foregroundColor: Colors.white,
@@ -325,9 +325,61 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
+                  child: Text(s.editZones,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
-              ),
-            ]),
+              )
+            else
+              Row(children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: _saving ? null : _cancelEdit,
+                    style: TextButton.styleFrom(
+                      foregroundColor: textSec,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(s.cancel),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: (_saving || _zones.isEmpty) ? null : _clear,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: dangerTint,
+                      foregroundColor: danger,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(s.delete, style: TextStyle(color: danger)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _saving ? null : _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(s.save),
+                  ),
+                ),
+              ]),
             const SizedBox(height: 24),
           ],
         ),

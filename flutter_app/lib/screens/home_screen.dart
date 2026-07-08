@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
@@ -30,14 +28,31 @@ class _HomeScreenState extends State<HomeScreen> {
   List<FallEvent> _recentEvents = [];
   bool _eventsLoading = true;
   WsEvent? _overlayEvent;
+  late final PageController _pageCtrl;
+  final _eventsKey  = GlobalKey<EventsScreenState>();
+  final _reportsKey = GlobalKey<ReportsScreenState>();
 
   @override
   void initState() {
     super.initState();
+    _pageCtrl = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _subscribeWs();
       _loadEvents();
     });
+  }
+
+  // Tabs are kept alive (never re-initState), so data would silently go stale
+  // when the user switches pages — refresh whichever tab just became visible.
+  void _onTabVisible(int i) {
+    if (i == 0) _loadEvents();
+    if (i == 1) _eventsKey.currentState?.reload();
+    if (i == 2) _reportsKey.currentState?.reload();
+  }
+
+  void _goToTab(int i) {
+    _pageCtrl.animateToPage(i,
+        duration: const Duration(milliseconds: 250), curve: Curves.easeOutCubic);
   }
 
   void _subscribeWs() {
@@ -82,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _wsSub?.cancel();
+    _pageCtrl.dispose();
     super.dispose();
   }
 
@@ -107,10 +123,10 @@ class _HomeScreenState extends State<HomeScreen> {
               eventsLoading: _eventsLoading,
               onRefresh: _loadEvents,
               onDismissAlert: () => setState(() => _activeAlert = null),
-              onGoToEvents: () => setState(() => _tabIndex = 1),
+              onGoToEvents: () => _goToTab(1),
             ),
-      const EventsScreen(),
-      const ReportsScreen(),
+      EventsScreen(key: _eventsKey),
+      ReportsScreen(key: _reportsKey),
       const AppSettingsScreen(),
     ];
 
@@ -118,7 +134,14 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: bg,
       body: Stack(
         children: [
-          IndexedStack(index: _tabIndex, children: tabs),
+          PageView(
+            controller: _pageCtrl,
+            onPageChanged: (i) {
+              setState(() => _tabIndex = i);
+              _onTabVisible(i);
+            },
+            children: tabs,
+          ),
           if (_overlayEvent != null)
             Positioned.fill(
               child: FallResponseOverlay(
@@ -128,43 +151,148 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
         ],
       ),
+      // Floating-style bottom bar: rounded top corners + a soft upward shadow
+      // lift it off the content plane; the active item gets a tinted pill.
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: surface,
-          border: Border(top: BorderSide(color: border)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _tabIndex,
-          onTap: (i) => setState(() => _tabIndex = i),
-          backgroundColor: surface,
-          selectedItemColor: primary,
-          unselectedItemColor: textTer,
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          selectedFontSize: 11,
-          unselectedFontSize: 11,
-          items: [
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.home_outlined),
-              activeIcon: const Icon(Icons.home_rounded),
-              label: s.home,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.history_outlined),
-              activeIcon: const Icon(Icons.history_rounded),
-              label: s.records,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.bar_chart_outlined),
-              activeIcon: const Icon(Icons.bar_chart_rounded),
-              label: s.report,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.settings_outlined),
-              activeIcon: const Icon(Icons.settings_rounded),
-              label: s.settings,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          border: Border(top: BorderSide(color: border.withOpacity(0.6))),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.35 : 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, -6),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                children: [
+                  _NavItem(
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home_rounded,
+                    label: s.home,
+                    selected: _tabIndex == 0,
+                    primary: primary,
+                    inactive: textTer,
+                    tint: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
+                    onTap: () => _goToTab(0),
+                  ),
+                  _NavItem(
+                    icon: Icons.history_outlined,
+                    activeIcon: Icons.history_rounded,
+                    label: s.records,
+                    selected: _tabIndex == 1,
+                    primary: primary,
+                    inactive: textTer,
+                    tint: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
+                    onTap: () => _goToTab(1),
+                  ),
+                  _NavItem(
+                    icon: Icons.bar_chart_outlined,
+                    activeIcon: Icons.bar_chart_rounded,
+                    label: s.report,
+                    selected: _tabIndex == 2,
+                    primary: primary,
+                    inactive: textTer,
+                    tint: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
+                    onTap: () => _goToTab(2),
+                  ),
+                  _NavItem(
+                    icon: Icons.settings_outlined,
+                    activeIcon: Icons.settings_rounded,
+                    label: s.settings,
+                    selected: _tabIndex == 3,
+                    primary: primary,
+                    inactive: textTer,
+                    tint: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
+                    onTap: () => _goToTab(3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bottom nav item ───────────────────────────────────────────────────────────
+// Animated pill: the tint grows behind the active icon (200ms ease-out), and
+// the label only renders for the active tab so the bar stays visually quiet.
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool selected;
+  final Color primary;
+  final Color inactive;
+  final Color tint;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.selected,
+    required this.primary,
+    required this.inactive,
+    required this.tint,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.symmetric(
+                horizontal: selected ? 16 : 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: selected ? tint : Colors.transparent,
+              borderRadius: BorderRadius.circular(100),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(selected ? activeIcon : icon,
+                    size: 22, color: selected ? primary : inactive),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  child: selected
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
+                            softWrap: false,
+                            style: TextStyle(
+                              color: primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -353,104 +481,87 @@ class _StatusHeroBanner extends StatelessWidget {
 
 // ── Live stream card ──────────────────────────────────────────────────────────
 
+// Static entry card — intentionally makes NO network requests. The old live
+// preview polled a snapshot every 400ms and, because dashboard tabs stay alive,
+// kept competing with the full-screen stream for the weak edge↔backend WiFi
+// link. The live video lives only in StreamScreen now; the tiny pulsing dot is
+// a quiet "monitoring is on" cue without pulling any frames.
 class _StreamCard extends StatefulWidget {
   const _StreamCard();
   @override
   State<_StreamCard> createState() => _StreamCardState();
 }
 
-class _StreamCardState extends State<_StreamCard> with SingleTickerProviderStateMixin {
-  Uint8List? _frame;
-  bool _active = false;
-  late AnimationController _pulseCtrl;
-  late Animation<double> _pulseAnim;
+class _StreamCardState extends State<_StreamCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 1.0, end: 0.25).animate(_pulseCtrl);
-    _active = true;
-    _fetchLoop();
+    _pulseAnim = Tween<double>(begin: 1.0, end: 0.3).animate(
+        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
-    _active = false;
     _pulseCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchLoop() async {
-    while (mounted && _active) {
-      await _fetchFrame();
-      if (mounted && _active) {
-        await Future.delayed(const Duration(milliseconds: 400));
-      }
-    }
-  }
-
-  Future<void> _fetchFrame() async {
-    if (!mounted || !_active) return;
-    try {
-      final auth = context.read<AuthProvider>();
-      final res = await http
-          .get(
-            Uri.parse(auth.api.snapshotUrl()),
-            headers: {'Authorization': 'Bearer ${auth.token}'},
-          )
-          .timeout(const Duration(seconds: 3));
-      if (mounted && _active && res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
-        setState(() => _frame = res.bodyBytes);
-      }
-    } catch (_) {}
-  }
-
   @override
   Widget build(BuildContext context) {
-    final s      = S.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final s       = S.of(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? DarkColors.primary : AppColors.primary;
+    final textPri = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
+    final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
+    final success = isDark ? DarkColors.success : AppColors.success;
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const StreamScreen()),
       ),
       child: Container(
+        padding: const EdgeInsets.all(16),
         decoration: cardDeco(radius: 18, dark: isDark),
-        clipBehavior: Clip.antiAlias,
-        child: AspectRatio(
-          aspectRatio: 16 / 10,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Frame or placeholder — Jetson already draws safe zones on video
-              _frame != null
-                  ? Image.memory(_frame!, fit: BoxFit.cover, gaplessPlayback: true)
-                  : _StripePlaceholder(),
-
-              // Top-left: AI badge
-              Positioned(
-                top: 10,
-                left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.55),
-                    borderRadius: BorderRadius.circular(100),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(Icons.videocam_outlined, color: primary, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.liveCam,
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w700, color: textPri),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 3),
+                  Row(
                     children: [
                       FadeTransition(
                         opacity: _pulseAnim,
                         child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: AppColors.success,
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: success,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -458,99 +569,19 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
                       const SizedBox(width: 6),
                       Text(
                         s.aiAnalyzing,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(fontSize: 12, color: textSec),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-
-              // Bottom-left: camera label
-              Positioned(
-                bottom: 10,
-                left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.55),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.videocam, color: Colors.white70, size: 13),
-                      const SizedBox(width: 4),
-                      Text(
-                        s.liveCam,
-                        style: const TextStyle(color: Colors.white, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Top-right: expand icon
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.45),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.fullscreen, color: Colors.white, size: 18),
-                ),
-              ),
-            ],
-          ),
+            ),
+            Icon(Icons.chevron_right, color: textTer, size: 20),
+          ],
         ),
       ),
     );
   }
-}
-
-class _StripePlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => CustomPaint(painter: _StripePainter());
-}
-
-class _StripePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height),
-        Paint()..color = const Color(0xFF1A1A1A));
-    final p = Paint()
-      ..color = Colors.white.withOpacity(0.05)
-      ..strokeWidth = 20
-      ..style = PaintingStyle.stroke;
-    for (double x = -size.height; x < size.width + size.height; x += 36) {
-      canvas.drawLine(Offset(x, 0), Offset(x + size.height, size.height), p);
-    }
-    canvas.drawRect(
-      Rect.fromCenter(
-        center: Offset(size.width / 2, size.height / 2),
-        width: 160,
-        height: 24,
-      ),
-      Paint()..color = Colors.white.withOpacity(0.06),
-    );
-    final tp = TextPainter(
-      text: const TextSpan(
-        text: '[ MJPEG LIVE STREAM ]',
-        style: TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(size.width / 2 - tp.width / 2, size.height / 2 - tp.height / 2));
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }
 
 // ── Emergency buttons ─────────────────────────────────────────────────────────
@@ -738,15 +769,8 @@ class _RecentEventsSection extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             decoration: cardDeco(radius: 14, dark: isDark),
             child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.check_circle_outline, color: AppColors.success, size: 36),
-                  const SizedBox(height: 8),
-                  Text(s.noRecentFalls,
-                      style: TextStyle(color: textSec, fontSize: 14)),
-                ],
-              ),
+              child: Text(s.noRecentFalls,
+                  style: TextStyle(color: textSec, fontSize: 14)),
             ),
           )
         else
@@ -767,6 +791,7 @@ class _RecentEventTile extends StatelessWidget {
     final textPri   = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
     final textTer   = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
     final isSevere  = event.isSevere;
+    final primary   = isDark ? DarkColors.primary : AppColors.primary;
     final severeColor = isDark ? DarkColors.danger : AppColors.danger;
     final severeTint  = isDark ? DarkColors.dangerTint : AppColors.dangerTint;
     final mildColor   = isDark ? DarkColors.warningText : AppColors.warningText;
@@ -786,16 +811,17 @@ class _RecentEventTile extends StatelessWidget {
         decoration: cardDeco(radius: 14, dark: isDark),
         child: Row(
           children: [
+            // calm blue — severity lives only in the small badge on the right
             Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: badgeBg,
+                color: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                Icons.personal_injury_outlined,
-                color: badgeText,
+                Icons.event_note_outlined,
+                color: primary,
                 size: 22,
               ),
             ),
@@ -811,10 +837,7 @@ class _RecentEventTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     event.isAcknowledged ? s.confirmed : s.needsConfirm,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: event.isAcknowledged ? textTer : badgeText,
-                    ),
+                    style: TextStyle(fontSize: 12, color: textTer),
                   ),
                 ],
               ),

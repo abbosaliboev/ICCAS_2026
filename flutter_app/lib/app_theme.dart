@@ -58,9 +58,18 @@ class DarkColors {
 }
 
 class AppTheme {
+  // Slide-in page transition (iOS-style, also feels native on modern Android)
+  // and the M3 sparkle ripple give taps/navigation a finished, non-prototype feel.
+  static const _pageTransitions = PageTransitionsTheme(builders: {
+    TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+    TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+  });
+
   static ThemeData get light => ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
+        pageTransitionsTheme: _pageTransitions,
+        splashFactory: InkSparkle.splashFactory,
         scaffoldBackgroundColor: AppColors.bg,
         colorScheme: const ColorScheme.light(
           primary: AppColors.primary,
@@ -107,6 +116,8 @@ class AppTheme {
   static ThemeData get dark => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
+        pageTransitionsTheme: _pageTransitions,
+        splashFactory: InkSparkle.splashFactory,
         scaffoldBackgroundColor: DarkColors.bg,
         colorScheme: const ColorScheme.dark(
           primary: DarkColors.primary,

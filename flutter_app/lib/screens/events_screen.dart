@@ -13,10 +13,10 @@ const _kPageSize = 30;
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
   @override
-  State<EventsScreen> createState() => _EventsScreenState();
+  State<EventsScreen> createState() => EventsScreenState();
 }
 
-class _EventsScreenState extends State<EventsScreen>
+class EventsScreenState extends State<EventsScreen>
     with AutomaticKeepAliveClientMixin {
   List<FallEvent> _events = [];
   bool _loading = true;
@@ -66,6 +66,10 @@ class _EventsScreenState extends State<EventsScreen>
       _loadMore();
     }
   }
+
+  /// Called by HomeScreen when this tab becomes visible (kept alive in a
+  /// PageView, so initState only ever runs once).
+  void reload() => _load();
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; _page = 0; _hasMore = true; });
@@ -551,18 +555,20 @@ class _EventCard extends StatelessWidget {
                     : null,
               )
             else
+              // calm blue — severity is shown only by the small badge on the
+              // right, so a wall of history entries doesn't read as all-alarm
               Container(
                 width: 48,
                 height: 48,
                 margin: const EdgeInsets.only(right: 14),
                 decoration: BoxDecoration(
-                  color: badgeBg,
+                  color: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  Icons.personal_injury_outlined,
-                  color: badgeFg,
-                  size: 24,
+                  Icons.event_note_outlined,
+                  color: primary,
+                  size: 22,
                 ),
               ),
 
@@ -580,12 +586,7 @@ class _EventCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     event.isAcknowledged ? s.confirmed : s.needsConfirm,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: event.isAcknowledged
-                          ? textTer
-                          : badgeFg,
-                    ),
+                    style: TextStyle(fontSize: 12, color: textTer),
                   ),
                 ],
               ),
@@ -676,22 +677,13 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textSec = Theme.of(context).brightness == Brightness.dark
-        ? DarkColors.textSecondary
-        : AppColors.textSecondary;
+    final textTer = Theme.of(context).brightness == Brightness.dark
+        ? DarkColors.textTertiary
+        : AppColors.textTertiary;
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle_outline,
-              color: AppColors.success, size: 56),
-          const SizedBox(height: 14),
-          Text(
-            message,
-            style: TextStyle(
-                color: textSec, fontSize: 15, fontWeight: FontWeight.w500),
-          ),
-        ],
+      child: Text(
+        message,
+        style: TextStyle(color: textTer, fontSize: 14),
       ),
     );
   }

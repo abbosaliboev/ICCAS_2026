@@ -600,13 +600,13 @@ class _CameraTypeToggle extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _tab('front', frontLabel, Icons.camera_front_outlined),
+          _tab('front', frontLabel),
           const SizedBox(width: 6),
-          _tab('top', ceilingLabel, Icons.camera_outdoor_outlined),
+          _tab('top', ceilingLabel),
         ],
       );
 
-  Widget _tab(String code, String label, IconData icon) {
+  Widget _tab(String code, String label) {
     final selected = value == code;
     return GestureDetector(
       onTap: () => onChanged(code),
@@ -618,18 +618,11 @@ class _CameraTypeToggle extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: selected ? primary : Colors.transparent, width: 1.5),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: selected ? primary : textP),
-            const SizedBox(width: 4),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                    color: selected ? primary : textP)),
-          ],
-        ),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+                color: selected ? primary : textP)),
       ),
     );
   }

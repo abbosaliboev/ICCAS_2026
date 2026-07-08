@@ -394,6 +394,8 @@ def main():
     ap.add_argument("--backend",      default="http://localhost:8000", help="Backend server URL")
     ap.add_argument("--device-token", default="edge-device-001", help="Device token for backend auth")
     ap.add_argument("--stream-port",  type=int, default=8081,  help="MJPEG HTTP port (default 8081)")
+    ap.add_argument("--stream-max-width", type=int, default=480, help="Max width of MJPEG stream frames (smaller = faster over weak WiFi)")
+    ap.add_argument("--stream-quality",   type=int, default=55,  help="JPEG quality of MJPEG stream frames (default 55)")
     ap.add_argument("--clip-dir",     default="clips",         help="Directory to save fall video clips")
     ap.add_argument("--preclip-seconds", type=float, default=5.0, help="Seconds of video to keep before a fall")
     ap.add_argument("--clip-buffer-fps", type=float, default=19.0, help="Max FPS stored in pre-fall clip buffer")
@@ -726,10 +728,10 @@ def main():
         if frame_no % 60 == 0:
             log.info(f"FPS — rtsp={cam_fps:.1f}  loop={fps_disp:.1f}  yolo={yolo_fps:.1f}({yolo_ms:.1f}ms)  stgcn={stgcn_fps:.1f}({stgcn_ms:.1f}ms)")
 
-        # MJPEG publish — resize to 854x480 for fast streaming (source may be 2560x1440)
-        stream_w, stream_h = 854, 480
-        if w > stream_w:
-            small = cv2.resize(frame, (stream_w, stream_h), interpolation=cv2.INTER_LINEAR)
+        # clip buffer keeps a higher-quality frame (854x480 max) for evidence clips
+        clip_w, clip_h = 854, 480
+        if w > clip_w:
+            small = cv2.resize(frame, (clip_w, clip_h), interpolation=cv2.INTER_LINEAR)
         else:
             small = frame
         clip_now = time.time()
@@ -738,7 +740,18 @@ def main():
             pre_clip_buf.append((clip_now, small.copy()))
             last_clip_sample_t = clip_now
         prune_time_buffer(pre_clip_buf, clip_now, args.preclip_seconds)
-        _, jpg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 70])
+
+        # MJPEG publish — stream frames are downscaled + compressed harder than
+        # clip frames: the backend↔edge link is often weak WiFi (~3-4 Mbit/s
+        # measured), and 48KB frames cap it at ~9 fps. ~15KB frames sustain 20 fps.
+        sh, sw = small.shape[:2]
+        if sw > args.stream_max_width:
+            s_w = args.stream_max_width
+            s_h = int(sh * s_w / sw)
+            stream_img = cv2.resize(small, (s_w, s_h), interpolation=cv2.INTER_AREA)
+        else:
+            stream_img = small
+        _, jpg = cv2.imencode(".jpg", stream_img, [cv2.IMWRITE_JPEG_QUALITY, args.stream_quality])
         with _frame_lock:
             _latest_jpg = jpg.tobytes()
 

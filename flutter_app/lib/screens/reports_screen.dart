@@ -14,10 +14,10 @@ enum _Period { today, week, month, all }
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
   @override
-  State<ReportsScreen> createState() => _ReportsScreenState();
+  State<ReportsScreen> createState() => ReportsScreenState();
 }
 
-class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveClientMixin {
+class ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -30,6 +30,10 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
     super.initState();
     _load();
   }
+
+  /// Called by HomeScreen when this tab becomes visible (kept alive in a
+  /// PageView, so initState only ever runs once).
+  void reload() => _load();
 
   Future<void> _load() async {
     setState(() => _loading = true);
@@ -218,13 +222,14 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Stats grid 2×2 ──────────────────────────────────────
+                    // ── Stats grid 2×2 — one hue per meaning: blue=info,
+                    // red=severe (green when none), orange=time-of-risk
                     Row(
                       children: [
                         _StatCard(
                           label: s.totalFalls,
                           value: s.countEntries(_totalCount),
-                          valueColor: textPri,
+                          valueColor: primary,
                           isDark: isDark,
                         ),
                         const SizedBox(width: 10),
@@ -233,7 +238,7 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           value: s.countEntries(_severeCount),
                           valueColor: _severeCount > 0
                               ? (isDark ? DarkColors.danger : AppColors.danger)
-                              : textPri,
+                              : (isDark ? DarkColors.success : AppColors.success),
                           isDark: isDark,
                         ),
                       ],
@@ -244,7 +249,7 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                         _StatCard(
                           label: s.peakTime,
                           value: peakHour,
-                          valueColor: textPri,
+                          valueColor: isDark ? DarkColors.warningText : AppColors.warningText,
                           isDark: isDark,
                           smallValue: true,
                         ),
@@ -312,11 +317,8 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                     Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton.icon(
+                          child: ElevatedButton(
                             onPressed: filtered.isEmpty ? null : () => _exportCsv(isKo: isKo),
-                            icon: const Icon(Icons.download_outlined, size: 16),
-                            label: Text(s.exportCsv,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primary.withOpacity(0.12),
                               foregroundColor: primary,
@@ -324,15 +326,14 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
+                            child: Text(s.exportCsv,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: ElevatedButton.icon(
+                          child: ElevatedButton(
                             onPressed: filtered.isEmpty ? null : () => _emailReport(isKo: isKo),
-                            icon: const Icon(Icons.email_outlined, size: 16),
-                            label: Text(s.emailReport,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: primary.withOpacity(0.12),
                               foregroundColor: primary,
@@ -340,6 +341,8 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
+                            child: Text(s.emailReport,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                           ),
                         ),
                       ],

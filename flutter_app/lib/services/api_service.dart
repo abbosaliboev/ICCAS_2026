@@ -213,6 +213,8 @@ class ApiService {
 
   String snapshotUrl() => '$baseUrl/api/stream/snapshot';
 
+  String streamUrl() => '$baseUrl/api/stream/video';
+
   String videoUrl(String eventId) =>
       '$baseUrl/api/fall-events/$eventId/video/file?token=$token';
 

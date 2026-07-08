@@ -173,7 +173,7 @@ class S {
       _t('낙상 감지 제외 구역 관리', 'Manage fall detection exclusion zones');
   String get appInfoSection => _t('앱 정보', 'App Info');
   String get appInfoSubtitle =>
-      _t('v1.2.0 · Edge AI 기반 낙상 감지', 'v1.2.0 · Edge AI Fall Detection');
+      _t('v1.3.0 · Edge AI 기반 낙상 감지', 'v1.3.0 · Edge AI Fall Detection');
   String get logoutLabel => _t('로그아웃', 'Log Out');
   String get logoutConfirmTitle => _t('로그아웃', 'Log Out');
   String get logoutConfirmBody =>
@@ -194,6 +194,7 @@ class S {
     'Drag on the camera feed to mark areas\n(bed, sofa, etc.) to exclude from fall detection.',
   );
   String get drawZoneLabel => _t('구역 그리기', 'Draw Zone');
+  String get editZones => _t('구역 편집', 'Edit Zones');
   String get noZoneLabel => _t('구역 없음', 'No zones');
   String zoneCount(int n) =>
       _ko ? '${n}개 구역 지정됨' : '$n zone${n == 1 ? '' : 's'} defined';
@@ -232,6 +233,12 @@ class S {
   String get sendSmsBtn => _t('보호자에게 문자 전송', 'Send SMS to Guardian');
   String get smsSentMsg => _t('문자 전송 완료', 'SMS sent successfully');
   String smsFailed(String e) => _t('문자 전송 실패: $e', 'SMS failed: $e');
+  String get smsLimitMsg => _t(
+      '문자 발송 한도에 도달했습니다. 잠시 후 다시 시도해 주세요',
+      'SMS limit reached. Please try again later');
+  String get smsFailedFriendly => _t(
+      '문자를 보내지 못했습니다. 잠시 후 다시 시도해 주세요',
+      'Could not send the SMS. Please try again later');
   String get deleteEventTitle => _t('이벤트 삭제', 'Delete Event');
   String get deleteEventBody =>
       _t('이 이벤트와 관련 영상을 삭제할까요?', 'Delete this event and its footage?');

@@ -6,6 +6,7 @@ import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../models/fall_event.dart';
 import '../strings.dart';
+import '../widgets/app_toast.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -23,8 +24,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   ChewieController? _chewieCtrl;
   bool _videoInitialized = false;
   bool _smsLoading = false;
-  String? _smsResult;
-  bool _smsSuccess = false;
 
   @override
   void initState() {
@@ -93,39 +92,47 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             isAcknowledged: true,
           ));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(s.acknowledgedMsg),
-            backgroundColor: isDark ? DarkColors.success : AppColors.success,
-          ),
-        );
+        AppToast.show(context, s.acknowledgedMsg, type: ToastType.success);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: isDark ? DarkColors.danger : AppColors.danger,
-          ),
-        );
+        AppToast.show(context, e.toString(), type: ToastType.error);
       }
     }
   }
 
+  // provider quota/limit errors get a friendly localized message instead of the
+  // raw API payload — a plain user can't act on "SolAPI 오류 403: {...}"
+  bool _isSmsLimitError(String detail) {
+    final d = detail.toLowerCase();
+    return d.contains('403') || d.contains('429') ||
+        d.contains('limit') || d.contains('quota') ||
+        d.contains('balance') || d.contains('insufficient') || d.contains('credit') ||
+        detail.contains('한도') || detail.contains('잔액');
+  }
+
   Future<void> _sendSms() async {
-    setState(() { _smsLoading = true; _smsResult = null; });
+    setState(() => _smsLoading = true);
+    final s = S.read(context);
     try {
-      final s      = S.read(context);
       final result = await context.read<AuthProvider>().api.notifyGuardianSms(widget.eventId);
-      final ok = result['ok'] == true;
-      setState(() {
-        _smsSuccess = ok;
-        _smsResult  = ok ? s.smsSentMsg : s.smsFailed(result['detail']?.toString() ?? '');
-      });
-    } catch (e) {
-      setState(() { _smsSuccess = false; _smsResult = e.toString(); });
+      if (!mounted) return;
+      if (result['ok'] == true) {
+        AppToast.show(context, s.smsSentMsg, type: ToastType.success);
+      } else {
+        final detail = result['detail']?.toString() ?? '';
+        AppToast.show(
+          context,
+          _isSmsLimitError(detail) ? s.smsLimitMsg : s.smsFailedFriendly,
+          type: ToastType.warning,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        AppToast.show(context, s.smsFailedFriendly, type: ToastType.warning);
+      }
     } finally {
-      setState(() => _smsLoading = false);
+      if (mounted) setState(() => _smsLoading = false);
     }
   }
 
@@ -165,13 +172,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        final dkNow = Theme.of(context).brightness == Brightness.dark;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: dkNow ? DarkColors.danger : AppColors.danger,
-          ),
-        );
+        AppToast.show(context, e.toString(), type: ToastType.error);
       }
     }
   }
@@ -284,17 +285,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             SizedBox(
               width: double.infinity,
               height: 52,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: _acknowledge,
-                icon: const Icon(Icons.check_circle_outline),
-                label: Text(s.acknowledgeBtn,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: success,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
+                child: Text(s.acknowledgeBtn,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               ),
             ),
             const SizedBox(height: 10),
@@ -303,34 +303,24 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           SizedBox(
             width: double.infinity,
             height: 52,
-            child: OutlinedButton.icon(
+            child: OutlinedButton(
               onPressed: _smsLoading ? null : _sendSms,
-              icon: _smsLoading
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: primary),
-                    )
-                  : Icon(Icons.sms_outlined, color: primary),
-              label: Text(s.sendSmsBtn,
-                  style: TextStyle(color: primary, fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
+                foregroundColor: primary,
                 side: BorderSide(color: primary),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
+              child: _smsLoading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: primary),
+                    )
+                  : Text(s.sendSmsBtn,
+                      style: TextStyle(color: primary, fontWeight: FontWeight.w600)),
             ),
           ),
 
-          if (_smsResult != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _smsResult!,
-              style: TextStyle(
-                color: _smsSuccess ? success : danger,
-                fontSize: 13,
-              ),
-            ),
-          ],
           const SizedBox(height: 20),
         ],
       ),
@@ -712,7 +702,7 @@ class _BodyFigurePainter extends CustomPainter {
   Paint _paint(bool active, {bool fill = false}) => Paint()
     ..color = active
         ? (isDark ? DarkColors.danger : AppColors.danger)
-        : (isDark ? const Color(0xFF3A3A3A) : const Color(0xFFD5D0C8))
+        : (isDark ? DarkColors.border : AppColors.border)
     ..style = fill ? PaintingStyle.fill : PaintingStyle.stroke
     ..strokeWidth = active ? 2.5 : 2.0
     ..strokeCap = StrokeCap.round;
