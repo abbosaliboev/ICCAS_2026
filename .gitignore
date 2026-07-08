@@ -48,3 +48,6 @@ Thumbs.db
 
 # Backend runtime storage (screenshots, clips)
 backend/storage/
+
+# Edge server runtime state (safe zone set via app, not source)
+fall_iccas/safe_zone.json

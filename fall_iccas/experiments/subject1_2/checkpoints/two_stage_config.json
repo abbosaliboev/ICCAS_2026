@@ -1,7 +1,0 @@
-{
-  "stage1_threshold": 0.8999999999999999,
-  "rescue_threshold": 0.8500000000000001,
-  "vel_threshold": 0.02038347848430866,
-  "acc_threshold": 0.3395980161116152,
-  "fps": 19.0
-}
