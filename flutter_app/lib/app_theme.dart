@@ -8,9 +8,9 @@ class AppColors {
   static const textPrimary = Color(0xFF2B2A28);
   static const textSecondary = Color(0xFF6B6660);
   static const textTertiary = Color(0xFF948E85);
-  static const primary = Color(0xFF2563C9);
-  static const primaryPressed = Color(0xFF1A4899);
-  static const primaryTint = Color(0xFFEBF0FB);
+  static const primary = Color(0xFF6366F1);
+  static const primaryPressed = Color(0xFF4F46E5);
+  static const primaryTint = Color(0xFFEEF2FF);
   static const success = Color(0xFF1A9460);
   static const successTint = Color(0xFFE7F7EE);
   static const danger = Color(0xFFD94035);
@@ -19,8 +19,8 @@ class AppColors {
   static const warning = Color(0xFFEF9D2E);
   static const warningText = Color(0xFFAD6E16);
   static const warningTint = Color(0xFFFDF3E3);
-  static const accent = Color(0xFFE2967A);
-  static const accentTint = Color(0xFFFBEEE8);
+  static const accent = Color(0xFFE88A30);
+  static const accentTint = Color(0xFFFCEED8);
   static const chip = Color(0xFFF2EFE9);
   AppColors._();
 }
@@ -32,8 +32,8 @@ class DarkColors {
   static const textPrimary   = Color(0xFFEBEBF5);
   static const textSecondary = Color(0xFFAEAEB2);
   static const textTertiary  = Color(0xFF636366);
-  static const primary    = Color(0xFF64AAFF);
-  static const primaryTint = Color(0xFF1A2A3F);
+  static const primary    = Color(0xFF818CF8);
+  static const primaryTint = Color(0xFF1E1B4B);
   static const success    = Color(0xFF30D158);
   static const successTint = Color(0xFF0D2A1A);
   static const danger     = Color(0xFFFF453A);
@@ -41,6 +41,8 @@ class DarkColors {
   static const warning     = Color(0xFFFFD60A);
   static const warningText  = Color(0xFFFFD60A);
   static const warningTint  = Color(0xFF2A220A);
+  static const accent     = Color(0xFFFF9A3C);
+  static const accentTint  = Color(0xFF3A2010);
   static const chip = Color(0xFF2C2E36);
   DarkColors._();
 }

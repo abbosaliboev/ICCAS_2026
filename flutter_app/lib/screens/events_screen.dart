@@ -448,8 +448,8 @@ class _EventCard extends StatelessWidget {
     final textTer  = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
     final primary  = isDark ? DarkColors.primary       : AppColors.primary;
     final isSevere = event.isSevere;
-    final badgeBg  = isSevere ? AppColors.dangerTint : AppColors.warningTint;
-    final badgeFg  = isSevere ? AppColors.danger     : AppColors.warningText;
+    final badgeBg  = isSevere ? AppColors.accentTint : AppColors.warningTint;
+    final badgeFg  = isSevere ? AppColors.accent     : AppColors.warningText;
     final label    = isSevere ? s.severe : s.mild;
 
     return GestureDetector(
@@ -499,12 +499,12 @@ class _EventCard extends StatelessWidget {
                 height: 48,
                 margin: const EdgeInsets.only(right: 14),
                 decoration: BoxDecoration(
-                  color: isSevere ? AppColors.dangerTint : AppColors.warningTint,
+                  color: isSevere ? AppColors.accentTint : AppColors.warningTint,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.personal_injury_outlined,
-                  color: isSevere ? AppColors.danger : AppColors.warningText,
+                  color: isSevere ? AppColors.accent : AppColors.warningText,
                   size: 24,
                 ),
               ),
@@ -527,7 +527,7 @@ class _EventCard extends StatelessWidget {
                       fontSize: 12,
                       color: event.isAcknowledged
                           ? textTer
-                          : AppColors.dangerPressed,
+                          : AppColors.accent,
                     ),
                   ),
                 ],

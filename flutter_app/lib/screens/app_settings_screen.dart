@@ -8,6 +8,7 @@ import '../strings.dart';
 import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'safe_zone_screen.dart';
+import '../widgets/app_toast.dart';
 
 class AppSettingsScreen extends StatelessWidget {
   const AppSettingsScreen({super.key});
@@ -252,9 +253,7 @@ class AppSettingsScreen extends StatelessWidget {
                 textP: textP,
                 onTap: () {
                   themeP.setDark(false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(S.read(context).lightModeSet),
-                        duration: const Duration(seconds: 2)));
+                  AppToast.show(context, S.read(context).lightModeSet, type: ToastType.success);
                 },
               ),
               const SizedBox(width: 8),
@@ -266,9 +265,7 @@ class AppSettingsScreen extends StatelessWidget {
                 textP: textP,
                 onTap: () {
                   themeP.setDark(true);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(S.read(context).darkModeSet),
-                        duration: const Duration(seconds: 2)));
+                  AppToast.show(context, S.read(context).darkModeSet, type: ToastType.success);
                 },
               ),
             ],
@@ -379,11 +376,10 @@ class AppSettingsScreen extends StatelessWidget {
                   onTap: () {
                     settingsP.setLocale(lang['code']!);
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(S.read(context).languageSelected(lang['label']!)),
-                        duration: const Duration(seconds: 2),
-                      ),
+                    AppToast.show(
+                      context,
+                      S.read(context).languageSelected(lang['label']!),
+                      type: ToastType.success,
                     );
                   },
                 );
@@ -452,7 +448,6 @@ class AppSettingsScreen extends StatelessWidget {
       bool isDark, Color primary) {
     final nameCtrl  = TextEditingController(text: settingsP.contactName);
     final phoneCtrl = TextEditingController(text: settingsP.contactPhone);
-    final messenger = ScaffoldMessenger.of(context);
     final s = S.read(context);
 
     showDialog(
@@ -487,12 +482,11 @@ class AppSettingsScreen extends StatelessWidget {
               settingsP.setContact(name, phone);
               Navigator.pop(ctx);
               final label = name.isNotEmpty ? name : phone;
-              messenger.showSnackBar(SnackBar(
-                content: Text(label.isNotEmpty
-                    ? s.emergencyContactSet(label)
-                    : s.emergencyContactCleared),
-                duration: const Duration(seconds: 2),
-              ));
+              AppToast.show(
+                context,
+                label.isNotEmpty ? s.emergencyContactSet(label) : s.emergencyContactCleared,
+                type: ToastType.success,
+              );
             },
             child: Text(s.save),
           ),
@@ -550,10 +544,7 @@ class AppSettingsScreen extends StatelessWidget {
               final sNow = S.read(context);
               final label = val == 'front' ? sNow.frontCameraLabel : sNow.ceilingCameraLabel;
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(sNow.cameraTypeSet(label)),
-                  duration: const Duration(seconds: 2),
-                ));
+                AppToast.show(context, sNow.cameraTypeSet(label), type: ToastType.success);
               }
             },
           ),

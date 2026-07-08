@@ -360,14 +360,10 @@ class _StreamCard extends StatefulWidget {
 }
 
 class _StreamCardState extends State<_StreamCard> with SingleTickerProviderStateMixin {
-  Timer? _pollTimer;
-  Timer? _zoneTimer;
   Uint8List? _frame;
-  bool _fetching = false;
-  List<Map<String, double>> _zones = [];
+  bool _active = false;
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
-  int _lastZonesVersion = -1;
 
   @override
   void initState() {
@@ -377,40 +373,28 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
       duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
     _pulseAnim = Tween<double>(begin: 1.0, end: 0.25).animate(_pulseCtrl);
-    _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) => _fetch());
-    _loadZones();
-    _zoneTimer = Timer.periodic(const Duration(seconds: 15), (_) => _loadZones());
-  }
-
-  Future<void> _loadZones() async {
-    try {
-      final api = context.read<AuthProvider>().api;
-      final data = await api.getSafeZone();
-      final zones = (data['zones'] as List?)
-          ?.map((e) {
-            final m = e as Map<String, dynamic>;
-            return {
-              'x': (m['x'] as num).toDouble(),
-              'y': (m['y'] as num).toDouble(),
-              'w': (m['w'] as num).toDouble(),
-              'h': (m['h'] as num).toDouble(),
-            };
-          }).toList() ?? <Map<String, double>>[];
-      if (mounted) setState(() => _zones = zones);
-    } catch (_) {}
+    _active = true;
+    _fetchLoop();
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
-    _zoneTimer?.cancel();
+    _active = false;
     _pulseCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _fetch() async {
-    if (_fetching || !mounted) return;
-    _fetching = true;
+  Future<void> _fetchLoop() async {
+    while (mounted && _active) {
+      await _fetchFrame();
+      if (mounted && _active) {
+        await Future.delayed(const Duration(milliseconds: 400));
+      }
+    }
+  }
+
+  Future<void> _fetchFrame() async {
+    if (!mounted || !_active) return;
     try {
       final auth = context.read<AuthProvider>();
       final res = await http
@@ -419,27 +403,16 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
             headers: {'Authorization': 'Bearer ${auth.token}'},
           )
           .timeout(const Duration(seconds: 3));
-      if (!mounted) return;
-      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+      if (mounted && _active && res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
         setState(() => _frame = res.bodyBytes);
       }
-    } catch (_) {
-    } finally {
-      _fetching = false;
-    }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
     final s      = S.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final zonesVersion = context.watch<SettingsProvider>().zonesVersion;
-    if (zonesVersion != _lastZonesVersion) {
-      _lastZonesVersion = zonesVersion;
-      _zoneTimer?.cancel();
-      _zoneTimer = Timer.periodic(const Duration(seconds: 15), (_) => _loadZones());
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadZones());
-    }
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -453,15 +426,10 @@ class _StreamCardState extends State<_StreamCard> with SingleTickerProviderState
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Frame or placeholder — with safe zone overlay
-              CustomPaint(
-                foregroundPainter: _zones.isNotEmpty
-                    ? _StreamZonePainter(zones: _zones)
-                    : null,
-                child: _frame != null
-                    ? Image.memory(_frame!, fit: BoxFit.cover, gaplessPlayback: true)
-                    : _StripePlaceholder(),
-              ),
+              // Frame or placeholder — Jetson already draws safe zones on video
+              _frame != null
+                  ? Image.memory(_frame!, fit: BoxFit.cover, gaplessPlayback: true)
+                  : _StripePlaceholder(),
 
               // Top-left: AI badge
               Positioned(
@@ -583,36 +551,6 @@ class _StripePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_) => false;
-}
-
-class _StreamZonePainter extends CustomPainter {
-  final List<Map<String, double>> zones;
-  const _StreamZonePainter({required this.zones});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final fill = Paint()
-      ..color = const Color(0xFF00C850).withOpacity(0.18)
-      ..style = PaintingStyle.fill;
-    final stroke = Paint()
-      ..color = const Color(0xFF00C850)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    for (final z in zones) {
-      final rect = Rect.fromLTWH(
-        (z['x']! * size.width),
-        (z['y']! * size.height),
-        (z['w']! * size.width),
-        (z['h']! * size.height),
-      );
-      canvas.drawRect(rect, fill);
-      canvas.drawRect(rect, stroke);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_StreamZonePainter old) => old.zones != zones;
 }
 
 // ── Emergency buttons ─────────────────────────────────────────────────────────
@@ -829,8 +767,8 @@ class _RecentEventTile extends StatelessWidget {
     final textPri   = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
     final textTer   = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
     final isSevere  = event.isSevere;
-    final badgeBg   = isSevere ? AppColors.dangerTint  : AppColors.warningTint;
-    final badgeText = isSevere ? AppColors.danger       : AppColors.warningText;
+    final badgeBg   = isSevere ? AppColors.accentTint  : AppColors.warningTint;
+    final badgeText = isSevere ? AppColors.accent       : AppColors.warningText;
     final label     = isSevere ? s.severe : s.mild;
 
     return GestureDetector(
@@ -848,12 +786,12 @@ class _RecentEventTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isSevere ? AppColors.dangerTint : AppColors.warningTint,
+                color: isSevere ? AppColors.accentTint : AppColors.warningTint,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.personal_injury_outlined,
-                color: isSevere ? AppColors.danger : AppColors.warningText,
+                color: isSevere ? AppColors.accent : AppColors.warningText,
                 size: 22,
               ),
             ),
@@ -871,7 +809,7 @@ class _RecentEventTile extends StatelessWidget {
                     event.isAcknowledged ? s.confirmed : s.needsConfirm,
                     style: TextStyle(
                       fontSize: 12,
-                      color: event.isAcknowledged ? textTer : AppColors.dangerPressed,
+                      color: event.isAcknowledged ? textTer : AppColors.accent,
                     ),
                   ),
                 ],

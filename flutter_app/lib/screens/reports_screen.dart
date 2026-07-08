@@ -235,17 +235,17 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                           label: s.severeEvents,
                           value: s.countEntries(_severeCount),
                           valueColor: _severeCount > 0
-                              ? (isDark ? DarkColors.danger : AppColors.danger)
+                              ? (isDark ? DarkColors.accent : AppColors.accent)
                               : textPri,
                           isDark: isDark,
                           icon: _severeCount > 0
                               ? Icons.warning_amber_rounded
                               : Icons.check_circle_outline_rounded,
                           iconTint: _severeCount > 0
-                              ? (isDark ? DarkColors.dangerTint : AppColors.dangerTint)
+                              ? (isDark ? DarkColors.accentTint : AppColors.accentTint)
                               : (isDark ? DarkColors.successTint : AppColors.successTint),
                           iconColor: _severeCount > 0
-                              ? (isDark ? DarkColors.danger : AppColors.danger)
+                              ? (isDark ? DarkColors.accent : AppColors.accent)
                               : (isDark ? DarkColors.success : AppColors.success),
                         ),
                       ],
@@ -288,7 +288,7 @@ class _ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCl
                                 minHeight: 6,
                                 backgroundColor: isDark ? DarkColors.chip : AppColors.chip,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                    isDark ? DarkColors.danger : AppColors.danger),
+                                    isDark ? DarkColors.accent : AppColors.accent),
                               ),
                             ),
                           ),
@@ -592,7 +592,7 @@ class _BarChartPainter extends CustomPainter {
       } else if (ratio < 0.7) {
         barColor = AppColors.warning;
       } else {
-        barColor = AppColors.danger;
+        barColor = AppColors.accent;
       }
 
       final rect = RRect.fromRectAndRadius(
@@ -661,12 +661,12 @@ class _EventTile extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: event.isSevere ? AppColors.dangerTint : AppColors.warningTint,
+                color: event.isSevere ? AppColors.accentTint : AppColors.warningTint,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 Icons.person_off_outlined,
-                color: event.isSevere ? AppColors.danger : AppColors.warning,
+                color: event.isSevere ? AppColors.accent : AppColors.warning,
                 size: 20,
               ),
             ),
@@ -678,7 +678,7 @@ class _EventTile extends StatelessWidget {
                   Text(
                     event.isSevere ? s.severeFall : s.fallSuspect,
                     style: TextStyle(
-                      color: event.isSevere ? AppColors.danger : AppColors.warningText,
+                      color: event.isSevere ? AppColors.accent : AppColors.warningText,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -696,11 +696,11 @@ class _EventTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.dangerTint,
+                  color: AppColors.accentTint,
                   borderRadius: BorderRadius.circular(100),
                 ),
                 child: Text(s.unconfirmed,
-                    style: const TextStyle(color: AppColors.danger, fontSize: 10, fontWeight: FontWeight.w700)),
+                    style: const TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.w700)),
               ),
             const SizedBox(width: 4),
             Icon(Icons.chevron_right, color: textTer, size: 18),
