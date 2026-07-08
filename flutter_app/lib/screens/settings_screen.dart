@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../strings.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -41,10 +42,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('서버 설정'),
+        title: Text(s.serverSettingsTitle),
         leading: const BackButton(),
       ),
       body: SingleChildScrollView(
@@ -53,49 +55,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Backend URL ───────────────────────────────────────────────
-            const Text(
-              '백엔드 서버 URL',
-              style: TextStyle(
+            Text(
+              s.backendUrlLabel,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              '인증·이벤트·리포트 등 앱 기능 서버',
-              style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
+            Text(
+              s.backendUrlHelp,
+              style: const TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _urlCtrl,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+              ),
               keyboardType: TextInputType.url,
-              decoration: lightInputDeco('http://192.168.x.x:8000', icon: Icons.dns_outlined),
+              decoration: lightInputDeco(
+                'http://192.168.x.x:8000',
+                icon: Icons.dns_outlined,
+              ),
             ),
 
             const SizedBox(height: 24),
 
             // ── Edge URL ──────────────────────────────────────────────────
-            const Text(
-              '엣지 디바이스 URL',
-              style: TextStyle(
+            Text(
+              s.edgeUrlLabel,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              '카메라 영상·AI 낙상감지 디바이스 (Jetson 등)',
-              style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
+            Text(
+              s.edgeUrlHelp,
+              style: const TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _edgeUrlCtrl,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+              ),
               keyboardType: TextInputType.url,
-              decoration: lightInputDeco('http://192.168.x.x:8000', icon: Icons.videocam_outlined),
+              decoration: lightInputDeco(
+                'http://192.168.x.x:8000',
+                icon: Icons.videocam_outlined,
+              ),
             ),
 
             const SizedBox(height: 28),
@@ -106,14 +126,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _saved ? AppColors.success : AppColors.primary,
+                  backgroundColor: _saved
+                      ? AppColors.success
+                      : AppColors.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
                 child: Text(
-                  _saved ? '저장 완료!' : '저장',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  _saved ? s.savedDone : s.save,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -131,13 +158,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.info_outline, color: AppColors.primary, size: 16),
-                      SizedBox(width: 6),
+                      const Icon(
+                        Icons.info_outline,
+                        color: AppColors.primary,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
                       Text(
-                        '연결 방법',
-                        style: TextStyle(
+                        s.connectionGuideTitle,
+                        style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -146,11 +177,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    '• 백엔드 서버: 이 PC (예: 192.168.0.57)\n'
-                    '• 엣지 디바이스: Jetson 카메라 장치 (예: 192.168.0.53)\n'
-                    '• 모두 같은 WiFi에 연결되어 있어야 합니다.',
-                    style: TextStyle(
+                  Text(
+                    s.connectionGuideBody,
+                    style: const TextStyle(
                       color: AppColors.primary,
                       fontSize: 12,
                       height: 1.7,

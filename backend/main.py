@@ -14,12 +14,6 @@ Web app: http://localhost:8000/app
 import os, json, uuid, shutil
 from datetime import datetime
 from pathlib import Path
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parent / ".env")
-except ImportError:
-    pass
 from typing import Optional
 
 from fastapi import (FastAPI, WebSocket, WebSocketDisconnect,
@@ -131,12 +125,10 @@ class DeviceRegReq(BaseModel):
     stream_url:   str = ""
 
 class FallEventReq(BaseModel):
-    event_id:          str
-    category:          str = "severe"
-    timestamp:         str = ""
-    clip_path:         str = ""
-    direction:         str = ""   # e.g. "forward" / "backward" / "sideways_left" / "sideways_right"
-    estimated_injury:  str = ""   # e.g. "골반/고관절" / "머리/어깨" / "무릎/손목"
+    event_id:  str
+    category:  str = "severe"
+    timestamp: str = ""
+    clip_path: str = ""
 
 class LinkGuardianReq(BaseModel):
     guardian_username: str
@@ -308,8 +300,7 @@ def set_stream_url(device_token: str, body: StreamUrlReq, user=Depends(auth_user
 async def ingest_fall(body: FallEventReq, dev=Depends(auth_device)):
     ts = body.timestamp or datetime.now().isoformat()
     user_id = dev.get("user_id")
-    db.create_fall_event(body.event_id, dev["id"], user_id, ts, body.category, body.clip_path,
-                         body.direction, body.estimated_injury)
+    db.create_fall_event(body.event_id, dev["id"], user_id, ts, body.category, body.clip_path)
 
     event_data = {
         "type":      "fall_detected",
@@ -337,6 +328,9 @@ async def ingest_fall(body: FallEventReq, dev=Depends(auth_device)):
 
 @app.post("/api/fall-events/{event_id}/video")
 async def upload_clip(event_id: str, file: UploadFile = File(...), dev=Depends(auth_device)):
+    ev = db.get_fall_event(event_id)
+    if not ev:
+        raise HTTPException(404, "낙상 이벤트가 DB에 먼저 생성되어야 합니다")
     ext   = Path(file.filename).suffix or ".mp4"
     fname = f"{event_id}{ext}"
     dest  = CLIPS / fname
@@ -383,7 +377,7 @@ def get_clip(event_id: str, user=Depends(auth_media)):
     path = Path(ev["video_path"])
     if not path.exists() or path.stat().st_size < 1000:
         raise HTTPException(404, "파일을 찾을 수 없습니다")
-    return FileResponse(str(path), media_type='video/mp4; codecs="avc1.42E01F"',
+    return FileResponse(str(path), media_type="video/mp4",
                         headers={"Content-Disposition": f'inline; filename="{event_id}.mp4"'})
 
 
@@ -467,11 +461,10 @@ def emergency_report(event_id: str, user=Depends(auth_user)):
         "age":       target.get("age", "미상"),
         "address":   target.get("address", "미상"),
         "phone":     target.get("phone", "미상"),
-        "category":         ev.get("category", "severe"),
-        "direction":        ev.get("direction") or "",
-        "estimated_injury": ev.get("estimated_injury") or "",
-        "gps":              "위치 정보 없음",
-        "has_video":        bool(ev.get("video_path")),
+        "category":  ev.get("category", "severe"),
+        "estimated_injury": "확인 필요",
+        "gps":       "위치 정보 없음",
+        "has_video": bool(ev.get("video_path")),
     }
 
 

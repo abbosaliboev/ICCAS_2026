@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../app_theme.dart';
+import '../strings.dart';
 import 'register_screen.dart';
 import 'settings_screen.dart';
 
@@ -29,7 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _error = null);
     try {
-      await context.read<AuthProvider>().login(_userCtrl.text.trim(), _passCtrl.text);
+      await context.read<AuthProvider>().login(
+        _userCtrl.text.trim(),
+        _passCtrl.text,
+      );
     } catch (e) {
       setState(() => _error = e.toString());
     }
@@ -38,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -56,7 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(Icons.shield_rounded, size: 40, color: Colors.white),
+                    child: const Icon(
+                      Icons.shield_rounded,
+                      size: 40,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -68,18 +77,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '낙상을 놓치지 않는, 가장 든든한 눈',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                  Text(
+                    s.loginTagline,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 40),
 
                   // Fields
                   TextFormField(
                     controller: _userCtrl,
-                    decoration: lightInputDeco('아이디', icon: Icons.person_outline),
+                    decoration: lightInputDeco(
+                      s.usernameHint,
+                      icon: Icons.person_outline,
+                    ),
                     style: const TextStyle(color: AppColors.textPrimary),
-                    validator: (v) => v!.isEmpty ? '아이디를 입력하세요' : null,
+                    validator: (v) => v!.isEmpty ? s.usernameRequired : null,
                     textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 12),
@@ -87,17 +102,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passCtrl,
                     obscureText: _obscure,
                     style: const TextStyle(color: AppColors.textPrimary),
-                    decoration: lightInputDeco('비밀번호', icon: Icons.lock_outline).copyWith(
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: AppColors.textTertiary,
-                          size: 20,
+                    decoration:
+                        lightInputDeco(
+                          s.passwordHint,
+                          icon: Icons.lock_outline,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: AppColors.textTertiary,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                          ),
                         ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
-                    ),
-                    validator: (v) => v!.isEmpty ? '비밀번호를 입력하세요' : null,
+                    validator: (v) => v!.isEmpty ? s.passwordRequired : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
 
@@ -109,11 +131,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.dangerTint,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+                        border: Border.all(
+                          color: AppColors.danger.withOpacity(0.3),
+                        ),
                       ),
                       child: Text(
                         _error!,
-                        style: const TextStyle(color: AppColors.danger, fontSize: 13),
+                        style: const TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 13,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -130,18 +157,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        disabledBackgroundColor: AppColors.primary.withOpacity(
+                          0.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         elevation: 0,
                       ),
                       child: auth.loading
                           ? const SizedBox(
                               width: 22,
                               height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
                             )
-                          : const Text('로그인',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          : Text(
+                              s.loginBtn,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -153,15 +192,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterScreen(),
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
-                      child: const Text('회원가입',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                      child: Text(
+                        s.registerBtn,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -172,10 +220,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       context,
                       MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     ),
-                    icon: const Icon(Icons.dns_outlined, size: 16, color: AppColors.textTertiary),
-                    label: const Text(
-                      '서버 설정',
-                      style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                    icon: const Icon(
+                      Icons.dns_outlined,
+                      size: 16,
+                      color: AppColors.textTertiary,
+                    ),
+                    label: Text(
+                      s.serverSettingsTitle,
+                      style: const TextStyle(
+                        color: AppColors.textTertiary,
+                        fontSize: 13,
+                      ),
                     ),
                     style: TextButton.styleFrom(padding: EdgeInsets.zero),
                   ),

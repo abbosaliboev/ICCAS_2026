@@ -923,6 +923,9 @@ html[data-theme="dark"] .action-panel .btn-ghost{background:rgba(120,120,128,.22
     <div style="width:32px"></div>
   </div>
   <div class="scroll p16 flex flex-col gap12">
+    <div id="detail-live-wrap" class="card" style="padding:0;overflow:hidden;display:none">
+      <img id="detail-live-img" alt="" style="width:100%;display:block;background:#111;min-height:180px">
+    </div>
     <div id="detail-video-wrap" class="card" style="padding:0;overflow:hidden">
       <video id="detail-video" controls playsinline webkit-playsinline preload="metadata" style="width:100%;display:block;background:#111;min-height:180px"></video>
       <div id="detail-video-err" style="display:none;padding:16px;text-align:center"></div>
@@ -1893,8 +1896,11 @@ function _startSSE(){
   _sse=new EventSource('/api/stream/sse');
   _sse.onmessage=e=>{
     if(e.data==='error') return;
+    const src='data:image/jpeg;base64,'+e.data;
     const img=document.getElementById('stream-img');
-    if(img) img.src='data:image/jpeg;base64,'+e.data;
+    const detailImg=document.getElementById('detail-live-img');
+    if(img) img.src=src;
+    if(detailImg) detailImg.src=src;
   };
   _sse.onerror=()=>{_stopSSE();if(streamUrl) setTimeout(_startSSE,2000);};
 }
@@ -2640,13 +2646,62 @@ function onItemClick(id){
 }
 
 // ── DETAIL ─────────────────────────────────────────────
+function showDetailLive(){
+  const liveWrap=document.getElementById('detail-live-wrap');
+  if(liveWrap) liveWrap.style.display='';
+  if(streamUrl) _startSSE();
+}
+
+function hideDetailLive(){
+  const liveWrap=document.getElementById('detail-live-wrap');
+  if(liveWrap) liveWrap.style.display='none';
+}
+
+function showDetailVideo(eventId, ev){
+  if(!ev || !ev.video_path) return false;
+  hideDetailLive();
+  const videoWrap=document.getElementById('detail-video-wrap');
+  const videoEl=document.getElementById('detail-video');
+  const errDiv=document.getElementById('detail-video-err');
+  errDiv.style.display='none';
+  videoEl.style.display='block';
+  videoEl.poster=ev.thumbnail_path?`/api/fall-events/${eventId}/screenshot?token=${token}`:'';
+  videoEl.onerror=()=>{
+    const c=videoEl.error?videoEl.error.code:'?';
+    const can=videoEl.canPlayType('video/mp4')||'no';
+    errDiv.innerHTML=`<span style="color:var(--text-muted);font-size:12px">⚠ 재생 오류 err:${c} can:${can}</span><br><br>`
+      +`<a href="/api/fall-events/${eventId}/video/file?token=${token}" download="fall_${eventId.slice(0,8)}.mp4" `
+      +`style="padding:8px 18px;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-size:14px">다운로드</a>`;
+    errDiv.style.display='block';
+    videoEl.style.display='none';
+  };
+  videoEl.src=`/api/fall-events/${eventId}/video/file?token=${token}&t=${Date.now()}`;
+  videoEl.load();
+  videoWrap.style.display='';
+  return true;
+}
+
+async function waitForDetailVideo(eventId){
+  for(let i=0;i<10;i++){
+    if(currentEventId!==eventId) return;
+    await new Promise(r=>setTimeout(r,2000));
+    const ev=await api('GET',`/api/fall-events/${eventId}`);
+    if(showDetailVideo(eventId,ev)){
+      const hasVideoEl=document.getElementById('detail-has-video');
+      if(hasVideoEl) hasVideoEl.textContent=t('yes');
+      return;
+    }
+  }
+}
+
 async function openDetail(eventId){
   currentEventId=eventId;
   showScreen('screen-detail');
+  const liveWrap=document.getElementById('detail-live-wrap');
   const videoWrap=document.getElementById('detail-video-wrap');
   const ssWrap=document.getElementById('detail-screenshot-wrap');
-  const videoEl=document.getElementById('detail-video');
   // reset
+  liveWrap.style.display='none';
   videoWrap.style.display='none';
   ssWrap.innerHTML='';
   document.getElementById('detail-info').innerHTML=`<div class="spinner mt12"></div>`;
@@ -2658,23 +2713,9 @@ async function openDetail(eventId){
   ]);
   if(!ev) return;
 
-  if(ev.video_path){
-    const errDiv=document.getElementById('detail-video-err');
-    errDiv.style.display='none';
-    videoEl.style.display='block';
-    videoEl.poster=ev.thumbnail_path?`/api/fall-events/${eventId}/screenshot?token=${token}`:'';
-    videoEl.onerror=()=>{
-      const c=videoEl.error?videoEl.error.code:'?';
-      const can=videoEl.canPlayType('video/mp4; codecs="avc1.42E01F"')||'no';
-      errDiv.innerHTML=`<span style="color:var(--text-muted);font-size:12px">⚠ 재생 오류 err:${c} can:${can}</span><br><br>`
-        +`<a href="/api/fall-events/${eventId}/video/file?token=${token}" download="fall_${eventId.slice(0,8)}.mp4" `
-        +`style="padding:8px 18px;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-size:14px">다운로드</a>`;
-      errDiv.style.display='block';
-      videoEl.style.display='none';
-    };
-    videoEl.src=`/api/fall-events/${eventId}/video/file?token=${token}`;
-    videoEl.load();
-    videoWrap.style.display='';
+  if(!showDetailVideo(eventId,ev)){
+    showDetailLive();
+    waitForDetailVideo(eventId);
   }
   const ssUrl=`/api/fall-events/${eventId}/screenshot?token=${token}&t=${Date.now()}`;
   ssWrap.innerHTML=`<div class="card" style="padding:0;overflow:hidden;margin-bottom:0;position:relative">
@@ -2695,7 +2736,7 @@ async function openDetail(eventId){
     <div class="dr"><span class="dk">${t('fall_time')}</span><span class="dv">${fmtTs(ev.timestamp)}</span></div>
     <div class="dr"><span class="dk">${t('fall_type')}</span><span class="dv">${catLabel(ev.category)}</span></div>
     <div class="dr"><span class="dk">${t('severity')}</span><span class="dv text-red fw7">${catLabel(ev.category)}</span></div>
-    <div class="dr"><span class="dk">${t('has_video')}</span><span class="dv">${ev.thumbnail_path?t('yes'):t('no')}</span></div>`;
+    <div class="dr"><span class="dk">${t('has_video')}</span><span id="detail-has-video" class="dv">${ev.video_path?t('yes'):t('no')}</span></div>`;
 
   if(report){
     document.getElementById('detail-emergency').innerHTML=`

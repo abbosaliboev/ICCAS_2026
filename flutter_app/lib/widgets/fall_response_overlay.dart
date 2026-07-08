@@ -5,12 +5,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
-
-const _kAlertMessage =
-    '낙상이 감지되었습니다. '
-    '보호자에게 연락 및 119 신고를 원하시면 "연락"이라고 말씀해주세요. '
-    '괜찮으시면 "아니"라고 말씀해주세요. '
-    '15초 간 응답이 없으시면 자동으로 119 문자 신고 및 보호자에게 연락 조치가 진행됩니다.';
+import '../strings.dart';
 
 class FallResponseOverlay extends StatefulWidget {
   final String eventId;
@@ -35,7 +30,7 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
   bool _ttsPlaying = true;
   bool _listening = false;
   bool _responded = false;
-  String _statusText = 'TTS 재생 중...';
+  String _statusText = '';
 
   @override
   void initState() {
@@ -52,24 +47,30 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
   }
 
   Future<void> _startTts() async {
-    await _tts.setLanguage('ko-KR');
+    final s = S.read(context);
+    _statusText = s.fallAlertTtsPlaying;
+
+    await _tts.setLanguage(s.isKorean ? 'ko-KR' : 'en-US');
     await _tts.setSpeechRate(0.45);
     await _tts.setVolume(1.0);
     _tts.setCompletionHandler(() {
       if (!mounted || _responded) return;
       setState(() {
         _ttsPlaying = false;
-        _statusText = '"연락" 또는 "아니"라고 말씀해주세요';
+        _statusText = S.read(context).fallAlertVoicePrompt;
       });
       _startCountdown();
       _startListening();
     });
-    await _tts.speak(_kAlertMessage);
+    await _tts.speak(s.fallAlertTtsMessage);
   }
 
   void _startCountdown() {
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
       setState(() => _remaining--);
       if (_remaining <= 0) {
         t.cancel();
@@ -90,14 +91,30 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
     _stt.listen(
       onResult: (result) {
         if (!mounted || _responded) return;
-        final text = result.recognizedWords;
-        if (text.contains('연락') || text.contains('네') || text.contains('예')) {
+        final text = result.recognizedWords.toLowerCase();
+        final s = S.read(context);
+        final wantsHelp = s.isKorean
+            ? text.contains('연락') || text.contains('네') || text.contains('예')
+            : text.contains('help') ||
+                text.contains('yes') ||
+                text.contains('call') ||
+                text.contains('emergency');
+        final isOk = s.isKorean
+            ? text.contains('아니') || text.contains('괜찮') || text.contains('아냐')
+            : text.contains('no') ||
+                text.contains('okay') ||
+                text.contains('ok') ||
+                text.contains('fine') ||
+                text.contains("i'm ok") ||
+                text.contains('im ok');
+
+        if (wantsHelp) {
           _handleResponse(emergency: true);
-        } else if (text.contains('아니') || text.contains('괜찮') || text.contains('아냐')) {
+        } else if (isOk) {
           _handleResponse(emergency: false);
         }
       },
-      localeId: 'ko_KR',
+      localeId: S.read(context).isKorean ? 'ko_KR' : 'en_US',
       listenFor: const Duration(seconds: 14),
       pauseFor: const Duration(seconds: 4),
     );
@@ -111,20 +128,21 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
     await _stt.stop();
     if (mounted) setState(() => _listening = false);
 
+    final s = S.read(context);
     if (emergency) {
-      if (mounted) setState(() => _statusText = '연락 중...');
+      if (mounted) setState(() => _statusText = s.fallAlertContacting);
       try {
         final api = context.read<AuthProvider>().api;
         await Future.wait([
           api.notifyGuardianSms(widget.eventId),
           api.notifyEmergencySms(widget.eventId),
         ]);
-        if (mounted) setState(() => _statusText = '보호자 및 119에 연락 완료');
+        if (mounted) setState(() => _statusText = s.fallAlertContacted);
       } catch (_) {
-        if (mounted) setState(() => _statusText = '연락 처리 중 오류 발생');
+        if (mounted) setState(() => _statusText = s.fallAlertContactError);
       }
     } else {
-      if (mounted) setState(() => _statusText = '취소되었습니다. 안전하세요!');
+      if (mounted) setState(() => _statusText = s.fallAlertCanceled);
     }
 
     await Future.delayed(const Duration(seconds: 2));
@@ -133,6 +151,8 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
+
     return Material(
       color: const Color(0xFF280A08).withOpacity(0.92),
       child: SafeArea(
@@ -180,18 +200,18 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
                                   color: Colors.white, size: 36),
                             ),
                             const SizedBox(height: 14),
-                            const Text(
-                              '낙상이 감지되었습니다',
-                              style: TextStyle(
+                            Text(
+                              s.fallAlertTitle,
+                              style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.dangerPressed,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
-                              '방금 전 · 중증',
-                              style: TextStyle(
+                            Text(
+                              s.fallAlertMeta,
+                              style: const TextStyle(
                                   color: AppColors.dangerPressed, fontSize: 13),
                             ),
                           ],
@@ -207,7 +227,9 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 300),
                               child: Text(
-                                _statusText,
+                                _statusText.isEmpty
+                                    ? s.fallAlertTtsPlaying
+                                    : _statusText,
                                 key: ValueKey(_statusText),
                                 style: TextStyle(
                                   color: _ttsPlaying
@@ -224,7 +246,7 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
                             if (!_ttsPlaying) ...[
                               const SizedBox(height: 16),
                               Text(
-                                '$_remaining초',
+                                s.fallAlertSeconds(_remaining),
                                 style: TextStyle(
                                   color: _remaining <= 5
                                       ? AppColors.danger
@@ -258,9 +280,9 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
                                     ? null
                                     : () => _handleResponse(emergency: true),
                                 icon: const Icon(Icons.phone),
-                                label: const Text(
-                                  '119 신고하기',
-                                  style: TextStyle(
+                                label: Text(
+                                  s.fallAlertReport119,
+                                  style: const TextStyle(
                                       fontSize: 16, fontWeight: FontWeight.w700),
                                 ),
                                 style: ElevatedButton.styleFrom(
@@ -283,9 +305,9 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
                                     ? null
                                     : () => _handleResponse(emergency: true),
                                 icon: const Icon(Icons.people_outline),
-                                label: const Text(
-                                  '보호자에게 연락',
-                                  style: TextStyle(
+                                label: Text(
+                                  s.fallAlertContactGuardian,
+                                  style: const TextStyle(
                                       fontSize: 16, fontWeight: FontWeight.w700),
                                 ),
                                 style: ElevatedButton.styleFrom(
@@ -312,9 +334,9 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14)),
                                 ),
-                                child: const Text(
-                                  '확인했습니다',
-                                  style: TextStyle(
+                                child: Text(
+                                  s.fallAlertConfirmed,
+                                  style: const TextStyle(
                                       fontSize: 15, fontWeight: FontWeight.w600),
                                 ),
                               ),
@@ -325,11 +347,12 @@ class _FallResponseOverlayState extends State<FallResponseOverlay> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.mic, color: AppColors.success, size: 14),
+                                  const Icon(Icons.mic,
+                                      color: AppColors.success, size: 14),
                                   const SizedBox(width: 5),
-                                  const Text(
-                                    '마이크 활성화 중',
-                                    style: TextStyle(
+                                  Text(
+                                    s.fallAlertMicActive,
+                                    style: const TextStyle(
                                         color: AppColors.success, fontSize: 12),
                                   ),
                                 ],
