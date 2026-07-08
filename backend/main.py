@@ -139,13 +139,13 @@ class LinkGuardianReq(BaseModel):
 # ── routes ────────────────────────────────────────────────────────────────────
 
 def _fall_sms_text(target: dict, category: str) -> str:
-    name = target.get("display_name") or "피보호자"
-    address = target.get("address") or "등록된 주소 없음"
-    label = "심각한 낙상" if category == "severe" else "낙상 의심"
+    name = target.get("display_name") or "User"
+    address = target.get("address") or "No address registered"
+    label = "Severe fall" if category == "severe" else "Possible fall"
     now_str = datetime.now().strftime("%H:%M")
     return (
-        f"[Fall Guard] {now_str} {name}님에게서 {label}이 감지되었습니다. "
-        f"위치: {address}. 앱에서 상태를 확인해주세요."
+        f"[MobiCare] {label} detected for {name} at {now_str}. "
+        f"Location: {address}. Please check the app."
     )
 
 
@@ -478,12 +478,12 @@ async def notify_emergency_sms(event_id: str, user=Depends(auth_user)):
     if not ev:
         raise HTTPException(404, "이벤트를 찾을 수 없습니다")
     target = db.get_user_by_id(ev.get("user_id", "")) if ev.get("user_id") else {}
-    name = (target or {}).get("display_name") or "피보호자"
-    address = (target or {}).get("address") or "등록된 주소 없음"
+    name = (target or {}).get("display_name") or "User"
+    address = (target or {}).get("address") or "No address registered"
     now_str = datetime.now().strftime("%H:%M")
     message = (
-        f"[MobiCare 긴급신고] {now_str} {name}님에게서 낙상이 감지되었습니다. "
-        f"위치: {address}. 즉각적인 확인이 필요합니다."
+        f"[MobiCare EMERGENCY] Fall detected for {name} at {now_str}. "
+        f"Location: {address}. Immediate attention required."
     )
     return await sms.send_sms(_EMERGENCY_TEST_PHONE, message)
 

@@ -41,7 +41,7 @@ async def send_sms(to: str, message: str) -> dict:
     """Send SMS via SolAPI, or dry-run when credentials are not configured."""
     to_clean = "".join(ch for ch in (to or "") if ch.isdigit())
     if not to_clean:
-        return {"ok": False, "mode": "error", "detail": "수신자 전화번호가 없습니다."}
+        return {"ok": False, "mode": "error", "detail": "Recipient phone number is missing."}
 
     if not sms_configured():
         detail = f"[DRY-RUN] SMS provider not configured -> {to_clean}: {message}"
