@@ -12,6 +12,8 @@ Web app: http://localhost:8000/app
 """
 
 import os, json, uuid, shutil
+from dotenv import load_dotenv
+load_dotenv()
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -636,7 +638,25 @@ async def stream_sse():
 
 # ── safe zone ────────────────────────────────────────────────────────────────
 
-SAFE_ZONE_PATH = BASE.parent / "fall_iccas" / "safe_zone.json"
+SAFE_ZONE_PATH  = BASE.parent / "fall_iccas" / "safe_zone.json"
+CAM_CONFIG_PATH = BASE.parent / "fall_iccas" / "camera_config.json"
+
+@app.get("/api/device/config")
+def get_device_config(dev=Depends(auth_device)):
+    """Edge server polls this every 15s to get safe zones + camera type."""
+    zones = []
+    if SAFE_ZONE_PATH.exists():
+        try:
+            zones = json.loads(SAFE_ZONE_PATH.read_text()).get("zones", [])
+        except Exception:
+            pass
+    cam_type = "front"
+    if CAM_CONFIG_PATH.exists():
+        try:
+            cam_type = json.loads(CAM_CONFIG_PATH.read_text()).get("camera_type", "front")
+        except Exception:
+            pass
+    return {"zones": zones, "camera_type": cam_type}
 
 class SafeZoneReq(BaseModel):
     zones: list

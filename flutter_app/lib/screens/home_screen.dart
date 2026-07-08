@@ -298,24 +298,24 @@ class _StatusHeroBanner extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(
               hasAlert ? Icons.warning_rounded : Icons.check_rounded,
               color: Colors.white,
-              size: 22,
+              size: 16,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,15 +323,15 @@ class _StatusHeroBanner extends StatelessWidget {
                 Text(
                   headline,
                   style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                     color: hasAlert ? AppColors.dangerPressed : AppColors.success,
                   ),
                 ),
                 Text(
                   sub,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: hasAlert
                         ? AppColors.dangerPressed.withOpacity(0.8)
                         : AppColors.success.withOpacity(0.85),
@@ -343,7 +343,7 @@ class _StatusHeroBanner extends StatelessWidget {
           if (hasAlert)
             GestureDetector(
               onTap: onDismiss,
-              child: const Icon(Icons.close, color: AppColors.danger, size: 20),
+              child: const Icon(Icons.close, color: AppColors.danger, size: 18),
             ),
         ],
       ),
@@ -695,7 +695,7 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
                           width: 18, height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text('🚨', style: TextStyle(fontSize: 18)),
+                      : const Icon(Icons.phone_in_talk_rounded, size: 20),
                   label: Text(s.emergencyCall,
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(

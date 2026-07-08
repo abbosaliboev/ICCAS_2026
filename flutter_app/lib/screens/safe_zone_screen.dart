@@ -5,8 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
 import '../providers/theme_provider.dart';
 import '../strings.dart';
+import '../widgets/app_toast.dart';
 
 class _Zone {
   final double x, y, w, h;
@@ -29,9 +31,6 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   Uint8List? _snapshot;
   bool _loadingSnapshot = true;
   bool _saving = false;
-  String _cameraType = 'front';
-  String? _message;
-  bool _isError = false;
 
   Offset? _drawStart;
   Offset? _drawCurrent;
@@ -51,8 +50,7 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
               ?.map((e) => _Zone.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [];
-      final cam = data['camera_type'] as String? ?? 'front';
-      if (mounted) setState(() { _zones = zones; _cameraType = cam; });
+      if (mounted) setState(() => _zones = zones);
     } catch (_) {}
     await _fetchSnapshot();
   }
@@ -120,14 +118,15 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
 
   Future<void> _save() async {
     final s = S.read(context);
-    setState(() { _saving = true; _message = null; });
+    setState(() => _saving = true);
     try {
-      final api = context.read<AuthProvider>().api;
+      final api     = context.read<AuthProvider>().api;
+      final camType = context.read<SettingsProvider>().cameraType;
       await api.setSafeZone(_zones.map((z) => z.toJson()).toList());
-      await api.setCameraType(_cameraType);
-      setState(() { _message = s.safeZoneSaved; _isError = false; });
+      await api.setCameraType(camType);
+      if (mounted) AppToast.show(context, s.safeZoneSaved, type: ToastType.success);
     } catch (e) {
-      setState(() { _message = s.saveFailed(e); _isError = true; });
+      if (mounted) AppToast.show(context, s.saveFailed(e), type: ToastType.error);
     } finally {
       setState(() => _saving = false);
     }
@@ -137,21 +136,22 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
     final s = S.read(context);
     try {
       await context.read<AuthProvider>().api.clearSafeZone();
-      setState(() { _zones.clear(); _message = s.safeZoneCleared; _isError = false; });
+      setState(() => _zones.clear());
+      if (mounted) AppToast.show(context, s.safeZoneCleared, type: ToastType.success);
     } catch (e) {
-      setState(() { _message = s.deleteFailed(e); _isError = true; });
+      if (mounted) AppToast.show(context, s.deleteFailed(e), type: ToastType.error);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final s      = S.of(context);
+    final s       = S.of(context);
     final isDark  = context.watch<ThemeProvider>().isDark;
     final bg      = isDark ? DarkColors.bg      : AppColors.bg;
     final surface = isDark ? DarkColors.surface  : Colors.white;
     final border  = isDark ? DarkColors.border   : AppColors.border;
     final primary = isDark ? DarkColors.primary  : AppColors.primary;
-    final textPri = isDark ? DarkColors.textPrimary  : AppColors.textPrimary;
+    final textPri = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
     final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
 
     return Scaffold(
@@ -198,20 +198,10 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
             ),
             const SizedBox(height: 20),
 
-            // ── Camera type selector ──────────────────────────────────────
-            Text(s.cameraTypeLabel, style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            Row(children: [
-              _camChip(isDark, surface, border, primary, textPri, textSec,
-                  'front', Icons.videocam_outlined, s.frontCameraLabel),
-              const SizedBox(width: 10),
-              _camChip(isDark, surface, border, primary, textPri, textSec,
-                  'top', Icons.camera_alt_outlined, s.ceilingCameraLabel),
-            ]),
-            const SizedBox(height: 20),
-
             // ── Canvas ────────────────────────────────────────────────────
-            Text(s.drawZoneLabel, style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(s.drawZoneLabel,
+                style: TextStyle(
+                    color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             AspectRatio(
               aspectRatio: 16 / 9,
@@ -223,8 +213,9 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: _loadingSnapshot
-                    ? Center(child: CircularProgressIndicator(
-                        color: primary, strokeWidth: 2))
+                    ? Center(
+                        child: CircularProgressIndicator(
+                            color: primary, strokeWidth: 2))
                     : GestureDetector(
                         key: _canvasKey,
                         onPanStart: _onPanStart,
@@ -250,7 +241,9 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                                           color: Colors.white24, size: 40),
                                       const SizedBox(height: 8),
                                       Text(s.noCameraMsg,
-                                          style: const TextStyle(color: Colors.white24, fontSize: 12),
+                                          style: const TextStyle(
+                                              color: Colors.white24,
+                                              fontSize: 12),
                                           textAlign: TextAlign.center),
                                     ],
                                   ),
@@ -264,55 +257,35 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _zones.isEmpty ? s.noZoneLabel : s.zoneCount(_zones.length),
+                  _zones.isEmpty
+                      ? s.noZoneLabel
+                      : s.zoneCount(_zones.length),
                   style: TextStyle(color: textSec, fontSize: 12),
                 ),
                 if (_zones.isNotEmpty)
                   GestureDetector(
                     onTap: () => setState(() => _zones.removeLast()),
                     child: Text(s.cancelLastZone,
-                        style: const TextStyle(color: AppColors.warning, fontSize: 12)),
+                        style: const TextStyle(
+                            color: AppColors.warning, fontSize: 12)),
                   ),
               ],
             ),
-
-            if (_message != null) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _isError
-                      ? Colors.red.withOpacity(0.08)
-                      : Colors.green.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: _isError
-                        ? Colors.red.withOpacity(0.3)
-                        : Colors.green.withOpacity(0.3),
-                  ),
-                ),
-                child: Text(
-                  _message!,
-                  style: TextStyle(
-                    color: _isError ? Colors.red : Colors.green,
-                    fontSize: 13,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-
             const SizedBox(height: 20),
+
             Row(children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _saving ? null : _clear,
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
-                  label: Text(s.delete, style: const TextStyle(color: Colors.redAccent)),
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.redAccent, size: 18),
+                  label: Text(s.delete,
+                      style: const TextStyle(color: Colors.redAccent)),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.redAccent.withOpacity(0.4)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -321,7 +294,9 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _saving ? null : _save,
                   icon: _saving
-                      ? const SizedBox(width: 16, height: 16,
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.save, size: 18),
@@ -330,7 +305,8 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
                     backgroundColor: primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -341,38 +317,6 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
       ),
     );
   }
-
-  Widget _camChip(bool isDark, Color surface, Color border, Color primary,
-      Color textPri, Color textSec,
-      String value, IconData icon, String label) =>
-      Expanded(
-        child: GestureDetector(
-          onTap: () => setState(() => _cameraType = value),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: _cameraType == value
-                  ? primary.withOpacity(0.10)
-                  : (isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03)),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _cameraType == value ? primary : border,
-              ),
-            ),
-            child: Column(children: [
-              Icon(icon,
-                  color: _cameraType == value ? primary : textSec,
-                  size: 22),
-              const SizedBox(height: 4),
-              Text(label,
-                  style: TextStyle(
-                    color: _cameraType == value ? primary : textSec,
-                    fontSize: 12, fontWeight: FontWeight.w500,
-                  )),
-            ]),
-          ),
-        ),
-      );
 }
 
 // ── Painter ────────────────────────────────────────────────────────────────────
@@ -383,8 +327,12 @@ class _ZonePainter extends CustomPainter {
   final Offset? drawCurrent;
   final Color primaryColor;
 
-  _ZonePainter({required this.zones, this.drawStart, this.drawCurrent,
-    required this.primaryColor});
+  _ZonePainter({
+    required this.zones,
+    this.drawStart,
+    this.drawCurrent,
+    required this.primaryColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -407,10 +355,17 @@ class _ZonePainter extends CustomPainter {
 
     if (drawStart != null && drawCurrent != null) {
       final rect = Rect.fromPoints(drawStart!, drawCurrent!);
-      canvas.drawRect(rect,
-          Paint()..color = Colors.orange.withOpacity(0.2)..style = PaintingStyle.fill);
-      canvas.drawRect(rect,
-          Paint()..color = Colors.orange..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawRect(
+          rect,
+          Paint()
+            ..color = Colors.orange.withOpacity(0.2)
+            ..style = PaintingStyle.fill);
+      canvas.drawRect(
+          rect,
+          Paint()
+            ..color = Colors.orange
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2);
     }
   }
 

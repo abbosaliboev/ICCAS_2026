@@ -79,6 +79,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Future<void> _acknowledge() async {
     final s   = S.read(context);
     final api = context.read<AuthProvider>().api;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     try {
       await api.acknowledgeEvent(widget.eventId);
       setState(() => _event = FallEvent(
@@ -93,13 +94,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           ));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.acknowledgedMsg), backgroundColor: AppColors.success),
+          SnackBar(
+            content: Text(s.acknowledgedMsg),
+            backgroundColor: isDark ? DarkColors.success : AppColors.success,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: isDark ? DarkColors.danger : AppColors.danger,
+          ),
         );
       }
     }
@@ -124,23 +131,30 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Future<void> _delete() async {
     final s = S.read(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: isDark ? DarkColors.surface : AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(s.deleteEventTitle,
-            style: const TextStyle(color: AppColors.textPrimary)),
+            style: TextStyle(
+                color: isDark ? DarkColors.textPrimary : AppColors.textPrimary)),
         content: Text(s.deleteEventBody,
-            style: const TextStyle(color: AppColors.textSecondary)),
+            style: TextStyle(
+                color: isDark ? DarkColors.textSecondary : AppColors.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(s.cancel, style: const TextStyle(color: AppColors.textSecondary)),
+            child: Text(s.cancel,
+                style: TextStyle(
+                    color: isDark ? DarkColors.textSecondary : AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(s.delete, style: const TextStyle(color: AppColors.danger)),
+            child: Text(s.delete,
+                style: TextStyle(
+                    color: isDark ? DarkColors.danger : AppColors.danger)),
           ),
         ],
       ),
@@ -151,8 +165,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
+        final dkNow = Theme.of(context).brightness == Brightness.dark;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: dkNow ? DarkColors.danger : AppColors.danger,
+          ),
         );
       }
     }
@@ -160,38 +178,48 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
+    final s       = S.of(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final bg      = isDark ? DarkColors.bg      : AppColors.bg;
+    final surface = isDark ? DarkColors.surface  : AppColors.surface;
+    final textPri = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
+    final danger  = isDark ? DarkColors.danger   : AppColors.danger;
+    final primary = isDark ? DarkColors.primary  : AppColors.primary;
+
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.textPrimary,
+        backgroundColor: surface,
+        foregroundColor: textPri,
         elevation: 0,
         centerTitle: false,
         title: Text(s.eventDetailTitle,
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+            style: TextStyle(color: textPri, fontWeight: FontWeight.w700)),
         actions: [
           if (_event != null)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+              icon: Icon(Icons.delete_outline, color: danger),
               onPressed: _delete,
             ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2))
+          ? Center(child: CircularProgressIndicator(color: primary, strokeWidth: 2))
           : _error != null
               ? Center(
                   child: Text(_error!,
-                      style: const TextStyle(color: AppColors.danger),
+                      style: TextStyle(color: danger),
                       textAlign: TextAlign.center))
-              : _buildBody(s),
+              : _buildBody(s, isDark),
     );
   }
 
-  Widget _buildBody(S s) {
-    final event = _event!;
+  Widget _buildBody(S s, bool isDark) {
+    final event   = _event!;
     final isSevere = event.isSevere;
+    final primary = isDark ? DarkColors.primary : AppColors.primary;
+    final danger  = isDark ? DarkColors.danger  : AppColors.danger;
+    final success = isDark ? DarkColors.success : AppColors.success;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -209,9 +237,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       )
                     : Container(
                         height: 220,
-                        color: AppColors.textPrimary,
-                        child: const Center(
-                          child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                        color: const Color(0xFF1A1A1A),
+                        child: Center(
+                          child: CircularProgressIndicator(color: primary, strokeWidth: 2),
                         ),
                       ))
                 : _ScreenshotWidget(eventId: event.id),
@@ -224,16 +252,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               _Pill(
                 label: isSevere ? s.severeFall : s.fallSuspect,
                 icon: Icons.warning_rounded,
-                bg: isSevere ? AppColors.dangerTint : AppColors.warningTint,
-                fg: isSevere ? AppColors.danger : AppColors.warningText,
+                bg: isSevere
+                    ? (isDark ? DarkColors.dangerTint  : AppColors.dangerTint)
+                    : (isDark ? DarkColors.warningTint : AppColors.warningTint),
+                fg: isSevere
+                    ? danger
+                    : (isDark ? DarkColors.warningText : AppColors.warningText),
               ),
               const SizedBox(width: 8),
               if (event.isAcknowledged)
                 _Pill(
                   label: s.confirmed,
                   icon: Icons.check_circle,
-                  bg: AppColors.successTint,
-                  fg: AppColors.success,
+                  bg: isDark ? DarkColors.successTint : AppColors.successTint,
+                  fg: success,
                 ),
             ],
           ),
@@ -258,7 +290,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 label: Text(s.acknowledgeBtn,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
+                  backgroundColor: success,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
@@ -274,16 +306,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             child: OutlinedButton.icon(
               onPressed: _smsLoading ? null : _sendSms,
               icon: _smsLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: primary),
                     )
-                  : const Icon(Icons.sms_outlined, color: AppColors.primary),
+                  : Icon(Icons.sms_outlined, color: primary),
               label: Text(s.sendSmsBtn,
-                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: primary, fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary),
+                side: BorderSide(color: primary),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
@@ -294,7 +326,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             Text(
               _smsResult!,
               style: TextStyle(
-                color: _smsSuccess ? AppColors.success : AppColors.danger,
+                color: _smsSuccess ? success : danger,
                 fontSize: 13,
               ),
             ),
@@ -340,7 +372,10 @@ class _ReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
+    final s       = S.of(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final textPri = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
+    final border  = isDark ? DarkColors.border      : AppColors.border;
     final r = report;
     String tsFormatted = r['timestamp'] ?? '-';
     try {
@@ -352,15 +387,15 @@ class _ReportCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: cardDeco(radius: 16),
+      decoration: cardDeco(radius: 16, dark: isDark),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(s.emergencyReportTitle,
-              style: const TextStyle(
-                  color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
+              style: TextStyle(
+                  color: textPri, fontWeight: FontWeight.w700, fontSize: 15)),
           const SizedBox(height: 12),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: border, height: 1),
           const SizedBox(height: 12),
           _Row(label: s.nameLabel,    value: r['name'] ?? '-'),
           _Row(label: s.ageLabel,     value: r['age']?.toString() ?? '-'),
@@ -380,23 +415,26 @@ class _Row extends StatelessWidget {
   const _Row({required this.label, required this.value});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 80,
-              child: Text(label,
-                  style: const TextStyle(color: AppColors.textTertiary, fontSize: 13)),
-            ),
-            Expanded(
-              child: Text(value,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-            ),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
+    final textPri = isDark ? DarkColors.textPrimary  : AppColors.textPrimary;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(label, style: TextStyle(color: textTer, fontSize: 13)),
+          ),
+          Expanded(
+            child: Text(value, style: TextStyle(color: textPri, fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Body region visualization ─────────────────────────────────────────────────
@@ -407,7 +445,6 @@ class _BodyRegionCard extends StatelessWidget {
 
   const _BodyRegionCard({required this.report, required this.isSevere});
 
-  // Korean internal keys — must match backend data
   static const _koRegions = [
     '머리/목', '어깨', '손목/팔꿈치', '골반/고관절', '무릎', '발목/발',
   ];
@@ -448,14 +485,24 @@ class _BodyRegionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s           = S.of(context);
-    final highlighted = _highlighted();
-    final injKey      = _injuryKey();
-    final dirRaw      = (report?['direction'] ?? '') as String;
-    final dirLabel    = s.fallDirections[dirRaw] ?? (_koDirections[dirRaw] ?? '');
-    final isEstimate  = (report?['estimated_injury'] ?? '').toString().isEmpty;
-    final displayLabels = s.bodyRegions; // localized, same order as _koRegions
+    final isDark      = Theme.of(context).brightness == Brightness.dark;
+    final textPri     = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
+    final textSec     = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+    final border      = isDark ? DarkColors.border        : AppColors.border;
+    final primary     = isDark ? DarkColors.primary       : AppColors.primary;
+    final danger      = isDark ? DarkColors.danger        : AppColors.danger;
+    final dangerTint  = isDark ? DarkColors.dangerTint    : AppColors.dangerTint;
+    final warningTint = isDark ? DarkColors.warningTint   : AppColors.warningTint;
+    final warningText = isDark ? DarkColors.warningText   : AppColors.warningText;
+    final chip        = isDark ? DarkColors.chip          : AppColors.chip;
 
-    // Build a localized injury label: find matching Korean key, use its English equivalent
+    final highlighted   = _highlighted();
+    final injKey        = _injuryKey();
+    final dirRaw        = (report?['direction'] ?? '') as String;
+    final dirLabel      = s.fallDirections[dirRaw] ?? (_koDirections[dirRaw] ?? '');
+    final isEstimate    = (report?['estimated_injury'] ?? '').toString().isEmpty;
+    final displayLabels = s.bodyRegions;
+
     String injDisplay = injKey;
     for (int i = 0; i < _koRegions.length; i++) {
       if (_koRegions[i] == injKey || injKey.contains(_koRegions[i].split('/').first)) {
@@ -466,53 +513,50 @@ class _BodyRegionCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: cardDeco(radius: 16),
+      decoration: cardDeco(radius: 16, dark: isDark),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
-              const Icon(Icons.accessibility_new_rounded, color: AppColors.primary, size: 18),
+              Icon(Icons.accessibility_new_rounded, color: primary, size: 18),
               const SizedBox(width: 8),
               Text(s.impactZoneTitle,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15)),
+                  style: TextStyle(
+                      color: textPri, fontWeight: FontWeight.w700, fontSize: 15)),
               if (isEstimate) ...[
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.warningTint,
+                    color: warningTint,
                     borderRadius: BorderRadius.circular(100),
                   ),
                   child: Text(s.estimateLabel,
-                      style: const TextStyle(
-                          color: AppColors.warningText, fontSize: 10, fontWeight: FontWeight.w700)),
+                      style: TextStyle(
+                          color: warningText,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700)),
                 ),
               ],
             ],
           ),
           const SizedBox(height: 14),
 
-          // Body figure + region list
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Stick figure (uses internal Korean keys for highlight logic)
               SizedBox(
                 width: 80,
                 height: 180,
                 child: CustomPaint(
                   painter: _BodyFigurePainter(
-                      highlighted: highlighted, regions: _koRegions),
+                      highlighted: highlighted,
+                      regions: _koRegions,
+                      isDark: isDark),
                 ),
               ),
               const SizedBox(width: 16),
-
-              // Region labels (localized)
               Expanded(
                 child: Column(
                   children: List.generate(_koRegions.length, (i) {
@@ -529,14 +573,14 @@ class _BodyRegionCard extends StatelessWidget {
                             height: 8,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: isHit ? AppColors.danger : AppColors.chip,
+                              color: isHit ? danger : chip,
                             ),
                           ),
                           const SizedBox(width: 10),
                           Text(
                             label,
                             style: TextStyle(
-                              color: isHit ? AppColors.danger : AppColors.textSecondary,
+                              color: isHit ? danger : textSec,
                               fontSize: 13,
                               fontWeight: isHit ? FontWeight.w700 : FontWeight.normal,
                             ),
@@ -546,12 +590,12 @@ class _BodyRegionCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.dangerTint,
+                                color: dangerTint,
                                 borderRadius: BorderRadius.circular(100),
                               ),
                               child: Text(s.impactBadge,
-                                  style: const TextStyle(
-                                      color: AppColors.danger,
+                                  style: TextStyle(
+                                      color: danger,
                                       fontSize: 9,
                                       fontWeight: FontWeight.w800)),
                             ),
@@ -566,10 +610,9 @@ class _BodyRegionCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 12),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: border, height: 1),
           const SizedBox(height: 12),
 
-          // Summary row
           Row(
             children: [
               Expanded(
@@ -605,40 +648,52 @@ class _SummaryItem extends StatelessWidget {
   final String value;
   final bool highlight;
   const _SummaryItem({
-    required this.icon, required this.label, required this.value, required this.highlight,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.highlight,
   });
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: highlight ? AppColors.dangerTint : AppColors.chip,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon,
-                    size: 13,
-                    color: highlight ? AppColors.danger : AppColors.textTertiary),
-                const SizedBox(width: 4),
-                Text(label,
-                    style: TextStyle(
-                        color: highlight ? AppColors.dangerPressed : AppColors.textTertiary,
-                        fontSize: 11)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(value,
-                style: TextStyle(
-                    color: highlight ? AppColors.dangerPressed : AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final isDark     = Theme.of(context).brightness == Brightness.dark;
+    final danger     = isDark ? DarkColors.danger      : AppColors.danger;
+    final dangerTint = isDark ? DarkColors.dangerTint  : AppColors.dangerTint;
+    final chip       = isDark ? DarkColors.chip        : AppColors.chip;
+    final textTer    = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
+    final textPri    = isDark ? DarkColors.textPrimary  : AppColors.textPrimary;
+    final dangerPre  = isDark ? DarkColors.danger       : AppColors.dangerPressed;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: highlight ? dangerTint : chip,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon,
+                  size: 13,
+                  color: highlight ? danger : textTer),
+              const SizedBox(width: 4),
+              Text(label,
+                  style: TextStyle(
+                      color: highlight ? dangerPre : textTer, fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(value,
+              style: TextStyle(
+                  color: highlight ? dangerPre : textPri,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Stick figure painter ──────────────────────────────────────────────────────
@@ -646,14 +701,18 @@ class _SummaryItem extends StatelessWidget {
 class _BodyFigurePainter extends CustomPainter {
   final Set<String> highlighted;
   final List<String> regions;
+  final bool isDark;
 
-  const _BodyFigurePainter({required this.highlighted, required this.regions});
-
-  static const _activeColor   = AppColors.danger;
-  static const _inactiveColor = Color(0xFFD5D0C8);
+  const _BodyFigurePainter({
+    required this.highlighted,
+    required this.regions,
+    required this.isDark,
+  });
 
   Paint _paint(bool active, {bool fill = false}) => Paint()
-    ..color = active ? _activeColor : _inactiveColor
+    ..color = active
+        ? (isDark ? DarkColors.danger : AppColors.danger)
+        : (isDark ? const Color(0xFF3A3A3A) : const Color(0xFFD5D0C8))
     ..style = fill ? PaintingStyle.fill : PaintingStyle.stroke
     ..strokeWidth = active ? 2.5 : 2.0
     ..strokeCap = StrokeCap.round;
@@ -663,13 +722,13 @@ class _BodyFigurePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    final headCY   = size.height * 0.07;
-    final shldrY   = size.height * 0.19;
+    final headCY    = size.height * 0.07;
+    final shldrY    = size.height * 0.19;
     final torsoMidY = size.height * 0.40;
-    final hipY     = size.height * 0.52;
-    final kneeY    = size.height * 0.68;
-    final ankleY   = size.height * 0.85;
-    final headR    = size.width * 0.18;
+    final hipY      = size.height * 0.52;
+    final kneeY     = size.height * 0.68;
+    final ankleY    = size.height * 0.85;
+    final headR     = size.width  * 0.18;
 
     canvas.drawCircle(Offset(cx, headCY), headR,
         _paint(_hit('머리/목'), fill: _hit('머리/목')));
@@ -710,8 +769,10 @@ class _BodyFigurePainter extends CustomPainter {
         Offset(cx + size.width * 0.18, ankleY), _paint(_hit('발목/발')));
 
     if (_hit('무릎')) {
-      canvas.drawCircle(Offset(cx - size.width * 0.18, kneeY), 4, _paint(true, fill: true));
-      canvas.drawCircle(Offset(cx + size.width * 0.18, kneeY), 4, _paint(true, fill: true));
+      canvas.drawCircle(Offset(cx - size.width * 0.18, kneeY), 4,
+          _paint(true, fill: true));
+      canvas.drawCircle(Offset(cx + size.width * 0.18, kneeY), 4,
+          _paint(true, fill: true));
     }
 
     canvas.drawLine(Offset(cx - size.width * 0.18, ankleY),
@@ -721,7 +782,8 @@ class _BodyFigurePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BodyFigurePainter old) => old.highlighted != highlighted;
+  bool shouldRepaint(_BodyFigurePainter old) =>
+      old.highlighted != highlighted || old.isDark != isDark;
 }
 
 // ── Screenshot widget ─────────────────────────────────────────────────────────
@@ -732,8 +794,11 @@ class _ScreenshotWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.read<AuthProvider>();
-    final url  = auth.api.screenshotUrl(eventId);
+    final auth    = context.read<AuthProvider>();
+    final url     = auth.api.screenshotUrl(eventId);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final chip    = isDark ? DarkColors.chip        : AppColors.chip;
+    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
     return Image.network(
       url,
       headers: {'Authorization': 'Bearer ${auth.token}'},
@@ -742,10 +807,9 @@ class _ScreenshotWidget extends StatelessWidget {
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => Container(
         height: 160,
-        color: AppColors.chip,
-        child: const Center(
-          child: Icon(Icons.image_not_supported_outlined,
-              color: AppColors.textTertiary, size: 48),
+        color: chip,
+        child: Center(
+          child: Icon(Icons.image_not_supported_outlined, color: textTer, size: 48),
         ),
       ),
     );

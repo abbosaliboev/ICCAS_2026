@@ -105,6 +105,20 @@ class S {
   String get noFalls => _t('낙상 기록이 없습니다', 'No fall events recorded');
   String get noFiltered => _t('해당 기록이 없습니다', 'No matching events');
 
+  // ── Events screen — bulk delete ───────────────────────────────────────────
+  String get selectBtn => _t('선택', 'Select');
+  String get cancelSelect => _t('취소', 'Cancel');
+  String get deleteSelectedBtn => _t('선택 항목 삭제', 'Delete Selected');
+  String selectedCount(int n) => _ko ? '${n}개 선택됨' : '$n selected';
+  String deleteSelectedTitle(int n) => _ko ? '${n}개 삭제' : 'Delete $n Items';
+  String deleteSelectedBody(int n) => _ko
+      ? '선택한 ${n}개의 낙상 기록을 삭제할까요?'
+      : 'Delete $n selected fall record${n == 1 ? '' : 's'}?';
+  String deleteSuccessMsg(int n) =>
+      _ko ? '${n}개가 삭제되었습니다' : '$n record${n == 1 ? '' : 's'} deleted';
+  String get deletePartialFail =>
+      _t('일부 항목 삭제에 실패했습니다', 'Some records failed to delete');
+
   // ── Reports screen ─────────────────────────────────────────────────────────
   String get reportsTitle => _t('리포트', 'Reports');
   String get today => _t('오늘', 'Today');
@@ -157,7 +171,7 @@ class S {
       _t('낙상 감지 제외 구역 관리', 'Manage fall detection exclusion zones');
   String get appInfoSection => _t('앱 정보', 'App Info');
   String get appInfoSubtitle =>
-      _t('v1.0.0 · Edge AI 기반 낙상 감지', 'v1.0.0 · Edge AI Fall Detection');
+      _t('v1.2.0 · Edge AI 기반 낙상 감지', 'v1.2.0 · Edge AI Fall Detection');
   String get logoutLabel => _t('로그아웃', 'Log Out');
   String get logoutConfirmTitle => _t('로그아웃', 'Log Out');
   String get logoutConfirmBody =>

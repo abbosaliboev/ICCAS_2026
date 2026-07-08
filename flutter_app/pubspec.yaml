@@ -2,7 +2,7 @@ name: mobicare_app
 description: "MobiCare - Fall Detection & Alert System for Elderly"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.2.0+2
 
 environment:
   sdk: ^3.9.2

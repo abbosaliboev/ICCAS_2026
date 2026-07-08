@@ -23,10 +23,6 @@ class SettingsProvider extends ChangeNotifier {
   static const languages = [
     {'code': 'ko', 'label': '한국어'},
     {'code': 'en', 'label': 'English'},
-    {'code': 'es', 'label': 'Español'},
-    {'code': 'fr', 'label': 'Français'},
-    {'code': 'ru', 'label': 'Русский'},
-    {'code': 'zh', 'label': '中文'},
   ];
 
   Future<void> init() async {
