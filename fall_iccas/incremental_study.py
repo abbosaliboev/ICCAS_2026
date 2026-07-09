@@ -46,7 +46,9 @@ def main():
     ap.add_argument("--data-dir", required=True,
                     help="Full cv_dataset (e.g. experiments/subject1_to_17/cv_dataset)")
     ap.add_argument("--out-root", default="experiments/incremental",
-                    help="Where per-size checkpoints/results go")
+                    help="Where per-size checkpoints/results go (use a new dir to keep old runs)")
+    ap.add_argument("--out-md", default="INCREMENTAL_STUDY.md",
+                    help="Output table filename (use a new name to keep old runs)")
     ap.add_argument("--max-subjects", type=int, default=17)
     args = ap.parse_args()
 
@@ -104,7 +106,7 @@ def main():
            "shrinks toward 0 as #Subj grows — and the Vel/Acc thresholds also shrink toward 0 — "
            "that is the evidence that physics matters most in the low-data regime."]
 
-    out_md = os.path.join(here, "INCREMENTAL_STUDY.md")
+    out_md = os.path.join(here, args.out_md)
     open(out_md, "w", encoding="utf-8").write("\n".join(md) + "\n")
     out_json = os.path.join(args.out_root, "incremental_summary.json")
     os.makedirs(args.out_root, exist_ok=True)
