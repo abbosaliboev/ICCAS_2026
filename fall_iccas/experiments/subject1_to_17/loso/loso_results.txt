@@ -1,0 +1,464 @@
+
+=======================================================
+  Fold 1  —  Test subject: 1
+=======================================================
+  Train: 15033 (fall=2131)  Val: 2645 (fall=392)  Test: 1145 (fall=165)
+    Epoch   1/60  tr_loss=0.3356 tr_acc=0.853  val_acc=0.918 val_f1=0.674  best=0.674  no_improve=0
+    Epoch  10/60  tr_loss=0.1295 tr_acc=0.946  val_acc=0.961 val_f1=0.875  best=0.875  no_improve=0
+    Epoch  20/60  tr_loss=0.0840 tr_acc=0.964  val_acc=0.966 val_f1=0.893  best=0.933  no_improve=1
+    Epoch  30/60  tr_loss=0.0625 tr_acc=0.976  val_acc=0.969 val_f1=0.903  best=0.939  no_improve=7
+    Early stopping at epoch 38
+  Loaded best (val fall F1=0.9388)
+
+  [Stage 1]  Acc=0.8707  Fall F1=0.6810
+  Confusion:
+[[839 141]
+ [  7 158]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9370
+[TwoStage] stage1_threshold=0.80  rescue_threshold=0.75  val_fall_F1=0.9430
+
+  [Two-stage] Acc=0.8812  Fall F1=0.6777
+  Confusion:
+[[866 114]
+ [ 22 143]]
+
+=======================================================
+  Fold 2  —  Test subject: 2
+=======================================================
+  Train: 15101 (fall=2145)  Val: 2657 (fall=396)  Test: 1065 (fall=147)
+    Epoch   1/60  tr_loss=0.3509 tr_acc=0.851  val_acc=0.873 val_f1=0.268  best=0.268  no_improve=0
+    Epoch  10/60  tr_loss=0.1304 tr_acc=0.944  val_acc=0.927 val_f1=0.800  best=0.861  no_improve=4
+    Epoch  20/60  tr_loss=0.0814 tr_acc=0.968  val_acc=0.951 val_f1=0.857  best=0.901  no_improve=4
+    Epoch  30/60  tr_loss=0.0589 tr_acc=0.977  val_acc=0.979 val_f1=0.933  best=0.933  no_improve=0
+    Epoch  40/60  tr_loss=0.0401 tr_acc=0.984  val_acc=0.981 val_f1=0.938  best=0.943  no_improve=7
+    Epoch  50/60  tr_loss=0.0340 tr_acc=0.987  val_acc=0.985 val_f1=0.950  best=0.952  no_improve=6
+    Early stopping at epoch 59
+  Loaded best (val fall F1=0.9525)
+
+  [Stage 1]  Acc=0.7906  Fall F1=0.5619
+  Confusion:
+[[699 219]
+ [  4 143]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9509
+[TwoStage] stage1_threshold=0.75  rescue_threshold=0.70  val_fall_F1=0.9606
+
+  [Two-stage] Acc=0.8019  Fall F1=0.5720
+  Confusion:
+[[713 205]
+ [  6 141]]
+
+=======================================================
+  Fold 3  —  Test subject: 3
+=======================================================
+  Train: 15038 (fall=2137)  Val: 2645 (fall=388)  Test: 1140 (fall=163)
+    Epoch   1/60  tr_loss=0.3304 tr_acc=0.859  val_acc=0.716 val_f1=0.508  best=0.508  no_improve=0
+    Epoch  10/60  tr_loss=0.1258 tr_acc=0.948  val_acc=0.953 val_f1=0.842  best=0.842  no_improve=0
+    Epoch  20/60  tr_loss=0.0857 tr_acc=0.966  val_acc=0.977 val_f1=0.922  best=0.922  no_improve=0
+    Epoch  30/60  tr_loss=0.0551 tr_acc=0.979  val_acc=0.984 val_f1=0.948  best=0.948  no_improve=0
+    Epoch  40/60  tr_loss=0.0435 tr_acc=0.984  val_acc=0.983 val_f1=0.945  best=0.952  no_improve=6
+    Epoch  50/60  tr_loss=0.0290 tr_acc=0.989  val_acc=0.986 val_f1=0.955  best=0.957  no_improve=2
+    Epoch  60/60  tr_loss=0.0266 tr_acc=0.990  val_acc=0.989 val_f1=0.964  best=0.967  no_improve=2
+  Loaded best (val fall F1=0.9673)
+
+  [Stage 1]  Acc=0.8333  Fall F1=0.5905
+  Confusion:
+[[813 164]
+ [ 26 137]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9669
+[TwoStage] stage1_threshold=0.90  rescue_threshold=0.50  val_fall_F1=0.9722
+
+  [Two-stage] Acc=0.8333  Fall F1=0.5905
+  Confusion:
+[[813 164]
+ [ 26 137]]
+
+=======================================================
+  Fold 4  —  Test subject: 4
+=======================================================
+  Train: 15038 (fall=2136)  Val: 2645 (fall=387)  Test: 1140 (fall=165)
+    Epoch   1/60  tr_loss=0.3333 tr_acc=0.857  val_acc=0.782 val_f1=0.573  best=0.573  no_improve=0
+    Epoch  10/60  tr_loss=0.1512 tr_acc=0.935  val_acc=0.951 val_f1=0.847  best=0.847  no_improve=0
+    Epoch  20/60  tr_loss=0.0917 tr_acc=0.963  val_acc=0.961 val_f1=0.881  best=0.906  no_improve=2
+    Epoch  30/60  tr_loss=0.0609 tr_acc=0.977  val_acc=0.976 val_f1=0.923  best=0.936  no_improve=3
+    Epoch  40/60  tr_loss=0.0412 tr_acc=0.983  val_acc=0.984 val_f1=0.948  best=0.954  no_improve=6
+    Epoch  50/60  tr_loss=0.0284 tr_acc=0.989  val_acc=0.988 val_f1=0.961  best=0.962  no_improve=1
+    Epoch  60/60  tr_loss=0.0246 tr_acc=0.991  val_acc=0.988 val_f1=0.961  best=0.963  no_improve=2
+  Loaded best (val fall F1=0.9634)
+
+  [Stage 1]  Acc=0.9167  Fall F1=0.7397
+  Confusion:
+[[910  65]
+ [ 30 135]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9631
+[TwoStage] stage1_threshold=0.85  rescue_threshold=0.80  val_fall_F1=0.9692
+
+  [Two-stage] Acc=0.9114  Fall F1=0.7055
+  Confusion:
+[[918  57]
+ [ 44 121]]
+
+=======================================================
+  Fold 5  —  Test subject: 5
+=======================================================
+  Train: 15014 (fall=2128)  Val: 2641 (fall=395)  Test: 1168 (fall=165)
+    Epoch   1/60  tr_loss=0.3246 tr_acc=0.861  val_acc=0.731 val_f1=0.527  best=0.527  no_improve=0
+    Epoch  10/60  tr_loss=0.1347 tr_acc=0.945  val_acc=0.924 val_f1=0.794  best=0.794  no_improve=0
+    Epoch  20/60  tr_loss=0.0886 tr_acc=0.965  val_acc=0.966 val_f1=0.895  best=0.895  no_improve=0
+    Epoch  30/60  tr_loss=0.0677 tr_acc=0.974  val_acc=0.972 val_f1=0.913  best=0.922  no_improve=5
+    Epoch  40/60  tr_loss=0.0489 tr_acc=0.981  val_acc=0.980 val_f1=0.936  best=0.943  no_improve=2
+    Epoch  50/60  tr_loss=0.0374 tr_acc=0.985  val_acc=0.985 val_f1=0.952  best=0.952  no_improve=0
+    Epoch  60/60  tr_loss=0.0334 tr_acc=0.988  val_acc=0.984 val_f1=0.947  best=0.952  no_improve=10
+  Loaded best (val fall F1=0.9519)
+
+  [Stage 1]  Acc=0.8262  Fall F1=0.5866
+  Confusion:
+[[821 182]
+ [ 21 144]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9526
+[TwoStage] stage1_threshold=0.85  rescue_threshold=0.80  val_fall_F1=0.9658
+
+  [Two-stage] Acc=0.8365  Fall F1=0.5962
+  Confusion:
+[[836 167]
+ [ 24 141]]
+
+=======================================================
+  Fold 6  —  Test subject: 6
+=======================================================
+  Train: 15221 (fall=2161)  Val: 2678 (fall=396)  Test: 924 (fall=131)
+    Epoch   1/60  tr_loss=0.3167 tr_acc=0.860  val_acc=0.785 val_f1=0.577  best=0.577  no_improve=0
+    Epoch  10/60  tr_loss=0.1254 tr_acc=0.949  val_acc=0.930 val_f1=0.807  best=0.807  no_improve=0
+    Epoch  20/60  tr_loss=0.0867 tr_acc=0.965  val_acc=0.946 val_f1=0.844  best=0.848  no_improve=1
+    Epoch  30/60  tr_loss=0.0570 tr_acc=0.977  val_acc=0.970 val_f1=0.906  best=0.906  no_improve=0
+    Epoch  40/60  tr_loss=0.0469 tr_acc=0.981  val_acc=0.965 val_f1=0.892  best=0.914  no_improve=7
+    Epoch  50/60  tr_loss=0.0303 tr_acc=0.989  val_acc=0.973 val_f1=0.916  best=0.928  no_improve=5
+    Epoch  60/60  tr_loss=0.0259 tr_acc=0.990  val_acc=0.976 val_f1=0.925  best=0.928  no_improve=15
+    Early stopping at epoch 60
+  Loaded best (val fall F1=0.9278)
+
+  [Stage 1]  Acc=0.8019  Fall F1=0.5674
+  Confusion:
+[[621 172]
+ [ 11 120]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9295
+[TwoStage] stage1_threshold=0.90  rescue_threshold=0.85  val_fall_F1=0.9547
+
+  [Two-stage] Acc=0.7965  Fall F1=0.5481
+  Confusion:
+[[622 171]
+ [ 17 114]]
+
+=======================================================
+  Fold 7  —  Test subject: 7
+=======================================================
+  Train: 15021 (fall=2133)  Val: 2643 (fall=390)  Test: 1159 (fall=165)
+    Epoch   1/60  tr_loss=0.3418 tr_acc=0.848  val_acc=0.873 val_f1=0.614  best=0.614  no_improve=0
+    Epoch  10/60  tr_loss=0.1319 tr_acc=0.945  val_acc=0.942 val_f1=0.835  best=0.856  no_improve=2
+    Epoch  20/60  tr_loss=0.0852 tr_acc=0.968  val_acc=0.966 val_f1=0.895  best=0.895  no_improve=0
+    Epoch  30/60  tr_loss=0.0610 tr_acc=0.977  val_acc=0.976 val_f1=0.924  best=0.924  no_improve=0
+    Epoch  40/60  tr_loss=0.0415 tr_acc=0.983  val_acc=0.980 val_f1=0.936  best=0.940  no_improve=3
+    Epoch  50/60  tr_loss=0.0320 tr_acc=0.987  val_acc=0.981 val_f1=0.939  best=0.952  no_improve=1
+    Epoch  60/60  tr_loss=0.0286 tr_acc=0.989  val_acc=0.985 val_f1=0.951  best=0.952  no_improve=11
+  Loaded best (val fall F1=0.9520)
+
+  [Stage 1]  Acc=0.8525  Fall F1=0.6323
+  Confusion:
+[[841 153]
+ [ 18 147]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9504
+[TwoStage] stage1_threshold=0.90  rescue_threshold=0.85  val_fall_F1=0.9621
+
+  [Two-stage] Acc=0.9129  Fall F1=0.7404
+  Confusion:
+[[914  80]
+ [ 21 144]]
+
+=======================================================
+  Fold 8  —  Test subject: 8
+=======================================================
+  Train: 15161 (fall=2136)  Val: 2667 (fall=391)  Test: 995 (fall=161)
+    Epoch   1/60  tr_loss=0.3276 tr_acc=0.862  val_acc=0.910 val_f1=0.714  best=0.714  no_improve=0
+    Epoch  10/60  tr_loss=0.1061 tr_acc=0.955  val_acc=0.958 val_f1=0.869  best=0.869  no_improve=0
+    Epoch  20/60  tr_loss=0.0719 tr_acc=0.970  val_acc=0.952 val_f1=0.859  best=0.884  no_improve=2
+    Epoch  30/60  tr_loss=0.0551 tr_acc=0.978  val_acc=0.966 val_f1=0.894  best=0.903  no_improve=3
+    Epoch  40/60  tr_loss=0.0379 tr_acc=0.985  val_acc=0.970 val_f1=0.907  best=0.924  no_improve=1
+    Epoch  50/60  tr_loss=0.0259 tr_acc=0.990  val_acc=0.982 val_f1=0.940  best=0.940  no_improve=0
+    Epoch  60/60  tr_loss=0.0224 tr_acc=0.991  val_acc=0.978 val_f1=0.928  best=0.940  no_improve=10
+  Loaded best (val fall F1=0.9405)
+
+  [Stage 1]  Acc=0.9065  Fall F1=0.7493
+  Confusion:
+[[763  71]
+ [ 22 139]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9387
+[TwoStage] stage1_threshold=0.90  rescue_threshold=0.85  val_fall_F1=0.9573
+
+  [Two-stage] Acc=0.8925  Fall F1=0.6986
+  Confusion:
+[[764  70]
+ [ 37 124]]
+
+=======================================================
+  Fold 9  —  Test subject: 9
+=======================================================
+  Train: 15038 (fall=2141)  Val: 2646 (fall=392)  Test: 1139 (fall=155)
+    Epoch   1/60  tr_loss=0.3361 tr_acc=0.861  val_acc=0.815 val_f1=0.608  best=0.608  no_improve=0
+    Epoch  10/60  tr_loss=0.1444 tr_acc=0.935  val_acc=0.935 val_f1=0.813  best=0.855  no_improve=1
+    Epoch  20/60  tr_loss=0.0927 tr_acc=0.962  val_acc=0.935 val_f1=0.814  best=0.911  no_improve=3
+    Epoch  30/60  tr_loss=0.0687 tr_acc=0.972  val_acc=0.976 val_f1=0.922  best=0.936  no_improve=2
+    Epoch  40/60  tr_loss=0.0523 tr_acc=0.979  val_acc=0.980 val_f1=0.936  best=0.952  no_improve=3
+    Epoch  50/60  tr_loss=0.0402 tr_acc=0.985  val_acc=0.988 val_f1=0.959  best=0.960  no_improve=4
+    Epoch  60/60  tr_loss=0.0353 tr_acc=0.987  val_acc=0.987 val_f1=0.958  best=0.960  no_improve=14
+  Loaded best (val fall F1=0.9600)
+
+  [Stage 1]  Acc=0.8253  Fall F1=0.6012
+  Confusion:
+[[790 194]
+ [  5 150]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9584
+[TwoStage] stage1_threshold=0.75  rescue_threshold=0.70  val_fall_F1=0.9659
+
+  [Two-stage] Acc=0.8297  Fall F1=0.6073
+  Confusion:
+[[795 189]
+ [  5 150]]
+
+=======================================================
+  Fold 10  —  Test subject: 10
+=======================================================
+  Train: 15048 (fall=2135)  Val: 2647 (fall=394)  Test: 1128 (fall=159)
+    Epoch   1/60  tr_loss=0.3358 tr_acc=0.857  val_acc=0.721 val_f1=0.516  best=0.516  no_improve=0
+    Epoch  10/60  tr_loss=0.1240 tr_acc=0.947  val_acc=0.951 val_f1=0.846  best=0.846  no_improve=0
+    Epoch  20/60  tr_loss=0.0779 tr_acc=0.967  val_acc=0.955 val_f1=0.866  best=0.914  no_improve=2
+    Epoch  30/60  tr_loss=0.0606 tr_acc=0.975  val_acc=0.977 val_f1=0.925  best=0.934  no_improve=1
+    Epoch  40/60  tr_loss=0.0368 tr_acc=0.984  val_acc=0.985 val_f1=0.951  best=0.952  no_improve=3
+    Epoch  50/60  tr_loss=0.0337 tr_acc=0.987  val_acc=0.987 val_f1=0.957  best=0.957  no_improve=0
+    Epoch  60/60  tr_loss=0.0302 tr_acc=0.988  val_acc=0.987 val_f1=0.958  best=0.960  no_improve=1
+  Loaded best (val fall F1=0.9602)
+
+  [Stage 1]  Acc=0.8617  Fall F1=0.6286
+  Confusion:
+[[840 129]
+ [ 27 132]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9610
+[TwoStage] stage1_threshold=0.90  rescue_threshold=0.70  val_fall_F1=0.9660
+
+  [Two-stage] Acc=0.8706  Fall F1=0.6368
+  Confusion:
+[[854 115]
+ [ 31 128]]
+
+=======================================================
+  Fold 11  —  Test subject: 11
+=======================================================
+  Train: 15021 (fall=2134)  Val: 2642 (fall=392)  Test: 1160 (fall=162)
+    Epoch   1/60  tr_loss=0.3260 tr_acc=0.860  val_acc=0.762 val_f1=0.555  best=0.555  no_improve=0
+    Epoch  10/60  tr_loss=0.1352 tr_acc=0.945  val_acc=0.939 val_f1=0.824  best=0.833  no_improve=2
+    Epoch  20/60  tr_loss=0.0860 tr_acc=0.964  val_acc=0.953 val_f1=0.860  best=0.908  no_improve=3
+    Epoch  30/60  tr_loss=0.0619 tr_acc=0.977  val_acc=0.971 val_f1=0.908  best=0.923  no_improve=1
+    Epoch  40/60  tr_loss=0.0451 tr_acc=0.983  val_acc=0.977 val_f1=0.925  best=0.935  no_improve=2
+    Epoch  50/60  tr_loss=0.0304 tr_acc=0.989  val_acc=0.983 val_f1=0.945  best=0.952  no_improve=5
+    Epoch  60/60  tr_loss=0.0303 tr_acc=0.989  val_acc=0.983 val_f1=0.945  best=0.952  no_improve=15
+    Early stopping at epoch 60
+  Loaded best (val fall F1=0.9516)
+
+  [Stage 1]  Acc=0.8095  Fall F1=0.5641
+  Confusion:
+[[796 202]
+ [ 19 143]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9499
+[TwoStage] stage1_threshold=0.90  rescue_threshold=0.80  val_fall_F1=0.9637
+
+  [Two-stage] Acc=0.8207  Fall F1=0.5685
+  Confusion:
+[[815 183]
+ [ 25 137]]
+
+=======================================================
+  Fold 12  —  Test subject: 12
+=======================================================
+  Train: 14997 (fall=2127)  Val: 2638 (fall=393)  Test: 1188 (fall=168)
+    Epoch   1/60  tr_loss=0.3577 tr_acc=0.845  val_acc=0.879 val_f1=0.621  best=0.621  no_improve=0
+    Epoch  10/60  tr_loss=0.1460 tr_acc=0.938  val_acc=0.943 val_f1=0.831  best=0.863  no_improve=1
+    Epoch  20/60  tr_loss=0.0831 tr_acc=0.967  val_acc=0.958 val_f1=0.874  best=0.896  no_improve=4
+    Epoch  30/60  tr_loss=0.0610 tr_acc=0.976  val_acc=0.965 val_f1=0.893  best=0.917  no_improve=4
+    Epoch  40/60  tr_loss=0.0427 tr_acc=0.983  val_acc=0.982 val_f1=0.941  best=0.941  no_improve=0
+    Epoch  50/60  tr_loss=0.0332 tr_acc=0.988  val_acc=0.981 val_f1=0.940  best=0.949  no_improve=2
+    Epoch  60/60  tr_loss=0.0261 tr_acc=0.990  val_acc=0.984 val_f1=0.949  best=0.952  no_improve=5
+  Loaded best (val fall F1=0.9521)
+
+  [Stage 1]  Acc=0.8493  Fall F1=0.6469
+  Confusion:
+[[845 175]
+ [  4 164]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9554
+[TwoStage] stage1_threshold=0.90  rescue_threshold=0.85  val_fall_F1=0.9660
+
+  [Two-stage] Acc=0.9226  Fall F1=0.7665
+  Confusion:
+[[945  75]
+ [ 17 151]]
+
+=======================================================
+  Fold 13  —  Test subject: 13
+=======================================================
+  Train: 15055 (fall=2135)  Val: 2648 (fall=395)  Test: 1120 (fall=158)
+    Epoch   1/60  tr_loss=0.3419 tr_acc=0.853  val_acc=0.707 val_f1=0.504  best=0.504  no_improve=0
+    Epoch  10/60  tr_loss=0.1243 tr_acc=0.949  val_acc=0.955 val_f1=0.860  best=0.860  no_improve=0
+    Epoch  20/60  tr_loss=0.0818 tr_acc=0.966  val_acc=0.974 val_f1=0.913  best=0.921  no_improve=2
+    Epoch  30/60  tr_loss=0.0627 tr_acc=0.976  val_acc=0.981 val_f1=0.937  best=0.938  no_improve=2
+    Epoch  40/60  tr_loss=0.0442 tr_acc=0.983  val_acc=0.984 val_f1=0.947  best=0.959  no_improve=7
+    Early stopping at epoch 48
+  Loaded best (val fall F1=0.9587)
+
+  [Stage 1]  Acc=0.8411  Fall F1=0.6009
+  Confusion:
+[[808 154]
+ [ 24 134]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9571
+[TwoStage] stage1_threshold=0.65  rescue_threshold=0.60  val_fall_F1=0.9619
+
+  [Two-stage] Acc=0.8429  Fall F1=0.5982
+  Confusion:
+[[813 149]
+ [ 27 131]]
+
+=======================================================
+  Fold 14  —  Test subject: 14
+=======================================================
+  Train: 15072 (fall=2144)  Val: 2652 (fall=386)  Test: 1099 (fall=158)
+    Epoch   1/60  tr_loss=0.3241 tr_acc=0.859  val_acc=0.851 val_f1=0.321  best=0.321  no_improve=0
+    Epoch  10/60  tr_loss=0.1230 tr_acc=0.947  val_acc=0.954 val_f1=0.855  best=0.875  no_improve=1
+    Epoch  20/60  tr_loss=0.0799 tr_acc=0.967  val_acc=0.977 val_f1=0.924  best=0.924  no_improve=0
+    Epoch  30/60  tr_loss=0.0599 tr_acc=0.977  val_acc=0.977 val_f1=0.926  best=0.952  no_improve=2
+    Epoch  40/60  tr_loss=0.0413 tr_acc=0.984  val_acc=0.986 val_f1=0.953  best=0.961  no_improve=2
+    Epoch  50/60  tr_loss=0.0332 tr_acc=0.987  val_acc=0.989 val_f1=0.962  best=0.967  no_improve=3
+    Epoch  60/60  tr_loss=0.0285 tr_acc=0.989  val_acc=0.988 val_f1=0.959  best=0.967  no_improve=13
+  Loaded best (val fall F1=0.9671)
+
+  [Stage 1]  Acc=0.7780  Fall F1=0.4786
+  Confusion:
+[[743 198]
+ [ 46 112]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9644
+[TwoStage] stage1_threshold=0.75  rescue_threshold=0.70  val_fall_F1=0.9730
+
+  [Two-stage] Acc=0.7825  Fall F1=0.4556
+  Confusion:
+[[760 181]
+ [ 58 100]]
+
+=======================================================
+  Fold 15  —  Test subject: 15
+=======================================================
+  Train: 15062 (fall=2135)  Val: 2650 (fall=396)  Test: 1111 (fall=157)
+    Epoch   1/60  tr_loss=0.3334 tr_acc=0.854  val_acc=0.742 val_f1=0.536  best=0.536  no_improve=0
+    Epoch  10/60  tr_loss=0.1246 tr_acc=0.948  val_acc=0.963 val_f1=0.877  best=0.877  no_improve=0
+    Epoch  20/60  tr_loss=0.0779 tr_acc=0.968  val_acc=0.969 val_f1=0.902  best=0.910  no_improve=1
+    Epoch  30/60  tr_loss=0.0578 tr_acc=0.977  val_acc=0.984 val_f1=0.947  best=0.947  no_improve=0
+    Epoch  40/60  tr_loss=0.0388 tr_acc=0.985  val_acc=0.980 val_f1=0.935  best=0.957  no_improve=1
+    Epoch  50/60  tr_loss=0.0277 tr_acc=0.988  val_acc=0.987 val_f1=0.957  best=0.964  no_improve=1
+    Epoch  60/60  tr_loss=0.0289 tr_acc=0.990  val_acc=0.990 val_f1=0.966  best=0.967  no_improve=1
+  Loaded best (val fall F1=0.9665)
+
+  [Stage 1]  Acc=0.8803  Fall F1=0.6667
+  Confusion:
+[[845 109]
+ [ 24 133]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9626
+[TwoStage] stage1_threshold=0.55  rescue_threshold=0.50  val_fall_F1=0.9665
+
+  [Two-stage] Acc=0.8803  Fall F1=0.6667
+  Confusion:
+[[845 109]
+ [ 24 133]]
+
+=======================================================
+  Fold 16  —  Test subject: 16
+=======================================================
+  Train: 15131 (fall=2146)  Val: 2662 (fall=393)  Test: 1030 (fall=149)
+    Epoch   1/60  tr_loss=0.3207 tr_acc=0.856  val_acc=0.580 val_f1=0.413  best=0.413  no_improve=0
+    Epoch  10/60  tr_loss=0.1218 tr_acc=0.949  val_acc=0.960 val_f1=0.876  best=0.876  no_improve=0
+    Epoch  20/60  tr_loss=0.0761 tr_acc=0.969  val_acc=0.980 val_f1=0.934  best=0.937  no_improve=1
+    Epoch  30/60  tr_loss=0.0561 tr_acc=0.977  val_acc=0.979 val_f1=0.932  best=0.941  no_improve=3
+    Epoch  40/60  tr_loss=0.0379 tr_acc=0.985  val_acc=0.986 val_f1=0.955  best=0.955  no_improve=0
+    Epoch  50/60  tr_loss=0.0304 tr_acc=0.989  val_acc=0.988 val_f1=0.961  best=0.965  no_improve=1
+    Epoch  60/60  tr_loss=0.0232 tr_acc=0.992  val_acc=0.988 val_f1=0.959  best=0.965  no_improve=2
+  Loaded best (val fall F1=0.9649)
+
+  [Stage 1]  Acc=0.8485  Fall F1=0.6195
+  Confusion:
+[[747 134]
+ [ 22 127]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9646
+[TwoStage] stage1_threshold=0.85  rescue_threshold=0.50  val_fall_F1=0.9661
+
+  [Two-stage] Acc=0.8485  Fall F1=0.6195
+  Confusion:
+[[747 134]
+ [ 22 127]]
+
+=======================================================
+  Fold 17  —  Test subject: 17
+=======================================================
+  Train: 15061 (fall=2132)  Val: 2650 (fall=396)  Test: 1112 (fall=160)
+    Epoch   1/60  tr_loss=0.3543 tr_acc=0.853  val_acc=0.784 val_f1=0.578  best=0.578  no_improve=0
+    Epoch  10/60  tr_loss=0.1324 tr_acc=0.942  val_acc=0.938 val_f1=0.824  best=0.824  no_improve=0
+    Epoch  20/60  tr_loss=0.0842 tr_acc=0.964  val_acc=0.969 val_f1=0.901  best=0.901  no_improve=0
+    Epoch  30/60  tr_loss=0.0532 tr_acc=0.978  val_acc=0.976 val_f1=0.924  best=0.929  no_improve=1
+    Epoch  40/60  tr_loss=0.0445 tr_acc=0.984  val_acc=0.980 val_f1=0.936  best=0.939  no_improve=4
+    Epoch  50/60  tr_loss=0.0318 tr_acc=0.988  val_acc=0.982 val_f1=0.943  best=0.956  no_improve=3
+    Epoch  60/60  tr_loss=0.0242 tr_acc=0.991  val_acc=0.985 val_f1=0.950  best=0.956  no_improve=13
+  Loaded best (val fall F1=0.9558)
+
+  [Stage 1]  Acc=0.8022  Fall F1=0.5652
+  Confusion:
+[[749 203]
+ [ 17 143]]
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9565
+[TwoStage] stage1_threshold=0.90  rescue_threshold=0.85  val_fall_F1=0.9633
+
+  [Two-stage] Acc=0.8192  Fall F1=0.5786
+  Confusion:
+[[773 179]
+ [ 22 138]]
+
+=======================================================
+  LOSO SUMMARY  (17 folds)
+=======================================================
+  Fold   Test Subj       S1 F1    S2 F1
+  --------------------------------------
+  1      Subject1          0.6810   0.6777
+  2      Subject2          0.5619   0.5720
+  3      Subject3          0.5905   0.5905
+  4      Subject4          0.7397   0.7055
+  5      Subject5          0.5866   0.5962
+  6      Subject6          0.5674   0.5481
+  7      Subject7          0.6323   0.7404
+  8      Subject8          0.7493   0.6986
+  9      Subject9          0.6012   0.6073
+  10     Subject10         0.6286   0.6368
+  11     Subject11         0.5641   0.5685
+  12     Subject12         0.6469   0.7665
+  13     Subject13         0.6009   0.5982
+  14     Subject14         0.4786   0.4556
+  15     Subject15         0.6667   0.6667
+  16     Subject16         0.6195   0.6195
+  17     Subject17         0.5652   0.5786
+  --------------------------------------
+  Mean                    0.6165   0.6251
+  Std                     0.0654   0.0750
+
+  ST-GCN (Stage 1)         : 0.6165 ± 0.0654
+  ST-GCN + Physics (Rescue): 0.6251 ± 0.0750
+
+  Aggregated confusion matrix (Stage 1):
+[[13470  2665]
+ [  327  2361]]
+
+  Aggregated confusion matrix (Two-stage):
+[[13793  2342]
+ [  428  2260]]
+
+  Saved: experiments/subject1_to_17/loso\loso_summary.json
+  Log  : experiments/subject1_to_17/loso\loso_results.txt

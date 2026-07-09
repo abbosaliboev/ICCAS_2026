@@ -1,0 +1,39 @@
+Dataset dir : F:\Project_F\ICCAS_2026\fall_iccas\dataset
+Subjects    : Subject[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+Output dir  : experiments/subject1_to_17/cv_dataset
+Device      : cuda
+
+Summary
+-------
+X shape  : (18823, 30, 17, 3)   (N, T=30, V=17, C=3)
+y shape  : (18823,)
+FALL     : 2688 sequences
+NO-FALL  : 16135 sequences
+Trials   : 559 (S8 A11 has only T1; all others complete)
+
+Notable zero-frame (interpolated) counts per trial
+--------------------------------------------------
+Heavy interpolation in Activity 11 (lying) - YOLO loses lying person on Camera1:
+  S11 A11: T1 902/1084, T2 659/1091, T3 619/1085
+  S12 A11: T1 1010/1130, T2 1018/1115, T3 972/1137
+  S15 A11: T1 983/1010, T2 871/1005, T3 895/1111
+  S17 A11: T2 500/1049, T3 365/1036
+
+FALL trials with >50% interpolated frames (mostly post-fall lying tail):
+  S4  A1 T2 140/186, A4 T1 107/187, A4 T2 145/193
+  S6  A1 T1 104/150
+  S7  A1 T2 100/191, A1 T3 116/189
+  S8  A1 T3 114/189
+  S12 A3 T1 141/193, A3 T2 116/192, A3 T3 108/192
+  S14 A2 T1 127/178
+  S15 A3 T1 111/184, A4 T1 108/184
+  S16 A3 T1 121/169
+
+Moderate interpolation in Activity 6 (walking, occlusions) across most subjects:
+  typically 50-360 frames per ~1000-1150 frame trial.
+
+Full per-trial log: see terminal output of the 2026-07-06 run
+(prepare_cv_dataset.py --out-dir experiments/subject1_to_17/cv_dataset).
+
+ST-GCN input: X.transpose(0,3,1,2)[:,None]  -> (N, C, T, V, 1)
+TCN input   : X.reshape(N, T, -1)           -> (N, T, V*C)
