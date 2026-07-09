@@ -171,6 +171,10 @@ def main():
                         help="Experiment name shown in header. Default: derived from ckpt-dir.")
     parser.add_argument("--patience", type=int, default=15,
                         help="Early stopping: stop if val fall-F1 does not improve for N epochs. Default: 15.")
+    parser.add_argument("--subjects", type=int, nargs="+", default=None,
+                        help="Only use these subject IDs (subset the cv_dataset). "
+                             "Default: all subjects in the dataset. Used for the "
+                             "incremental data-size study (Subject 1, 1+2, ...).")
     args = parser.parse_args()
 
     # argparse stores --ckpt-dir as args.ckpt_dir automatically
@@ -195,13 +199,22 @@ def main():
     # ── load data ─────────────────────────────────────────────────────────────
     X = np.load(os.path.join(data_dir, "X.npy"))   # (N, T, V, C)
     y = np.load(os.path.join(data_dir, "y.npy"))   # (N,)
+
+    import pandas as pd
+    meta_path = os.path.join(data_dir, "meta.csv")
+    meta = pd.read_csv(meta_path) if os.path.exists(meta_path) else None
+
+    # optional subject subset — for the incremental data-size study
+    if args.subjects and meta is not None:
+        keep = meta["subject"].isin(set(args.subjects)).values
+        X, y = X[keep], y[keep]
+        meta = meta[keep].reset_index(drop=True)
+        print(f"Subjects    : {sorted(set(args.subjects))} ({len(set(args.subjects))} subjects)")
+
     print(f"Data: X={X.shape}  y={y.shape}  FALL={y.sum()}  NO-FALL={(y==0).sum()}")
 
     # subject-stratified split 70/15/15 — each subject proportionally in all splits
-    meta_path = os.path.join(data_dir, "meta.csv")
-    if os.path.exists(meta_path):
-        import pandas as pd
-        meta = pd.read_csv(meta_path)
+    if meta is not None:
         subjects = meta["subject"].values  # (N,)
         tr_idx, val_idx, te_idx = [], [], []
         for subj in np.unique(subjects):
