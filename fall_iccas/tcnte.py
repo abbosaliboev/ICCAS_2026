@@ -73,6 +73,25 @@ class TCNTE(nn.Module):
         return self.fc(h)
 
 
+class TCN(nn.Module):
+    """Plain Temporal Convolutional Network baseline — the TCN blocks of TCNTE
+    without the transformer encoder (TCNTE's own ablation; also the TCN baseline
+    the CLAUDE.md TODO calls for)."""
+    def __init__(self, in_features=51, num_classes=2):
+        super().__init__()
+        self.tcn = nn.Sequential(
+            _TemporalBlock(in_features, 8,  kernel=5, dilation=1),
+            _TemporalBlock(8,          16, kernel=5, dilation=2),
+            _TemporalBlock(16,         32, kernel=5, dilation=4),
+        )
+        self.fc = nn.Linear(32, num_classes)
+
+    def forward(self, x):
+        h = self.tcn(x)               # (B, 32, T)
+        h = h.mean(dim=2)             # (B, 32) — mean over time
+        return self.fc(h)
+
+
 class WeightedFocalLoss(nn.Module):
     """WFL (Lin et al. focal loss + class weight). alpha weights the fall class."""
     def __init__(self, alpha=30.0, gamma=3.0):

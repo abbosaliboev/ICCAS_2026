@@ -21,7 +21,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.metrics import (f1_score, accuracy_score, precision_score,
                              recall_score, confusion_matrix, classification_report)
 
-from tcnte import TCNTE, WeightedFocalLoss
+from tcnte import TCNTE, TCN, WeightedFocalLoss
 
 EPOCHS = 100
 BATCH  = 64
@@ -64,6 +64,8 @@ def main():
     ap.add_argument("--data-dir", required=True)
     ap.add_argument("--subjects", type=int, nargs="+", default=None)
     ap.add_argument("--ckpt-dir", required=True)
+    ap.add_argument("--model", choices=["tcnte", "tcn"], default="tcnte",
+                    help="tcnte = TCN+Transformer (full paper); tcn = TCN blocks only (baseline)")
     ap.add_argument("--patience", type=int, default=15)
     args = ap.parse_args()
     os.makedirs(args.ckpt_dir, exist_ok=True)
@@ -92,7 +94,10 @@ def main():
     alpha = nneg / max(npos, 1)
     print(f"WFL alpha (non-fall/fall ratio) = {alpha:.2f}, gamma = {GAMMA}")
 
-    model = TCNTE(in_features=X.shape[2] * X.shape[3], window=X.shape[1]).to(DEVICE)
+    in_feat = X.shape[2] * X.shape[3]
+    model = (TCN(in_features=in_feat) if args.model == "tcn"
+             else TCNTE(in_features=in_feat, window=X.shape[1])).to(DEVICE)
+    print(f"Model: {args.model.upper()}  params={sum(p.numel() for p in model.parameters())}")
     crit  = WeightedFocalLoss(alpha=alpha, gamma=GAMMA)
     opt   = torch.optim.Adam(model.parameters(), lr=LR)
 
@@ -126,7 +131,7 @@ def main():
     spec = tn / (tn + fp) if (tn + fp) else 0.0   # specificity
 
     print("\n" + "=" * 50)
-    print("  TCNTE (TCN + Transformer) — test result")
+    print(f"  {args.model.upper()} — test result")
     print("=" * 50)
     print(f"  Accuracy    : {acc:.4f}")
     print(f"  Sensitivity : {sens:.4f}")
@@ -138,7 +143,7 @@ def main():
     print(f"\n{classification_report(yte, pte, target_names=['NO-FALL','FALL'], zero_division=0)}")
     print(f"Confusion:\n{cm}")
 
-    out = {"model": "TCNTE", "subjects": sorted(set(subjects.tolist())),
+    out = {"model": args.model.upper(), "subjects": sorted(set(subjects.tolist())),
            "n_test": int(len(te)), "accuracy": float(acc), "fall_f1": float(f1),
            "sensitivity": float(sens), "specificity": float(spec),
            "precision": float(prec), "recall": float(rec),
