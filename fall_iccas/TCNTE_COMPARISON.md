@@ -12,7 +12,7 @@ Only the model architecture differs. Test set: 505 windows (75 fall / 430 no-fal
 | TCN (baseline) | 97.3% | 91.9% | 92.7% | 0.798 | 35 | 2 | ~30 |
 | TCNTE (TCN+Transformer) | 97.3% | 91.4% | 92.3% | 0.789 | 37 | 2 | 19 |
 | Our ST-GCN (alone) | 78.7% | 100.0% | 96.8% | 0.881 | 0 | 16 | ~30 |
-| **Our ST-GCN + Physics** | 90.7% | **99.3%** | **98.0%** | **0.932** | **3** | 7 | **30.48** |
+| **Our ST-GCN + Physics** | 90.7% | **99.3%** | **98.0%** | **0.932** | **3** | **7** | **30.48** |
 
 ## Honest reading
 
