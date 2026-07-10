@@ -25,7 +25,8 @@ class AppColors {
   static const dangerPressed = Color(0xFFB91C1C);
   static const dangerTint = Color(0xFFFDECEC);
   static const warning = Color(0xFFD97706);
-  static const warningText = Color(0xFF92400E);
+  // brightened from the old brown 0xFF92400E — keeps 4.5:1 contrast on white
+  static const warningText = Color(0xFFB45309);
   static const warningTint = Color(0xFFFEF6E7);
   // secondary hue — guardian role badge only, not severity
   static const accent = Color(0xFF7C3AED);
@@ -185,32 +186,45 @@ BoxDecoration cardDeco({double radius = 16, bool dark = false, bool bordered = t
       ],
     );
 
-InputDecoration lightInputDeco(String label, {IconData? icon}) => InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-      prefixIcon: icon != null ? Icon(icon, color: AppColors.textTertiary, size: 20) : null,
-      filled: true,
-      fillColor: AppColors.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.danger),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
-      ),
-      errorStyle: const TextStyle(color: AppColors.danger),
-    );
+InputDecoration lightInputDeco(String label, {IconData? icon}) =>
+    appInputDeco(label, icon: icon, dark: false);
+
+/// Theme-aware input decoration — pass `dark: true` on screens that support
+/// dark mode so fields don't stay light against a dark background.
+InputDecoration appInputDeco(String label, {IconData? icon, bool dark = false}) {
+  final surface = dark ? DarkColors.surface : AppColors.surface;
+  final border  = dark ? DarkColors.border  : AppColors.border;
+  final textSec = dark ? DarkColors.textSecondary : AppColors.textSecondary;
+  final textTer = dark ? DarkColors.textTertiary  : AppColors.textTertiary;
+  final primary = dark ? DarkColors.primary : AppColors.primary;
+  final danger  = dark ? DarkColors.danger  : AppColors.danger;
+  return InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(color: textSec, fontSize: 14),
+    prefixIcon: icon != null ? Icon(icon, color: textTer, size: 20) : null,
+    filled: true,
+    fillColor: surface,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: primary, width: 1.5),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: danger),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: danger, width: 1.5),
+    ),
+    errorStyle: TextStyle(color: danger),
+  );
+}

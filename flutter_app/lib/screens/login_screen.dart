@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../app_theme.dart';
@@ -35,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _passCtrl.text,
       );
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     }
   }
@@ -54,17 +55,13 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 children: [
                   // Logo
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Icon(
-                      Icons.shield_rounded,
-                      size: 40,
-                      color: Colors.white,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/logo/logo.png',
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
                     ),
                   ),
                   const SizedBox(height: 16),

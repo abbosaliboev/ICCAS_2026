@@ -6,11 +6,13 @@ class SettingsProvider extends ChangeNotifier {
   static const _keyCamType    = 'cam_type';
   static const _keyContactName  = 'contact_name';
   static const _keyContactPhone = 'contact_phone';
+  static const _keyDemoTtsStt   = 'demo_tts_stt_enabled';
 
   String _localeCode   = 'ko';
   String _cameraType   = 'front';
   String _contactName  = '';
   String _contactPhone = '';
+  bool _demoTtsSttEnabled = false;
 
   int _zonesVersion = 0;
 
@@ -18,6 +20,7 @@ class SettingsProvider extends ChangeNotifier {
   String get cameraType   => _cameraType;
   String get contactName  => _contactName;
   String get contactPhone => _contactPhone;
+  bool get demoTtsSttEnabled => _demoTtsSttEnabled;
   int get zonesVersion => _zonesVersion;
 
   void bumpZonesVersion() {
@@ -39,6 +42,7 @@ class SettingsProvider extends ChangeNotifier {
     _cameraType   = prefs.getString(_keyCamType)      ?? 'front';
     _contactName  = prefs.getString(_keyContactName)  ?? '';
     _contactPhone = prefs.getString(_keyContactPhone) ?? '';
+    _demoTtsSttEnabled = prefs.getBool(_keyDemoTtsStt) ?? false;
     notifyListeners();
   }
 
@@ -62,6 +66,13 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyContactName, name);
     await prefs.setString(_keyContactPhone, phone);
+    notifyListeners();
+  }
+
+  Future<void> setDemoTtsSttEnabled(bool enabled) async {
+    _demoTtsSttEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyDemoTtsStt, enabled);
     notifyListeners();
   }
 }

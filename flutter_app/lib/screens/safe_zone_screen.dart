@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+﻿import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -6,6 +6,7 @@ import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/theme_provider.dart';
+import '../models/user.dart';
 import '../strings.dart';
 import '../widgets/app_toast.dart';
 
@@ -20,7 +21,9 @@ class _Zone {
 }
 
 class SafeZoneScreen extends StatefulWidget {
-  const SafeZoneScreen({super.key});
+  final String? targetUserId;
+  final String? targetUserName;
+  const SafeZoneScreen({super.key, this.targetUserId, this.targetUserName});
   @override
   State<SafeZoneScreen> createState() => _SafeZoneScreenState();
 }
@@ -29,8 +32,12 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   List<_Zone> _zones = [];
   Uint8List? _snapshot;
   bool _loadingSnapshot = true;
+  bool _loadingRecipients = false;
   bool _saving = false;
   bool _drawing = false;
+  List<User> _recipients = [];
+  String? _targetUserId;
+  String? _targetUserName;
 
   // View/edit state machine: drawing and destructive actions only exist in
   // edit mode; Save (or Cancel) returns to view mode. _zonesBackup restores
@@ -50,8 +57,56 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
 
   Future<void> _load() async {
     final api = context.read<AuthProvider>().api;
+    final auth = context.read<AuthProvider>();
+    _targetUserId = widget.targetUserId;
+    _targetUserName = widget.targetUserName;
+    if (auth.user?.isGuardian == true && _targetUserId == null) {
+      if (mounted) setState(() => _loadingRecipients = true);
+      try {
+        final users = await api.getMonitoredUsers();
+        if (users.isNotEmpty) {
+          _targetUserId = users.first.id;
+          _targetUserName = _displayName(users.first);
+        }
+        if (mounted) setState(() => _recipients = users);
+      } catch (_) {
+        if (mounted) setState(() => _recipients = []);
+      } finally {
+        if (mounted) setState(() => _loadingRecipients = false);
+      }
+    }
     try {
-      final data = await api.getSafeZone();
+      final data = await api.getSafeZone(userId: _targetUserId);
+      final zones = (data['zones'] as List?)
+              ?.map((e) => _Zone.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [];
+      if (mounted) setState(() => _zones = zones);
+    } catch (_) {}
+    await _fetchSnapshot();
+  }
+
+  String _displayName(User user) =>
+      user.displayName.isNotEmpty ? user.displayName : user.username;
+
+  Future<void> _selectRecipient(User user) async {
+    setState(() {
+      _targetUserId = user.id;
+      _targetUserName = _displayName(user);
+      _snapshot = null;
+      _zones = [];
+      _editing = false;
+      _drawStart = null;
+      _drawCurrent = null;
+      _drawing = false;
+    });
+    await _loadTargetData();
+  }
+
+  Future<void> _loadTargetData() async {
+    final api = context.read<AuthProvider>().api;
+    try {
+      final data = await api.getSafeZone(userId: _targetUserId);
       final zones = (data['zones'] as List?)
               ?.map((e) => _Zone.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -64,9 +119,11 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
   Future<void> _fetchSnapshot() async {
     if (mounted) setState(() => _loadingSnapshot = true);
     try {
-      final baseUrl = context.read<AuthProvider>().baseUrl;
-      final r = await http.get(Uri.parse('$baseUrl/api/stream/snapshot'))
-          .timeout(const Duration(seconds: 5));
+      final auth = context.read<AuthProvider>();
+      final r = await http.get(
+        Uri.parse(auth.api.snapshotUrl(userId: _targetUserId)),
+        headers: {'Authorization': 'Bearer ${auth.token}'},
+      ).timeout(const Duration(seconds: 5));
       if (r.statusCode == 200 && mounted) {
         setState(() { _snapshot = r.bodyBytes; _loadingSnapshot = false; });
       } else {
@@ -154,7 +211,10 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
       final camType = context.read<SettingsProvider>().cameraType;
       // an empty list clears the zones server-side, so a separate clear API
       // call is unnecessary — Clear only edits the local working copy
-      await api.setSafeZone(_zones.map((z) => z.toJson()).toList());
+      await api.setSafeZone(
+        _zones.map((z) => z.toJson()).toList(),
+        userId: _targetUserId,
+      );
       await api.setCameraType(camType);
       if (mounted) {
         context.read<SettingsProvider>().bumpZonesVersion();
@@ -233,6 +293,71 @@ class _SafeZoneScreenState extends State<SafeZoneScreen> {
               ]),
             ),
             const SizedBox(height: 20),
+            if (_recipients.isNotEmpty) ...[
+              Text(
+                s.isKorean ? '피보호자 선택' : 'Care recipient',
+                style: TextStyle(
+                    color: textSec, fontSize: 12, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: border),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _targetUserId,
+                    isExpanded: true,
+                    icon: Icon(Icons.keyboard_arrow_down_rounded, color: textSec),
+                    items: _recipients
+                        .map((user) => DropdownMenuItem<String>(
+                              value: user.id,
+                              child: Text(
+                                _displayName(user),
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: textPri,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ))
+                        .toList(),
+                    onChanged: _loadingRecipients
+                        ? null
+                        : (id) {
+                            final user = _recipients.firstWhere((u) => u.id == id);
+                            _selectRecipient(user);
+                          },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ] else if (_targetUserName?.isNotEmpty == true) ...[
+              Text(
+                s.isKorean ? '피보호자' : 'Care recipient',
+                style: TextStyle(
+                    color: textSec, fontSize: 12, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                decoration: BoxDecoration(
+                  color: surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: border),
+                ),
+                child: Text(
+                  _targetUserName!,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: textPri, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
 
             // ── Canvas ────────────────────────────────────────────────────
             Text(s.drawZoneLabel,
@@ -446,3 +571,6 @@ class _ZonePainter extends CustomPainter {
       old.drawStart != drawStart ||
       old.drawCurrent != drawCurrent;
 }
+
+
+

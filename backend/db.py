@@ -1,4 +1,4 @@
-"""SQLite database layer for MobiCare backend."""
+﻿"""SQLite database layer for MobiCare backend."""
 
 import sqlite3, os, uuid
 from datetime import datetime
@@ -8,15 +8,15 @@ DB_PATH = Path(__file__).parent / "mobicare.db"
 
 
 def get_conn():
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
 def init_db():
     conn = get_conn()
+    conn.execute("PRAGMA journal_mode=WAL")
     c = conn.cursor()
 
     c.executescript("""
@@ -165,6 +165,93 @@ def link_guardian(user_id: str, guardian_id: str):
     conn.close()
 
 
+
+def link_monitored_user(guardian_id: str, user_identifier: str):
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM users WHERE role='user' AND (id=? OR username=?)",
+        (user_identifier, user_identifier),
+    ).fetchone()
+    if not row:
+        conn.close()
+        return None
+    conn.execute("UPDATE users SET guardian_id=? WHERE id=?", (guardian_id, row["id"]))
+    conn.commit()
+    linked = conn.execute("SELECT id,username,role,display_name,age,gender,phone,address,guardian_id FROM users WHERE id=?", (row["id"],)).fetchone()
+    conn.close()
+    return dict(linked) if linked else None
+
+
+def create_monitored_user(guardian_id: str, display_name: str, age, phone: str, address: str,
+                          gender: str = "", stream_url: str = ""):
+    base = "demo_user_" + uuid.uuid4().hex[:8]
+    uid = create_user(base, "1234", "user", display_name, age, phone, address, None, None, gender)
+    if not uid:
+        return None
+    link_guardian(uid, guardian_id)
+    assign_device_to_user("demo-device-" + uid[:8], uid, stream_url)
+    return get_user_by_id(uid)
+
+
+
+def remove_monitored_user(guardian_id: str, user_id: str):
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT id FROM users WHERE id=? AND role='user' AND guardian_id=?",
+        (user_id, guardian_id),
+    ).fetchone()
+    if not row:
+        conn.close()
+        return False
+    conn.execute("UPDATE users SET guardian_id=NULL WHERE id=?", (user_id,))
+    conn.commit()
+    conn.close()
+    return True
+def get_guardian_call_count(guardian_id: str):
+    conn = get_conn()
+    row = conn.execute("""
+        SELECT COUNT(*) AS count
+        FROM sms_logs sl
+        JOIN fall_events fe ON sl.event_id = fe.id
+        JOIN users u ON fe.user_id = u.id
+        WHERE u.guardian_id=? AND sl.ok=1
+    """, (guardian_id,)).fetchone()
+    conn.close()
+    return int(row["count"] if row else 0)
+
+
+def update_monitored_user(guardian_id: str, user_id: str, display_name: str, age, phone: str,
+                          address: str, gender: str = "", stream_url: str = ""):
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM users WHERE id=? AND role='user' AND guardian_id=?",
+        (user_id, guardian_id),
+    ).fetchone()
+    if not row:
+        conn.close()
+        return None
+    conn.execute(
+        "UPDATE users SET display_name=?, age=?, gender=?, phone=?, address=? WHERE id=?",
+        (display_name, age, gender, phone, address, user_id),
+    )
+    if stream_url:
+        token = "demo-device-" + user_id[:8]
+        dev = conn.execute("SELECT * FROM devices WHERE user_id=? ORDER BY last_seen DESC LIMIT 1", (user_id,)).fetchone()
+        now = datetime.now().isoformat()
+        if dev:
+            conn.execute("UPDATE devices SET stream_url=?, last_seen=? WHERE id=?", (stream_url, now, dev["id"]))
+        else:
+            conn.execute("""
+                INSERT INTO devices (id,token,name,location,stream_url,user_id,last_seen,created_at)
+                VALUES (?,?,?,?,?,?,?,?)
+            """, (str(uuid.uuid4()), token, "카메라", "거실", stream_url, user_id, now, now))
+    conn.commit()
+    updated = conn.execute(
+        "SELECT id,username,role,display_name,age,gender,phone,address,guardian_id FROM users WHERE id=?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return dict(updated) if updated else None
 # ── session helpers ───────────────────────────────────────────────────────────
 
 def create_session(user_id: str) -> str:
@@ -224,6 +311,16 @@ def get_latest_device():
     conn.close()
     return dict(row) if row else None
 
+
+def get_latest_device_for_user(user_id: str):
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM devices WHERE user_id=? AND stream_url IS NOT NULL AND stream_url != '' "
+        "ORDER BY last_seen DESC LIMIT 1",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 def assign_device_to_user(device_token: str, user_id: str, stream_url: str = ""):
     conn = get_conn()
@@ -322,7 +419,8 @@ def get_guardian_events(guardian_id: str, limit: int = 50):
     """Fall events for all users who have this guardian."""
     conn = get_conn()
     rows = conn.execute("""
-        SELECT fe.* FROM fall_events fe
+        SELECT fe.*, COALESCE(NULLIF(u.display_name, ''), u.username) AS monitored_user_name
+        FROM fall_events fe
         JOIN users u ON fe.user_id = u.id
         WHERE u.guardian_id = ?
         ORDER BY fe.created_at DESC LIMIT ?
@@ -334,7 +432,7 @@ def get_guardian_events(guardian_id: str, limit: int = 50):
 def get_monitored_users(guardian_id: str):
     conn = get_conn()
     rows = conn.execute(
-        "SELECT id,username,display_name,age,phone,address FROM users WHERE guardian_id=?",
+        "SELECT id,username,role,display_name,age,gender,phone,address,guardian_id FROM users WHERE guardian_id=?",
         (guardian_id,)
     ).fetchall()
     conn.close()
@@ -370,3 +468,10 @@ def get_sms_logs_for_event(event_id: str):
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+
+
+
+
+

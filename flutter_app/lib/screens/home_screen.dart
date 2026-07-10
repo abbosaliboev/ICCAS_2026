@@ -1,10 +1,12 @@
-import 'dart:async';
+﻿import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/fall_event.dart';
+import '../services/mjpeg_stream.dart';
 import '../services/ws_service.dart';
 import '../strings.dart';
 import '../widgets/fall_response_overlay.dart';
@@ -29,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _eventsLoading = true;
   WsEvent? _overlayEvent;
   late final PageController _pageCtrl;
+  final _guardianKey = GlobalKey<GuardianScreenState>();
   final _eventsKey  = GlobalKey<EventsScreenState>();
   final _reportsKey = GlobalKey<ReportsScreenState>();
 
@@ -62,7 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() => _activeAlert = event);
       if (event.isFallDetected) {
-        if (user?.role == 'user' && event.eventId != null) {
+        final demoTtsStt = context.read<SettingsProvider>().demoTtsSttEnabled;
+        if (user?.role == 'user' || (user?.isGuardian == true && demoTtsStt)) {
           setState(() => _overlayEvent = event);
         }
         Future.delayed(const Duration(seconds: 30), () {
@@ -71,6 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         });
         _loadEvents();
+        _guardianKey.currentState?.reload();
+        _eventsKey.currentState?.reload();
+        _reportsKey.currentState?.reload();
       } else if (event.isFallResolved) {
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted) setState(() => _activeAlert = null);
@@ -85,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final events = await api.getFallEvents();
       if (mounted) {
         setState(() {
-          _recentEvents = events.take(2).toList();
+          _recentEvents = events.take(1).toList();
           _eventsLoading = false;
         });
       }
@@ -115,12 +122,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final tabs = [
       user.isGuardian
-          ? const GuardianScreen()
+          ? GuardianScreen(
+              key: _guardianKey,
+              fallDetected: _activeAlert?.isFallDetected == true,
+              onOpenHistory: () => _goToTab(1),
+            )
           : _DashboardTab(
               user: user,
               activeAlert: _activeAlert,
               recentEvents: _recentEvents,
               eventsLoading: _eventsLoading,
+              streamVisible: _tabIndex == 0,
               onRefresh: _loadEvents,
               onDismissAlert: () => setState(() => _activeAlert = null),
               onGoToEvents: () => _goToTab(1),
@@ -134,18 +146,21 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: bg,
       body: Stack(
         children: [
-          PageView(
-            controller: _pageCtrl,
-            onPageChanged: (i) {
-              setState(() => _tabIndex = i);
-              _onTabVisible(i);
-            },
-            children: tabs,
+          Positioned.fill(
+            child: PageView(
+              controller: _pageCtrl,
+              onPageChanged: (i) {
+                setState(() => _tabIndex = i);
+                _onTabVisible(i);
+              },
+              children: tabs,
+            ),
           ),
           if (_overlayEvent != null)
             Positioned.fill(
               child: FallResponseOverlay(
-                eventId: _overlayEvent!.eventId!,
+                eventId: _overlayEvent!.eventId,
+                demoMode: user.isGuardian,
                 onDismiss: () => setState(() => _overlayEvent = null),
               ),
             ),
@@ -255,7 +270,11 @@ class _NavItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
+        // heightFactor keeps Center from expanding: Scaffold hands the
+        // bottomNavigationBar loose height constraints, and an unbounded
+        // Center would claim the full screen, squeezing the body to 0.
         child: Center(
+          heightFactor: 1.0,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOut,
@@ -306,6 +325,7 @@ class _DashboardTab extends StatelessWidget {
   final WsEvent? activeAlert;
   final List<FallEvent> recentEvents;
   final bool eventsLoading;
+  final bool streamVisible;
   final VoidCallback onRefresh;
   final VoidCallback onDismissAlert;
   final VoidCallback onGoToEvents;
@@ -315,6 +335,7 @@ class _DashboardTab extends StatelessWidget {
     required this.activeAlert,
     required this.recentEvents,
     required this.eventsLoading,
+    required this.streamVisible,
     required this.onRefresh,
     required this.onDismissAlert,
     required this.onGoToEvents,
@@ -327,16 +348,16 @@ class _DashboardTab extends StatelessWidget {
         color: AppColors.primary,
         onRefresh: () async => onRefresh(),
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
           children: [
             _Header(user: user),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             _StatusHeroBanner(activeAlert: activeAlert, onDismiss: onDismissAlert),
-            const SizedBox(height: 16),
-            _StreamCard(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
+            _LiveStreamCard(visible: streamVisible),
+            const SizedBox(height: 18),
             _EmergencyButtons(activeAlert: activeAlert, onDismiss: onDismissAlert),
-            const SizedBox(height: 24),
+            const SizedBox(height: 26),
             _RecentEventsSection(
               recentEvents: recentEvents,
               loading: eventsLoading,
@@ -389,13 +410,13 @@ class _Header extends StatelessWidget {
         Text(
           s.greeting(user.displayName.isNotEmpty ? user.displayName : user.username),
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 24,
             fontWeight: FontWeight.w800,
             color: textPri,
           ),
         ),
-        const SizedBox(height: 2),
-        Text(dateStr, style: TextStyle(color: textSec, fontSize: 13)),
+        const SizedBox(height: 3),
+        Text(dateStr, style: TextStyle(color: textSec, fontSize: 14)),
       ],
     );
   }
@@ -411,12 +432,19 @@ class _StatusHeroBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s        = S.of(context);
+    final isDark   = Theme.of(context).brightness == Brightness.dark;
     final hasAlert = activeAlert != null;
     final isSevere = activeAlert?.category == 'severe';
-    final bg = hasAlert ? AppColors.dangerTint : AppColors.successTint;
-    final color = hasAlert
-        ? (isSevere ? AppColors.danger : AppColors.warning)
-        : AppColors.success;
+    final dangerTint  = isDark ? DarkColors.dangerTint  : AppColors.dangerTint;
+    final successTint = isDark ? DarkColors.successTint : AppColors.successTint;
+    final danger  = isDark ? DarkColors.danger  : AppColors.danger;
+    final warning = isDark ? DarkColors.warning : AppColors.warning;
+    final success = isDark ? DarkColors.success : AppColors.success;
+    final bg = hasAlert ? dangerTint : successTint;
+    final color = hasAlert ? (isSevere ? danger : warning) : success;
+    final headlineColor = hasAlert
+        ? (isDark ? DarkColors.danger : AppColors.dangerPressed)
+        : success;
     final headline = hasAlert
         ? (isSevere ? s.needsAttention : s.fallSuspected)
         : s.normal;
@@ -426,7 +454,7 @@ class _StatusHeroBanner extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(14),
@@ -434,13 +462,13 @@ class _StatusHeroBanner extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(
-              hasAlert ? Icons.warning_rounded : Icons.check_rounded,
+              hasAlert ? Icons.event_note_outlined : Icons.check_rounded,
               color: Colors.white,
-              size: 16,
+              size: 18,
             ),
           ),
           const SizedBox(width: 12),
@@ -451,18 +479,16 @@ class _StatusHeroBanner extends StatelessWidget {
                 Text(
                   headline,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: hasAlert ? AppColors.dangerPressed : AppColors.success,
+                    color: headlineColor,
                   ),
                 ),
                 Text(
                   sub,
                   style: TextStyle(
-                    fontSize: 12,
-                    color: hasAlert
-                        ? AppColors.dangerPressed.withOpacity(0.8)
-                        : AppColors.success.withOpacity(0.85),
+                    fontSize: 13,
+                    color: headlineColor.withOpacity(0.82),
                   ),
                 ),
               ],
@@ -471,7 +497,7 @@ class _StatusHeroBanner extends StatelessWidget {
           if (hasAlert)
             GestureDetector(
               onTap: onDismiss,
-              child: const Icon(Icons.close, color: AppColors.danger, size: 18),
+              child: Icon(Icons.close, color: danger, size: 18),
             ),
         ],
       ),
@@ -481,104 +507,289 @@ class _StatusHeroBanner extends StatelessWidget {
 
 // ── Live stream card ──────────────────────────────────────────────────────────
 
-// Static entry card — intentionally makes NO network requests. The old live
-// preview polled a snapshot every 400ms and, because dashboard tabs stay alive,
-// kept competing with the full-screen stream for the weak edge↔backend WiFi
-// link. The live video lives only in StreamScreen now; the tiny pulsing dot is
-// a quiet "monitoring is on" cue without pulling any frames.
-class _StreamCard extends StatefulWidget {
-  const _StreamCard();
+// Embedded live monitor: streams the same persistent MJPEG connection the
+// full-screen viewer uses. Per-frame updates go through ValueNotifiers so only
+// the video surface repaints — the dashboard around it never rebuilds. The
+// stream is stopped whenever this tab is hidden, the app is backgrounded, or
+// the full-screen viewer is open, so at most ONE connection ever pulls frames
+// over the weak edge↔backend WiFi link.
+class _LiveStreamCard extends StatefulWidget {
+  final bool visible;
+  const _LiveStreamCard({required this.visible});
   @override
-  State<_StreamCard> createState() => _StreamCardState();
+  State<_LiveStreamCard> createState() => _LiveStreamCardState();
 }
 
-class _StreamCardState extends State<_StreamCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseCtrl;
-  late final Animation<double> _pulseAnim;
+class _LiveStreamCardState extends State<_LiveStreamCard>
+    with WidgetsBindingObserver {
+  MjpegStreamController? _ctrl;
+  int _zoneCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 1.0, end: 0.3).animate(
-        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      _ctrl = MjpegStreamController(
+        url: () => auth.api.streamUrl(),
+        headers: () => {'Authorization': 'Bearer ${auth.token}'},
+      );
+      if (widget.visible) _ctrl!.start();
+      setState(() {});
+      _loadZones(auth);
+    });
+  }
+
+  Future<void> _loadZones(AuthProvider auth) async {
+    try {
+      final data = await auth.api.getSafeZone();
+      final zones = (data['zones'] as List?) ?? const [];
+      if (mounted) setState(() => _zoneCount = zones.length);
+    } catch (_) {}
+  }
+
+  @override
+  void didUpdateWidget(covariant _LiveStreamCard old) {
+    super.didUpdateWidget(old);
+    if (widget.visible != old.visible) {
+      widget.visible ? _ctrl?.start() : _ctrl?.stop();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (widget.visible) _ctrl?.start();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _ctrl?.stop();
+    }
+  }
+
+  Future<void> _openFullscreen() async {
+    _ctrl?.stop(); // hand the single connection over to the viewer
+    await Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const StreamScreen()));
+    if (mounted && widget.visible) _ctrl?.start();
   }
 
   @override
   void dispose() {
-    _pulseCtrl.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _ctrl?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final s       = S.of(context);
-    final isDark  = Theme.of(context).brightness == Brightness.dark;
-    final primary = isDark ? DarkColors.primary : AppColors.primary;
-    final textPri = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
-    final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
-    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
-    final success = isDark ? DarkColors.success : AppColors.success;
+    final s      = S.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ctrl   = _ctrl;
+
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const StreamScreen()),
-      ),
+      onTap: _openFullscreen,
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: cardDeco(radius: 18, dark: isDark),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isDark ? DarkColors.primaryTint : AppColors.primaryTint,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(Icons.videocam_outlined, color: primary, size: 24),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    s.liveCam,
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700, color: textPri),
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
+        decoration: cardDeco(radius: 18, dark: isDark, bordered: false),
+        clipBehavior: Clip.antiAlias,
+        // Everything lives on the video itself — no info strip below, so the
+        // stream fills the whole card.
+        child: AspectRatio(
+          aspectRatio: 16 / 10,
+          child: Container(
+            color: const Color(0xFF10151F),
+            child: ctrl == null
+                ? const SizedBox.shrink()
+                : Stack(
+                    fit: StackFit.expand,
                     children: [
-                      FadeTransition(
-                        opacity: _pulseAnim,
-                        child: Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: success,
-                            shape: BoxShape.circle,
-                          ),
+                      // Only this subtree repaints per frame.
+                      RepaintBoundary(
+                        child: ValueListenableBuilder<Uint8List?>(
+                          valueListenable: ctrl.frame,
+                          builder: (_, frame, __) => frame == null
+                              ? _StreamPlaceholder(ctrl: ctrl, s: s)
+                              : Image.memory(
+                                  frame,
+                                  gaplessPlayback: true,
+                                  fit: BoxFit.cover,
+                                ),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        s.aiAnalyzing,
-                        style: TextStyle(fontSize: 12, color: textSec),
+                      // LIVE badge + FPS
+                      Positioned(
+                        top: 10, left: 10,
+                        child: ValueListenableBuilder<MjpegStatus>(
+                          valueListenable: ctrl.status,
+                          builder: (_, st, __) =>
+                              _LiveBadge(live: st == MjpegStatus.live, s: s),
+                        ),
+                      ),
+                      Positioned(
+                        top: 10, right: 10,
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: ctrl.fps,
+                          builder: (_, fps, __) => fps > 0
+                              ? _GlassChip(text: '$fps FPS')
+                              : const SizedBox.shrink(),
+                        ),
+                      ),
+                      // Connection status — bottom-left, same glass style as
+                      // the LIVE badge
+                      Positioned(
+                        bottom: 10, left: 10,
+                        child: ValueListenableBuilder<MjpegStatus>(
+                          valueListenable: ctrl.status,
+                          builder: (_, st, __) {
+                            final live = st == MjpegStatus.live;
+                            final connecting = st == MjpegStatus.connecting;
+                            final dotColor = live
+                                ? DarkColors.success
+                                : connecting
+                                    ? DarkColors.warning
+                                    : DarkColors.danger;
+                            final label = live
+                                ? s.streamConnected
+                                : connecting
+                                    ? s.connecting
+                                    : s.streamDisconnected;
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _GlassChip(text: label, dotColor: dotColor),
+                                if (_zoneCount > 0) ...[
+                                  const SizedBox(width: 6),
+                                  _GlassChip(
+                                      icon: Icons.crop_free_rounded,
+                                      text: s.zonesCount(_zoneCount)),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 10, right: 10,
+                        child: _GlassChip(
+                          icon: Icons.fullscreen_rounded,
+                          text: '',
+                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: textTer, size: 20),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _StreamPlaceholder extends StatelessWidget {
+  final MjpegStreamController ctrl;
+  final S s;
+  const _StreamPlaceholder({required this.ctrl, required this.s});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<MjpegStatus>(
+      valueListenable: ctrl.status,
+      builder: (_, st, __) => Center(
+        child: st == MjpegStatus.error
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.videocam_off_outlined,
+                      color: Colors.white38, size: 36),
+                  const SizedBox(height: 8),
+                  Text(s.cameraOffline,
+                      style: const TextStyle(
+                          color: Colors.white54, fontSize: 13)),
+                ],
+              )
+            : const SizedBox(
+                width: 26, height: 26,
+                child: CircularProgressIndicator(
+                    color: Colors.white38, strokeWidth: 2),
+              ),
+      ),
+    );
+  }
+}
+
+class _LiveBadge extends StatelessWidget {
+  final bool live;
+  final S s;
+  const _LiveBadge({required this.live, required this.s});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: live
+            ? AppColors.danger.withOpacity(0.92)
+            : Colors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6, height: 6,
+            decoration: const BoxDecoration(
+                color: Colors.white, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            live ? 'LIVE' : s.liveCam,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.6),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlassChip extends StatelessWidget {
+  final String text;
+  final IconData? icon;
+  final Color? dotColor;
+  const _GlassChip({required this.text, this.icon, this.dotColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+          horizontal: text.isEmpty ? 5 : 8, vertical: text.isEmpty ? 5 : 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dotColor != null) ...[
+            Container(
+              width: 7, height: 7,
+              decoration:
+                  BoxDecoration(color: dotColor, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+          ],
+          if (icon != null)
+            Icon(icon, color: Colors.white, size: 16),
+          if (icon != null && text.isNotEmpty) const SizedBox(width: 4),
+          if (text.isNotEmpty)
+            Text(text,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700)),
+        ],
       ),
     );
   }
@@ -690,24 +901,35 @@ class _EmergencyButtonsState extends State<_EmergencyButtons> {
               flex: 2,
               child: SizedBox(
                 height: 60,
-                child: OutlinedButton(
-                  onPressed: widget.activeAlert != null ? widget.onDismiss : null,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.success,
-                    side: const BorderSide(color: AppColors.success),
-                    disabledForegroundColor: AppColors.textTertiary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ).copyWith(
-                    side: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.disabled)) {
-                        return const BorderSide(color: AppColors.border);
-                      }
-                      return const BorderSide(color: AppColors.success);
-                    }),
-                  ),
-                  child: Text(s.allClearBtn,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                ),
+                child: Builder(builder: (context) {
+                  final isDark =
+                      Theme.of(context).brightness == Brightness.dark;
+                  final success =
+                      isDark ? DarkColors.success : AppColors.success;
+                  final border = isDark ? DarkColors.border : AppColors.border;
+                  final textTer =
+                      isDark ? DarkColors.textTertiary : AppColors.textTertiary;
+                  return OutlinedButton(
+                    onPressed:
+                        widget.activeAlert != null ? widget.onDismiss : null,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: success,
+                      disabledForegroundColor: textTer,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ).copyWith(
+                      side: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.disabled)) {
+                          return BorderSide(color: border);
+                        }
+                        return BorderSide(color: success);
+                      }),
+                    ),
+                    child: Text(s.allClearBtn,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
+                  );
+                }),
               ),
             ),
           ],
@@ -834,11 +1056,6 @@ class _RecentEventTile extends StatelessWidget {
                     _formatTs(event.timestamp, context),
                     style: TextStyle(fontWeight: FontWeight.w600, color: textPri, fontSize: 14),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    event.isAcknowledged ? s.confirmed : s.needsConfirm,
-                    style: TextStyle(fontSize: 12, color: textTer),
-                  ),
                 ],
               ),
             ),
@@ -880,3 +1097,7 @@ class _RecentEventTile extends StatelessWidget {
     }
   }
 }
+
+
+
+

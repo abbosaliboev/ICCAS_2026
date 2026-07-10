@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/settings_provider.dart';
 
@@ -41,9 +41,9 @@ class S {
 
   // ── Fall severity labels ───────────────────────────────────────────────────
   String get all => _t('전체', 'All');
-  String get severe => _t('중증', 'Severe');
+  String get severe => _t('낙상', 'Fall');
   String get mild => _t('경미', 'Mild');
-  String get severeFall => _t('심각한 낙상', 'Severe Fall');
+  String get severeFall => _t('낙상 의심', 'Fall Suspected');
   String get fallSuspect => _t('낙상 의심', 'Fall Suspected');
   String get confirmed => _t('확인 완료', 'Confirmed');
   String get needsConfirm => _t('확인 필요', 'Needs Confirm');
@@ -55,22 +55,23 @@ class S {
   String get safeNote => _t('지금 안전하게 지내고 계세요', 'Currently safe and sound');
   String get fallSuspected => _t('낙상 의심 감지', 'Fall Detected');
   String get needsAttention => _t('확인이 필요해요', 'Needs Attention');
-  String get severeFallMsg => _t('중증 낙상이 의심됩니다', 'Severe fall suspected');
+  String get severeFallMsg => _t('낙상이 감지되었습니다', 'Fall detected');
   String get fallDetectedMsg => _t('낙상이 감지되었습니다', 'A fall has been detected');
   String get recentFalls => _t('최근 낙상 기록', 'Recent Falls');
   String get viewAll => _t('전체보기', 'View All');
   String get noRecentFalls => _t('최근 낙상 기록이 없습니다', 'No recent fall events');
   String get liveCam => _t('라이브 카메라', 'Live Camera');
   String get aiAnalyzing => _t('AI 분석 중', 'AI Monitoring');
+  String zonesCount(int n) => _ko ? '안전 구역 $n개' : '$n zone${n == 1 ? '' : 's'}';
   String get emergencyCall => _t('긴급 연락', 'Emergency');
   String get allClearBtn => _t('안심 확인', 'All Clear');
 
   // Fall response overlay
   String get fallAlertTitle => _t('낙상이 감지되었습니다', 'Fall Detected');
-  String get fallAlertMeta => _t('방금 전 · 중증', 'Just now · Severe');
+  String get fallAlertMeta => _t('방금 전', 'Just now');
   String get fallAlertTtsPlaying => _t('TTS 재생 중...', 'Playing voice alert...');
   String get fallAlertVoicePrompt =>
-      _t('"연락" 또는 "아니"라고 말씀해주세요', 'Say "help" or "no"');
+      _t('"연락" 또는 "아니"라고 말씀해주세요', 'Say "call" or "no"');
   String get fallAlertContacting => _t('연락 중...', 'Contacting...');
   String get fallAlertContacted =>
       _t('보호자 및 119에 연락 완료', 'Guardian and emergency services contacted');
@@ -84,9 +85,11 @@ class S {
   String get fallAlertConfirmed => _t('확인했습니다', "I'm OK");
   String get fallAlertMicActive => _t('마이크 활성화 중', 'Microphone active');
   String fallAlertSeconds(int seconds) => _ko ? '$seconds초' : '$seconds sec';
+  // Kept deliberately short — the countdown UI carries the details; the voice
+  // only needs to state the event and the two commands.
   String get fallAlertTtsMessage => _t(
-    '낙상이 감지되었습니다. 보호자에게 연락 및 119 신고를 원하시면 "연락"이라고 말씀해주세요. 괜찮으시면 "아니"라고 말씀해주세요. 15초 간 응답이 없으시면 자동으로 119 문자 신고 및 보호자에게 연락 조치가 진행됩니다.',
-    'A fall has been detected. If you need your guardian and emergency services contacted, please say "help". If you are okay, please say "no". If there is no response for 15 seconds, an emergency text and guardian alert will be sent automatically.',
+    '낙상 감지. 도움이 필요하면 "연락", 괜찮으면 "아니"라고 말씀해주세요.',
+    'Fall detected. Say "call" for assistance, or "no" if you are okay.',
   );
 
   // Emergency dialog
@@ -128,7 +131,7 @@ class S {
   String get thisMonth => _t('이번 달', 'This Month');
   String get allTime => _t('전체', 'All Time');
   String get totalFalls => _t('총 낙상 수', 'Total Falls');
-  String get severeEvents => _t('중증 이벤트', 'Severe Events');
+  String get severeEvents => _t('Call 횟수', 'Calls');
   String get peakTime => _t('위험 시간대', 'Peak Hours');
   String get lastEvent => _t('마지막 발생', 'Last Event');
   String get dailyChart => _t('일별 낙상 현황', 'Daily Fall Chart');
@@ -147,8 +150,8 @@ class S {
   String get languageLabel => _t('언어', 'Language');
   String get languageSubtitle => _t('앱 표시 언어 설정', 'App display language');
   String get selectLanguage => _t('언어 선택', 'Select Language');
-  String get lightMode => _t('☀️  라이트', '☀️  Light');
-  String get darkMode => _t('🌙  다크', '🌙  Dark');
+  String get lightMode => _t('라이트', 'Light');
+  String get darkMode => _t('다크', 'Dark');
   String get lightModeSet => _t('라이트 모드가 설정되었습니다', 'Light mode enabled');
   String get darkModeSet => _t('다크 모드가 설정되었습니다', 'Dark mode enabled');
   String get emergencyContactSection => _t('긴급 연락처', 'Emergency Contact');
@@ -369,7 +372,7 @@ class S {
   String get monitoredStatusTitle => _t('피보호자 현황', 'Care Recipient Status');
   String monitoredStatusSubtitle(int n) => _ko
       ? '등록된 ${n}명의 상태를 한눈에 확인하세요'
-      : 'View the status of $n registered care recipient${n == 1 ? '' : 's'}';
+      : 'Status of $n registered care recipient${n == 1 ? '' : 's'}';
   String get noLinkedRecipients =>
       _t('연결된 피보호자가 없습니다', 'No linked care recipients');
   String get linkByGuardianId => _t(
@@ -382,12 +385,8 @@ class S {
       _t('방금 · 낙상 의심 · 확인 필요', 'Just now · Fall suspected · Needs check');
   String ageYears(int age) => _ko ? '${age}세' : '$age yrs';
   String monitoredEventTitle(String? name, bool isSevere) {
-    if (name != null) {
-      return _ko
-          ? '$name님 · ${isSevere ? severe : mild}'
-          : '$name · ${isSevere ? severe : mild}';
-    }
-    return isSevere ? severeFall : fallSuspect;
+    if (name != null) return _ko ? '$name님 · 낙상 의심' : '$name · Fall Suspected';
+    return fallSuspect;
   }
 
   // ── Server settings screen ─────────────────────────────────────────────────
@@ -418,3 +417,5 @@ class S {
   String connectionFailedMsg(String e) =>
       _t('연결 실패: $e', 'Connection failed: $e');
 }
+
+

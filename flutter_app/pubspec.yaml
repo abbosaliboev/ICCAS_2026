@@ -1,8 +1,8 @@
-name: mobicare_app
+﻿name: mobicare_app
 description: "MobiCare - Fall Detection & Alert System for Elderly"
 publish_to: 'none'
 
-version: 1.3.0+3
+version: 1.3.1+4
 
 environment:
   sdk: ^3.9.2
@@ -37,6 +37,13 @@ dependencies:
   flutter_tts: ^4.0.2
   speech_to_text: ^7.0.0
 
+  # Confirmation sounds
+  audioplayers: ^6.1.0
+
+  # Background alerts
+  flutter_local_notifications: ^18.0.1
+  flutter_foreground_task: ^8.17.0
+
   # Sharing & URL launch
   url_launcher: ^6.3.1
   share_plus: ^10.0.0
@@ -48,3 +55,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/sounds/
+    - assets/logo/
+

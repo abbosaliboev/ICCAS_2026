@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'app_theme.dart';
 
 void main() {
+  FlutterForegroundTask.initCommunicationPort();
   runApp(
     MultiProvider(
       providers: [
@@ -26,7 +29,7 @@ class MobiCareApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider    = context.watch<ThemeProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
     final settingsProvider = context.watch<SettingsProvider>();
     return MaterialApp(
       title: 'MobiCare',
@@ -41,9 +44,22 @@ class MobiCareApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('ko'), Locale('en'), Locale('es'),
-        Locale('fr'), Locale('ru'), Locale('zh'),
+        Locale('ko'),
+        Locale('en'),
+        Locale('es'),
+        Locale('fr'),
+        Locale('ru'),
+        Locale('zh'),
       ],
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(mq.textScaler.scale(1.0) * 1.06),
+          ),
+          child: WithForegroundTask(child: child!),
+        );
+      },
       home: const _RootRouter(),
     );
   }
@@ -55,47 +71,73 @@ class _RootRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final isDark = context.watch<ThemeProvider>().isDark;
-    final bg = isDark ? DarkColors.bg : AppColors.bg;
-    final textColor = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
-    final primary = isDark ? DarkColors.primary : AppColors.primary;
-
     if (auth.loading) {
-      return Scaffold(
-        backgroundColor: bg,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: primary,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: const Icon(Icons.shield_rounded, size: 44, color: Colors.white),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'MobiCare',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(color: primary, strokeWidth: 2.5),
-              ),
-            ],
-          ),
-        ),
-      );
+      return const _SplashScreen();
     }
-    return auth.isLoggedIn ? const HomeScreen() : const LoginScreen();
+    if (!auth.isLoggedIn) return const LoginScreen();
+    if (auth.onboardingPending) return const OnboardingScreen();
+    return const HomeScreen();
+  }
+}
+
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    const splashBg = AppColors.bg;
+    const splashText = AppColors.textPrimary;
+    const subtitleColor = AppColors.textSecondary;
+    const splashPrimary = AppColors.primary;
+    return Scaffold(
+      backgroundColor: splashBg,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: splashPrimary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(34),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: Image.asset(
+                  'assets/logo/logo.png',
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              'MobiCare',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                color: splashText,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Fall detection and care monitoring',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: subtitleColor,
+              ),
+            ),
+            const SizedBox(height: 26),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(color: splashPrimary, strokeWidth: 2.5),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

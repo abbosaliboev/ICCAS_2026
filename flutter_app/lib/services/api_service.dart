@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user.dart';
@@ -165,6 +165,60 @@ class ApiService {
     return data.map((e) => User.fromJson(e)).toList();
   }
 
+
+  Future<User> linkMonitoredUser(String userId) async {
+    final data = await _post('/api/users/link-monitored', {'user_id': userId});
+    return User.fromJson(data);
+  }
+
+  Future<User> createMonitoredUser({
+    required String name,
+    required String address,
+    required String phone,
+    int? age,
+    required String gender,
+    required String rtspUrl,
+  }) async {
+    final data = await _post('/api/users/monitored', {
+      'name': name,
+      'address': address,
+      'phone': phone,
+      if (age != null) 'age': age,
+      'gender': gender,
+      'rtsp_url': rtspUrl,
+    });
+    return User.fromJson(data);
+  }
+
+
+  Future<User> updateMonitoredUser({
+    required String userId,
+    required String name,
+    required String address,
+    required String phone,
+    int? age,
+    required String gender,
+    required String rtspUrl,
+  }) async {
+    final data = await _put('/api/users/monitored/$userId', {
+      'name': name,
+      'address': address,
+      'phone': phone,
+      if (age != null) 'age': age,
+      'gender': gender,
+      'rtsp_url': rtspUrl,
+    });
+    return User.fromJson(data);
+  }
+
+  Future<void> deleteMonitoredUser(String userId) async {
+    await _delete('/api/users/monitored/$userId');
+  }
+  Future<int> getReportCallCount() async {
+    final data = await _get('/api/reports/call-count') as Map<String, dynamic>;
+    return (data['count'] as num?)?.toInt() ?? 0;
+  }
+
   // ── fall events ───────────────────────────────────────────────────────────
 
   Future<List<FallEvent>> getFallEvents({int limit = 30, int offset = 0}) async {
@@ -196,24 +250,32 @@ class ApiService {
 
   // ── safe zone ─────────────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> getSafeZone() async {
-    final data = await _get('/api/safe-zone');
+  String _userQuery(String? userId) => userId == null ? '' : '?user_id=$userId';
+
+  Future<Map<String, dynamic>> getSafeZone({String? userId}) async {
+    final data = await _get('/api/safe-zone${_userQuery(userId)}');
     return (data as Map<String, dynamic>?) ?? {'zones': []};
   }
 
-  Future<void> setSafeZone(List<Map<String, dynamic>> zones) =>
-      _post('/api/safe-zone', {'zones': zones});
+  Future<void> setSafeZone(List<Map<String, dynamic>> zones, {String? userId}) =>
+      _post('/api/safe-zone${_userQuery(userId)}', {'zones': zones});
 
-  Future<void> clearSafeZone() => _delete('/api/safe-zone');
+  Future<void> clearSafeZone({String? userId}) => _delete('/api/safe-zone${_userQuery(userId)}');
 
   Future<void> setCameraType(String cameraType) =>
       _post('/api/safe-zone/camera-type', {'camera_type': cameraType});
 
   // ── stream ────────────────────────────────────────────────────────────────
 
-  String snapshotUrl() => '$baseUrl/api/stream/snapshot';
+  String snapshotUrl({String? userId}) {
+    final suffix = userId == null ? '' : '?user_id=$userId';
+    return '$baseUrl/api/stream/snapshot$suffix';
+  }
 
-  String streamUrl() => '$baseUrl/api/stream/video';
+  String streamUrl({String? userId}) {
+    final suffix = userId == null ? '' : '?user_id=$userId';
+    return '$baseUrl/api/stream/video$suffix';
+  }
 
   String videoUrl(String eventId) =>
       '$baseUrl/api/fall-events/$eventId/video/file?token=$token';
@@ -221,3 +283,9 @@ class ApiService {
   String screenshotUrl(String eventId) =>
       '$baseUrl/api/fall-events/$eventId/screenshot?token=$token';
 }
+
+
+
+
+
+

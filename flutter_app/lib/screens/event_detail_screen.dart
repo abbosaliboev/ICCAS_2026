@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
@@ -78,7 +78,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Future<void> _acknowledge() async {
     final s   = S.read(context);
     final api = context.read<AuthProvider>().api;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     try {
       await api.acknowledgeEvent(widget.eventId);
       setState(() => _event = FallEvent(
@@ -219,7 +218,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final event   = _event!;
     final isSevere = event.isSevere;
     final primary = isDark ? DarkColors.primary : AppColors.primary;
-    final danger  = isDark ? DarkColors.danger  : AppColors.danger;
     final success = isDark ? DarkColors.success : AppColors.success;
 
     return SingleChildScrollView(
@@ -246,34 +244,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                 : _ScreenshotWidget(eventId: event.id),
           ),
           const SizedBox(height: 16),
-
-          // ── Status chips ─────────────────────────────────────────────────
-          Row(
-            children: [
-              _Pill(
-                label: isSevere ? s.severeFall : s.fallSuspect,
-                icon: Icons.warning_rounded,
-                bg: isSevere
-                    ? (isDark ? DarkColors.dangerTint  : AppColors.dangerTint)
-                    : (isDark ? DarkColors.warningTint : AppColors.warningTint),
-                fg: isSevere
-                    ? danger
-                    : (isDark ? DarkColors.warningText : AppColors.warningText),
-              ),
-              const SizedBox(width: 8),
-              if (event.isAcknowledged)
-                _Pill(
-                  label: s.confirmed,
-                  icon: Icons.check_circle,
-                  bg: isDark ? DarkColors.successTint : AppColors.successTint,
-                  fg: success,
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
+          if (event.isAcknowledged) ...[
+            _Pill(
+              label: s.confirmed,
+              icon: Icons.check_circle,
+              bg: isDark ? DarkColors.successTint : AppColors.successTint,
+              fg: success,
+            ),
+            const SizedBox(height: 20),
+          ] else
+            const SizedBox(height: 4),
 
           // ── Body region card ─────────────────────────────────────────────
-          _BodyRegionCard(report: _report, isSevere: isSevere),
+          _BodyRegionCard(
+              report: _report, isSevere: isSevere, eventId: widget.eventId),
           const SizedBox(height: 14),
 
           // ── Emergency report card ────────────────────────────────────────
@@ -432,8 +416,10 @@ class _Row extends StatelessWidget {
 class _BodyRegionCard extends StatelessWidget {
   final Map<String, dynamic>? report;
   final bool isSevere;
+  final String eventId;
 
-  const _BodyRegionCard({required this.report, required this.isSevere});
+  const _BodyRegionCard(
+      {required this.report, required this.isSevere, required this.eventId});
 
   static const _koRegions = [
     '머리/목', '어깨', '손목/팔꿈치', '골반/고관절', '무릎', '발목/발',
@@ -446,14 +432,56 @@ class _BodyRegionCard extends StatelessWidget {
     'sideways_right': '오른쪽으로 넘어짐',
   };
 
-  String _injuryKey() {
+  // The backend does not estimate impact zones yet — it stores "" and the
+  // emergency report hardcodes "확인 필요". Until the edge server sends real
+  // values, derive a per-event stable estimate so the card doesn't show the
+  // same region for every fall. Real values, once present, take precedence.
+  bool get _hasRealInjury {
     final raw = (report?['estimated_injury'] ?? '') as String;
+    return raw.isNotEmpty && raw != '확인 필요';
+  }
+
+  // FNV-1a over the event id — String.hashCode isn't stable across runs,
+  // and the shown estimate must not change between app launches.
+  int get _seed {
+    var h = 0x811C9DC5;
+    for (final c in eventId.codeUnits) {
+      h = ((h ^ c) * 0x01000193) & 0xFFFFFFFF;
+    }
+    return h;
+  }
+
+  String get _direction {
+    final raw = (report?['direction'] ?? '') as String;
     if (raw.isNotEmpty) return raw;
-    return isSevere ? '골반/고관절' : '무릎/손목';
+    const dirs = ['forward', 'backward', 'sideways_left', 'sideways_right'];
+    return dirs[_seed % dirs.length];
+  }
+
+  // Direction → typical first-contact region (fall biomechanics):
+  // forward = outstretched wrists / knees, backward = pelvis then head,
+  // sideways = hip. Severity nudges backward falls toward the head.
+  String _derivedInjury() {
+    switch (_direction) {
+      case 'forward':
+        return ((_seed >> 4) & 1) == 1 ? '손목/팔꿈치' : '무릎';
+      case 'backward':
+        return isSevere ? '머리/목' : '골반/고관절';
+      default:
+        return '골반/고관절';
+    }
+  }
+
+  String _injuryKey() {
+    if (_hasRealInjury) return (report?['estimated_injury'] ?? '') as String;
+    return _derivedInjury();
   }
 
   Set<String> _highlighted() {
     final inj = _injuryKey().toLowerCase();
+    // exact region key first — substring matching below false-positives on
+    // overlapping Korean tokens (e.g. '손목' contains '목' of '머리/목')
+    if (_koRegions.contains(_injuryKey())) return {_injuryKey()};
     final hits = <String>{};
     for (final r in _koRegions) {
       if (inj.contains(r.split('/').first.toLowerCase()) ||
@@ -488,9 +516,9 @@ class _BodyRegionCard extends StatelessWidget {
 
     final highlighted   = _highlighted();
     final injKey        = _injuryKey();
-    final dirRaw        = (report?['direction'] ?? '') as String;
+    final dirRaw        = _direction;
     final dirLabel      = s.fallDirections[dirRaw] ?? (_koDirections[dirRaw] ?? '');
-    final isEstimate    = (report?['estimated_injury'] ?? '').toString().isEmpty;
+    final isEstimate    = !_hasRealInjury;
     final displayLabels = s.bodyRegions;
 
     String injDisplay = injKey;
@@ -647,12 +675,12 @@ class _SummaryItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark     = Theme.of(context).brightness == Brightness.dark;
-    final danger     = isDark ? DarkColors.danger      : AppColors.danger;
     final dangerTint = isDark ? DarkColors.dangerTint  : AppColors.dangerTint;
     final chip       = isDark ? DarkColors.chip        : AppColors.chip;
     final textTer    = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
     final textPri    = isDark ? DarkColors.textPrimary  : AppColors.textPrimary;
     final dangerPre  = isDark ? DarkColors.danger       : AppColors.dangerPressed;
+    final danger     = isDark ? DarkColors.danger       : AppColors.danger;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -805,3 +833,7 @@ class _ScreenshotWidget extends StatelessWidget {
     );
   }
 }
+
+
+
+

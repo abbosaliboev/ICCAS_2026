@@ -43,8 +43,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final bg      = isDark ? DarkColors.bg          : AppColors.bg;
+    final textPri = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
+    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
+    final primary = isDark ? DarkColors.primary     : AppColors.primary;
+    final success = isDark ? DarkColors.success     : AppColors.success;
+    final infoBg  = isDark ? DarkColors.primaryTint : AppColors.primaryTint;
+
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: bg,
       appBar: AppBar(
         title: Text(s.serverSettingsTitle),
         leading: const BackButton(),
@@ -57,31 +65,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Backend URL ───────────────────────────────────────────────
             Text(
               s.backendUrlLabel,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
+              style: TextStyle(
+                color: textPri,
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               s.backendUrlHelp,
-              style: const TextStyle(
-                color: AppColors.textTertiary,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: textTer, fontSize: 13),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _urlCtrl,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: textPri, fontSize: 14),
               keyboardType: TextInputType.url,
-              decoration: lightInputDeco(
+              decoration: appInputDeco(
                 'http://192.168.x.x:8000',
                 icon: Icons.dns_outlined,
+                dark: isDark,
               ),
             ),
 
@@ -90,31 +93,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Edge URL ──────────────────────────────────────────────────
             Text(
               s.edgeUrlLabel,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
+              style: TextStyle(
+                color: textPri,
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               s.edgeUrlHelp,
-              style: const TextStyle(
-                color: AppColors.textTertiary,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: textTer, fontSize: 13),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _edgeUrlCtrl,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: textPri, fontSize: 14),
               keyboardType: TextInputType.url,
-              decoration: lightInputDeco(
+              decoration: appInputDeco(
                 'http://192.168.x.x:8000',
                 icon: Icons.videocam_outlined,
+                dark: isDark,
               ),
             ),
 
@@ -122,13 +120,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: 54,
               child: ElevatedButton(
                 onPressed: _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _saved
-                      ? AppColors.success
-                      : AppColors.primary,
+                  backgroundColor: _saved ? success : primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -151,25 +147,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.primaryTint,
+                color: infoBg,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: AppColors.primary,
-                        size: 16,
-                      ),
+                      Icon(Icons.info_outline, color: primary, size: 16),
                       const SizedBox(width: 6),
                       Text(
                         s.connectionGuideTitle,
-                        style: const TextStyle(
-                          color: AppColors.primary,
+                        style: TextStyle(
+                          color: primary,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                         ),
@@ -179,8 +170,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 8),
                   Text(
                     s.connectionGuideBody,
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: primary,
                       fontSize: 12,
                       height: 1.7,
                     ),

@@ -1,14 +1,16 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../models/fall_event.dart';
+import '../models/user.dart';
 import '../strings.dart';
 import '../widgets/app_toast.dart';
 import 'event_detail_screen.dart';
 
 const _kPageSize = 30;
+enum _DateFilter { all, today, week, month }
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -21,7 +23,9 @@ class EventsScreenState extends State<EventsScreen>
   List<FallEvent> _events = [];
   bool _loading = true;
   String? _error;
-  String _filter = 'all'; // 'all' | 'severe' | 'mild'
+  List<User> _monitoredUsers = [];
+  _DateFilter _dateFilter = _DateFilter.all;
+  String? _userFilterId;
 
   bool _selectMode = false;
   bool _deleting = false;
@@ -74,11 +78,15 @@ class EventsScreenState extends State<EventsScreen>
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; _page = 0; _hasMore = true; });
     try {
-      final events = await context.read<AuthProvider>().api
-          .getFallEvents(limit: _kPageSize, offset: 0);
+      final auth = context.read<AuthProvider>();
+      final events = await auth.api.getFallEvents(limit: _kPageSize, offset: 0);
+      final users = auth.user?.isGuardian == true
+          ? await auth.api.getMonitoredUsers()
+          : <User>[];
       if (mounted) {
         setState(() {
           _events = events;
+          _monitoredUsers = users;
           _hasMore = events.length >= _kPageSize;
         });
       }
@@ -110,9 +118,125 @@ class EventsScreenState extends State<EventsScreen>
   }
 
   List<FallEvent> get _filtered {
-    if (_filter == 'severe') return _events.where((e) => e.isSevere).toList();
-    if (_filter == 'mild')   return _events.where((e) => !e.isSevere).toList();
-    return _events;
+    final now = DateTime.now();
+    return _events.where((e) {
+      final dt = DateTime.tryParse(e.timestamp)?.toLocal();
+      final dateOk = switch (_dateFilter) {
+        _DateFilter.all => true,
+        _DateFilter.today => dt != null &&
+            dt.year == now.year && dt.month == now.month && dt.day == now.day,
+        _DateFilter.week => dt != null && now.difference(dt).inDays < 7,
+        _DateFilter.month => dt != null &&
+            dt.year == now.year && dt.month == now.month,
+      };
+      final userOk = _userFilterId == null || e.userId == _userFilterId;
+      return dateOk && userOk;
+    }).toList();
+  }
+
+  String _dateFilterLabel(S s) => switch (_dateFilter) {
+        _DateFilter.all => s.all,
+        _DateFilter.today => s.today,
+        _DateFilter.week => s.thisWeek,
+        _DateFilter.month => s.thisMonth,
+      };
+
+  String _userFilterLabel(S s) {
+    if (_userFilterId == null) return s.isKorean ? '모든 사용자' : 'All users';
+    for (final user in _monitoredUsers) {
+      if (user.id == _userFilterId) {
+        return user.displayName.isNotEmpty ? user.displayName : user.username;
+      }
+    }
+    return s.isKorean ? '사용자' : 'User';
+  }
+
+  Future<void> _openFilters() async {
+    final s = S.read(context);
+    var nextDate = _dateFilter;
+    var nextUserId = _userFilterId;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? DarkColors.surface
+          : AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+          final textPri = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.isKorean ? '필터' : 'Filters',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textPri)),
+                  const SizedBox(height: 16),
+                  Text(s.isKorean ? '날짜별' : 'Date',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPri)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _ChoicePill(label: s.all, selected: nextDate == _DateFilter.all, onTap: () => setSheetState(() => nextDate = _DateFilter.all)),
+                      _ChoicePill(label: s.today, selected: nextDate == _DateFilter.today, onTap: () => setSheetState(() => nextDate = _DateFilter.today)),
+                      _ChoicePill(label: s.thisWeek, selected: nextDate == _DateFilter.week, onTap: () => setSheetState(() => nextDate = _DateFilter.week)),
+                      _ChoicePill(label: s.thisMonth, selected: nextDate == _DateFilter.month, onTap: () => setSheetState(() => nextDate = _DateFilter.month)),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Text(s.isKorean ? '연결 사용자별' : 'Care recipient',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPri)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _ChoicePill(label: s.isKorean ? '모든 사용자' : 'All users', selected: nextUserId == null, onTap: () => setSheetState(() => nextUserId = null)),
+                      ..._monitoredUsers.map((u) {
+                        final name = u.displayName.isNotEmpty ? u.displayName : u.username;
+                        return _ChoicePill(label: name, selected: nextUserId == u.id, onTap: () => setSheetState(() => nextUserId = u.id));
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _dateFilter = nextDate;
+                          _userFilterId = nextUserId;
+                          _selectedIds.clear();
+                        });
+                        Navigator.pop(ctx);
+                        AppToast.show(context, s.isKorean ? '필터가 적용되었습니다' : 'Filters applied', type: ToastType.success);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text(s.isKorean ? '적용' : 'Apply',
+                          style: const TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _enterSelectMode() {
@@ -217,7 +341,8 @@ class EventsScreenState extends State<EventsScreen>
       backgroundColor: bg,
       body: Stack(
         children: [
-        SafeArea(
+        Positioned.fill(
+        child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -267,6 +392,10 @@ class EventsScreenState extends State<EventsScreen>
                         ),
                       ] else ...[
                         IconButton(
+                          icon: Icon(Icons.filter_list_rounded, color: textSec),
+                          onPressed: _openFilters,
+                        ),
+                        IconButton(
                           icon: Icon(Icons.refresh_rounded, color: textSec),
                           onPressed: _load,
                         ),
@@ -283,34 +412,12 @@ class EventsScreenState extends State<EventsScreen>
                 ],
               ),
             ),
-
-            // ── Filter chips (hidden in select mode) ────────────────────────
             if (!_selectMode)
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                child: Row(
-                  children: [
-                    _FilterChip(
-                        label: s.all,
-                        value: 'all',
-                        selected: _filter,
-                        isDark: isDark,
-                        onTap: () => setState(() => _filter = 'all')),
-                    const SizedBox(width: 8),
-                    _FilterChip(
-                        label: s.severe,
-                        value: 'severe',
-                        selected: _filter,
-                        isDark: isDark,
-                        onTap: () => setState(() => _filter = 'severe')),
-                    const SizedBox(width: 8),
-                    _FilterChip(
-                        label: s.mild,
-                        value: 'mild',
-                        selected: _filter,
-                        isDark: isDark,
-                        onTap: () => setState(() => _filter = 'mild')),
-                  ],
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Text(
+                  '${_dateFilterLabel(s)} · ${_userFilterLabel(s)}',
+                  style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
 
@@ -326,9 +433,7 @@ class EventsScreenState extends State<EventsScreen>
                       ? _ErrorView(error: _error!, onRetry: _load)
                       : filtered.isEmpty
                           ? _EmptyView(
-                              message: _filter == 'all'
-                                  ? s.noFalls
-                                  : s.noFiltered)
+                              message: s.noFiltered)
                           : RefreshIndicator(
                               color: primary,
                               onRefresh: _load,
@@ -377,6 +482,7 @@ class EventsScreenState extends State<EventsScreen>
                             ),
             ),
           ],
+        ),
         ),
         ),
         if (_deleting)
@@ -434,51 +540,44 @@ class EventsScreenState extends State<EventsScreen>
   }
 }
 
-// ── Filter chip ───────────────────────────────────────────────────────────────
-
-class _FilterChip extends StatelessWidget {
+class _ChoicePill extends StatelessWidget {
   final String label;
-  final String value;
-  final String selected;
-  final bool isDark;
+  final bool selected;
   final VoidCallback onTap;
 
-  const _FilterChip({
+  const _ChoicePill({
     required this.label,
-    required this.value,
     required this.selected,
-    required this.isDark,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isActive = value == selected;
-    final primary  = isDark ? DarkColors.primary       : AppColors.primary;
-    final chip     = isDark ? DarkColors.chip          : AppColors.chip;
-    final textSec  = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? DarkColors.primary : AppColors.primary;
+    final chip = isDark ? DarkColors.chip : AppColors.chip;
+    final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? primary : chip,
+          color: selected ? primary : chip,
           borderRadius: BorderRadius.circular(100),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isActive ? Colors.white : textSec,
-            fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
-            fontSize: 13,
+            color: selected ? Colors.white : textSec,
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
       ),
     );
   }
 }
-
 // ── Event card ────────────────────────────────────────────────────────────────
 
 class _EventCard extends StatelessWidget {
@@ -500,18 +599,13 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s        = S.of(context);
     final textPri  = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
     final textTer  = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
     final primary  = isDark ? DarkColors.primary       : AppColors.primary;
-    final isSevere = event.isSevere;
-    final severeColor = isDark ? DarkColors.danger : AppColors.danger;
-    final severeTint  = isDark ? DarkColors.dangerTint : AppColors.dangerTint;
-    final mildColor   = isDark ? DarkColors.warningText : AppColors.warningText;
-    final mildTint    = isDark ? DarkColors.warningTint : AppColors.warningTint;
-    final badgeBg  = isSevere ? severeTint  : mildTint;
-    final badgeFg  = isSevere ? severeColor : mildColor;
-    final label    = isSevere ? s.severe : s.mild;
+    final success  = isDark ? DarkColors.success       : AppColors.success;
+    final warning  = isDark ? DarkColors.warning       : AppColors.warning;
+    final statusColor = event.isAcknowledged ? success : warning;
+    final statusBg = statusColor.withOpacity(isDark ? 0.18 : 0.12);
 
     return GestureDetector(
       onTap: onTap,
@@ -583,35 +677,52 @@ class _EventCard extends StatelessWidget {
                         color: textPri,
                         fontSize: 14),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    event.isAcknowledged ? s.confirmed : s.needsConfirm,
-                    style: TextStyle(fontSize: 12, color: textTer),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Text(
+                          event.isAcknowledged ? 'Confirmed' : 'Need to Confirm',
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-
-            if (!selectMode)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: badgeBg,
-                        borderRadius: BorderRadius.circular(100)),
-                    child: Text(label,
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: badgeFg)),
-                  ),
-                  const SizedBox(height: 6),
-                  Icon(Icons.chevron_right, size: 16, color: textTer),
-                ],
+            if (!selectMode) ...[
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 112),
+                child: Text(
+                  event.monitoredUserName?.isNotEmpty == true ? event.monitoredUserName! : '-',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: textTer),
+                ),
               ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, size: 16, color: textTer),
+            ],
           ],
         ),
       ),
@@ -688,3 +799,12 @@ class _EmptyView extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
+

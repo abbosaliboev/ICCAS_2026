@@ -402,9 +402,10 @@ def main():
     ap.add_argument("--stage1-threshold", type=float, default=None, help="ST-GCN confident FALL threshold (default: tuned value from checkpoints/two_stage_config.json)")
     ap.add_argument("--rescue-threshold", type=float, default=None, help="Physics rescue lower probability threshold (default: tuned value from checkpoints/two_stage_config.json)")
     ap.add_argument("--confirm",      type=int, default=4,     help="Consecutive FALL windows to confirm (default 4)")
-    ap.add_argument("--min-lock",     type=float, default=5.0, help="Min seconds to hold FALL alert")
+    ap.add_argument("--confirm-seconds", type=float, default=1.5, help="Seconds the person must stay fallen after detection before the alert fires (filters instant recoveries / blips)")
+    ap.add_argument("--min-lock",     type=float, default=1.5, help="Min seconds to hold FALL alert (standing overrides this)")
     ap.add_argument("--event-cooldown", type=float, default=30.0, help="Min seconds between two fall events (default 30s)")
-    ap.add_argument("--stand-streak", type=int, default=2,     help="Standing windows to auto-reset")
+    ap.add_argument("--stand-streak", type=int, default=5,     help="Consecutive standing frames to clear the FALL state")
     ap.add_argument("--display",      action="store_true",     help="Show cv2 window (requires display)")
     ap.add_argument("--tensorrt",     action="store_true",     help="Use TensorRT engine for YOLO (Jetson)")
     ap.add_argument("--width",        type=int, default=640)
@@ -471,6 +472,7 @@ def main():
     fall_streak   = 0
     fall_active   = False
     fall_lock_t   = 0.0
+    pending_fall_t = None  # time the model first confirmed a fall — alert fires only if the person stays down for --confirm-seconds
     stand_streak  = 0
     baseline_hip  = 0.0
     lying_streak  = 0
@@ -670,32 +672,60 @@ def main():
                 if not fall_active:
                     fall_streak = 0
 
-            if fall_streak >= args.confirm and not fall_active:
+            # model says fall — arm a confirmation window instead of firing
+            # immediately: instant recoveries and brief misclassifications
+            # cancel below before any alert/event/notification goes out
+            if fall_streak >= args.confirm and not fall_active and pending_fall_t is None:
                 if time.time() - last_event_time < args.event_cooldown:
-                    fall_streak = args.confirm  # hold at threshold, re-fire as soon as cooldown clears
+                    fall_streak = args.confirm  # hold at threshold, re-arm as soon as cooldown clears
                 else:
-                    event_id      = datetime.now().strftime('%Y%m%d%H%M%S')
-                    event_created = client.post_fall(event_id, "severe", datetime.now().isoformat())
-                    if not event_created:
-                        log.warning(f"FALL detected locally but backend event was not created: {event_id}")
-                        fall_streak = max(args.confirm - 1, 0)
-                    else:
-                        fall_active  = True
-                        fall_lock_t  = time.time() + args.min_lock
-                        stand_streak = 0
-                        current_event_id = event_id
-                        last_event_time  = time.time()
-                        log.info("FALL DETECTED — backend event created, alert active")
-                        clip_frames = [(ts, f.copy()) for ts, f in pre_clip_buf]
-                        threading.Thread(
-                            target=save_and_upload_clip,
-                            args=(event_id, clip_frames, clip_dir, client),
-                            daemon=True,
-                        ).start()
+                    pending_fall_t = time.time()
+                    log.info(f"FALL candidate — confirming posture for {args.confirm_seconds:.1f}s")
 
-        # auto-reset
-        if fall_active and time.time() > fall_lock_t:
-            if no_person_frames > 50:
+        # ── pending confirmation (runs every frame, not per vote) ─────────────
+        if pending_fall_t is not None and not fall_active:
+            if is_standing(kp):
+                pending_fall_t = None
+                fall_streak    = 0
+                log.info("FALL candidate canceled — person recovered before confirmation window elapsed")
+            elif time.time() - pending_fall_t >= args.confirm_seconds:
+                pending_fall_t = None
+                event_id      = datetime.now().strftime('%Y%m%d%H%M%S')
+                event_created = client.post_fall(event_id, "severe", datetime.now().isoformat())
+                if not event_created:
+                    log.warning(f"FALL detected locally but backend event was not created: {event_id}")
+                    fall_streak = max(args.confirm - 1, 0)
+                else:
+                    fall_active  = True
+                    fall_lock_t  = time.time() + args.min_lock
+                    stand_streak = 0
+                    current_event_id = event_id
+                    last_event_time  = time.time()
+                    log.info("FALL DETECTED — backend event created, alert active")
+                    clip_frames = [(ts, f.copy()) for ts, f in pre_clip_buf]
+                    threading.Thread(
+                        target=save_and_upload_clip,
+                        args=(event_id, clip_frames, clip_dir, client),
+                        daemon=True,
+                    ).start()
+
+        # ── auto-reset — standing clears the FALL state immediately (per frame,
+        # overriding min-lock) so the UI tracks posture recovery without lag;
+        # min-lock only gates the person-left-frame path to avoid flapping
+        if fall_active:
+            if is_standing(kp):
+                stand_streak += 1
+            else:
+                stand_streak = 0
+            if stand_streak >= args.stand_streak:
+                fall_active  = False
+                fall_streak  = 0
+                stand_streak = 0
+                lying_streak = 0
+                log.info("Auto-reset: person standing")
+                if current_event_id:
+                    threading.Thread(target=client.resolve_fall, args=(current_event_id,), daemon=True).start()
+            elif no_person_frames > 50 and time.time() > fall_lock_t:
                 fall_active  = False
                 fall_streak  = 0
                 stand_streak = 0
@@ -703,18 +733,6 @@ def main():
                 log.info("Auto-reset: person left frame")
                 if current_event_id:
                     threading.Thread(target=client.resolve_fall, args=(current_event_id,), daemon=True).start()
-            elif is_standing(kp):
-                stand_streak += 1
-                if stand_streak >= args.stand_streak:
-                    fall_active  = False
-                    fall_streak  = 0
-                    stand_streak = 0
-                    lying_streak = 0
-                    log.info("Auto-reset: person standing")
-                    if current_event_id:
-                        threading.Thread(target=client.resolve_fall, args=(current_event_id,), daemon=True).start()
-            else:
-                stand_streak = 0
 
         # ── overlay: two lines — pipeline FPS + model latency ────────────────
         cv2.putText(frame,

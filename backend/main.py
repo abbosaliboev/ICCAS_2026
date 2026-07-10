@@ -1,4 +1,4 @@
-
+﻿
 """
 MobiCare Backend Server
 
@@ -11,7 +11,7 @@ Default: http://0.0.0.0:8000
 Web app: http://localhost:8000/app
 """
 
-import os, json, uuid, shutil
+import os, json, uuid, shutil, asyncio, base64
 from dotenv import load_dotenv
 load_dotenv()
 from datetime import datetime
@@ -130,6 +130,25 @@ class FallEventReq(BaseModel):
 
 class LinkGuardianReq(BaseModel):
     guardian_username: str
+
+class LinkMonitoredReq(BaseModel):
+    user_id: str
+
+class CreateMonitoredReq(BaseModel):
+    name: str
+    address: str = ""
+    phone: str = ""
+    age: Optional[int] = None
+    gender: str = ""
+    rtsp_url: str = ""
+
+class UpdateMonitoredReq(BaseModel):
+    name: str
+    address: str = ""
+    phone: str = ""
+    age: Optional[int] = None
+    gender: str = ""
+    rtsp_url: str = ""
 
 
 # ── routes ────────────────────────────────────────────────────────────────────
@@ -262,6 +281,63 @@ def monitored(user=Depends(auth_user)):
         raise HTTPException(403, "Guardian only")
     return db.get_monitored_users(user["id"])
 
+
+
+@app.post("/api/users/link-monitored")
+def link_monitored(body: LinkMonitoredReq, user=Depends(auth_user)):
+    if user["role"] != "guardian":
+        raise HTTPException(403, "Guardian only")
+    linked = db.link_monitored_user(user["id"], body.user_id.strip())
+    if not linked:
+        raise HTTPException(404, "실사용자를 찾을 수 없습니다")
+    return linked
+
+
+@app.post("/api/users/monitored")
+def create_monitored(body: CreateMonitoredReq, user=Depends(auth_user)):
+    if user["role"] != "guardian":
+        raise HTTPException(403, "Guardian only")
+    stream_url = body.rtsp_url.strip()
+    if stream_url and not stream_url.startswith(("http://", "https://")):
+        stream_url = "demo://" + stream_url
+    linked = db.create_monitored_user(
+        user["id"], body.name.strip() or "Demo User", body.age,
+        body.phone.strip(), body.address.strip(), body.gender.strip(), stream_url,
+    )
+    if not linked:
+        raise HTTPException(500, "실사용자를 추가할 수 없습니다")
+    return linked
+
+
+
+@app.put("/api/users/monitored/{user_id}")
+def update_monitored(user_id: str, body: UpdateMonitoredReq, user=Depends(auth_user)):
+    if user["role"] != "guardian":
+        raise HTTPException(403, "Guardian only")
+    stream_url = body.rtsp_url.strip()
+    if stream_url and not stream_url.startswith(("http://", "https://")):
+        stream_url = "demo://" + stream_url
+    updated = db.update_monitored_user(
+        user["id"], user_id, body.name.strip() or "Demo User", body.age,
+        body.phone.strip(), body.address.strip(), body.gender.strip(), stream_url,
+    )
+    if not updated:
+        raise HTTPException(404, "실사용자를 찾을 수 없습니다")
+    return updated
+
+@app.delete("/api/users/monitored/{user_id}")
+def delete_monitored(user_id: str, user=Depends(auth_user)):
+    if user["role"] != "guardian":
+        raise HTTPException(403, "Guardian only")
+    ok = db.remove_monitored_user(user["id"], user_id)
+    if not ok:
+        raise HTTPException(404, "실사용자를 찾을 수 없습니다")
+    return {"ok": True}
+@app.get("/api/reports/call-count")
+def report_call_count(user=Depends(auth_user)):
+    if user["role"] == "guardian":
+        return {"count": db.get_guardian_call_count(user["id"])}
+    return {"count": 0}
 
 # ── devices ───────────────────────────────────────────────────────────────────
 
@@ -493,7 +569,16 @@ async def notify_emergency_sms(event_id: str, user=Depends(auth_user)):
         f"[MobiCare EMERGENCY] Fall detected for {name} at {now_str}. "
         f"Location: {address}. Immediate attention required."
     )
-    return await sms.send_sms(_EMERGENCY_TEST_PHONE, message)
+    result = await sms.send_sms(_EMERGENCY_TEST_PHONE, message)
+    db.log_sms(
+        event_id,
+        _EMERGENCY_TEST_PHONE,
+        message,
+        result.get("mode", "error"),
+        bool(result.get("ok")),
+        str(result.get("detail", "")),
+    )
+    return result
 
 
 @app.post("/api/fall-events/{event_id}/notify-guardian-sms")
@@ -580,41 +665,68 @@ async def transcribe_speech(file: UploadFile = File(...), user=Depends(auth_user
 # ── MJPEG stream proxy ────────────────────────────────────────────────────────
 # The edge server (edge_server.py) may run on a different machine than this
 # backend. edge_server.py self-reports its own reachable address on startup via
-# POST /api/device/stream-url, so this is normally zero-config. EDGE_STREAM_URL /
-# EDGE_SNAPSHOT_URL (settable in backend/.env) are only a fallback for before any
-# device has reported in, or for edge servers running an older version.
-# Proxying here lets the browser load the stream from the same origin (port 8000),
-# avoiding CORS issues and the need to expose port 8081 to the network separately.
+# POST /api/device/stream-url, so this is normally zero-config.
 
 EDGE_STREAM_URL     = os.environ.get("EDGE_STREAM_URL",     "http://localhost:8081/video")
 EDGE_SNAPSHOT_URL   = os.environ.get("EDGE_SNAPSHOT_URL",  "http://localhost:8081/snapshot")
+_DEMO_JPEG = base64.b64decode(
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAH/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Al//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QH//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QH//EABQQAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QH//Z"
+)
+
+async def _demo_mjpeg():
+    while True:
+        yield b"--mjpeg\r\nContent-Type: image/jpeg\r\nContent-Length: " + str(len(_DEMO_JPEG)).encode() + b"\r\n\r\n" + _DEMO_JPEG + b"\r\n"
+        await asyncio.sleep(0.2)
 
 
-def _edge_stream_url() -> str:
-    """Prefer the edge device's self-reported address (POST /api/device/stream-url,
-    sent automatically by edge_server.py on startup) — falls back to the static
-    EDGE_STREAM_URL env var only if no device has reported in yet."""
-    dev = db.get_latest_device()
+def _stream_user_id(user: dict, requested_user_id: str = None) -> str:
+    if not requested_user_id:
+        return user.get("id")
+    if requested_user_id == user.get("id"):
+        return requested_user_id
+    if user.get("role") == "guardian":
+        target = db.get_user_by_id(requested_user_id)
+        if target and target.get("guardian_id") == user.get("id"):
+            return requested_user_id
+    raise HTTPException(403, "이 스트림에 접근할 수 없습니다")
+
+
+def _edge_stream_url(user_id: str = None) -> str:
+    dev = db.get_latest_device_for_user(user_id) if user_id else db.get_latest_device()
     if dev and dev.get("stream_url"):
         return dev["stream_url"].rstrip("/") + "/video"
+    if user_id:
+        raise HTTPException(404, "연결된 카메라가 없습니다")
     return EDGE_STREAM_URL
 
 
-def _edge_snapshot_url() -> str:
-    dev = db.get_latest_device()
+def _edge_snapshot_url(user_id: str = None) -> str:
+    dev = db.get_latest_device_for_user(user_id) if user_id else db.get_latest_device()
     if dev and dev.get("stream_url"):
         return dev["stream_url"].rstrip("/") + "/snapshot"
+    if user_id:
+        raise HTTPException(404, "연결된 카메라가 없습니다")
     return EDGE_SNAPSHOT_URL
 
 
 @app.get("/api/stream/video")
-async def proxy_stream():
+async def proxy_stream(user_id: str = Query(None), user=Depends(auth_user)):
+    target_user_id = _stream_user_id(user, user_id)
+
+    stream_ref = _edge_stream_url(target_user_id)
+    if stream_ref.startswith("demo://"):
+        return StreamingResponse(
+            _demo_mjpeg(),
+            media_type="multipart/x-mixed-replace; boundary=--mjpeg",
+            headers={"Cache-Control": "no-cache"},
+        )
+
     async def _gen():
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(connect=3.0, read=None, write=None, pool=None)
             ) as client:
-                async with client.stream("GET", _edge_stream_url()) as r:
+                async with client.stream("GET", stream_ref) as r:
                     async for chunk in r.aiter_bytes(chunk_size=4096):
                         yield chunk
         except Exception as exc:
@@ -629,30 +741,39 @@ async def proxy_stream():
 
 
 @app.get("/api/stream/snapshot")
-async def stream_snapshot():
+async def stream_snapshot(user_id: str = Query(None), user=Depends(auth_user)):
     """Return the latest JPEG frame — works on all browsers including iOS Safari."""
     from fastapi.responses import Response
+    target_user_id = _stream_user_id(user, user_id)
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(2.0)) as client:
-            r = await client.get(_edge_snapshot_url())
+            r = await client.get(_edge_snapshot_url(target_user_id))
             return Response(content=r.content, media_type="image/jpeg",
                             headers={"Cache-Control": "no-cache, no-store"})
     except Exception:
         raise HTTPException(503, "Stream unavailable")
-
 
 # ── safe zone ────────────────────────────────────────────────────────────────
 
 SAFE_ZONE_PATH  = BASE.parent / "fall_iccas" / "safe_zone.json"
 CAM_CONFIG_PATH = BASE.parent / "fall_iccas" / "camera_config.json"
 
+def _safe_zone_path(user_id: str = None):
+    if not user_id:
+        return SAFE_ZONE_PATH
+    safe_id = "".join(c for c in user_id if c.isalnum() or c in ("-", "_"))
+    return BASE.parent / "fall_iccas" / f"safe_zone_{safe_id}.json"
+
 @app.get("/api/device/config")
 def get_device_config(dev=Depends(auth_device)):
     """Edge server polls this every 15s to get safe zones + camera type."""
     zones = []
-    if SAFE_ZONE_PATH.exists():
+    zone_path = _safe_zone_path(dev.get("user_id"))
+    if not zone_path.exists():
+        zone_path = SAFE_ZONE_PATH
+    if zone_path.exists():
         try:
-            zones = json.loads(SAFE_ZONE_PATH.read_text()).get("zones", [])
+            zones = json.loads(zone_path.read_text()).get("zones", [])
         except Exception:
             pass
     cam_type = "front"
@@ -681,14 +802,21 @@ class SafeZoneReq(BaseModel):
     zones: list
 
 @app.get("/api/safe-zone")
-def get_safe_zone(user=Depends(auth_user)):
-    if not SAFE_ZONE_PATH.exists():
+def get_safe_zone(user_id: str = Query(None), user=Depends(auth_user)):
+    target_user_id = _stream_user_id(user, user_id)
+    zone_path = _safe_zone_path(target_user_id)
+    if not zone_path.exists() and target_user_id:
+        zone_path = SAFE_ZONE_PATH
+    if not zone_path.exists():
         return {"zones": []}
-    return json.loads(SAFE_ZONE_PATH.read_text())
+    return json.loads(zone_path.read_text())
 
 @app.post("/api/safe-zone")
-def set_safe_zone(body: SafeZoneReq, user=Depends(auth_user)):
-    SAFE_ZONE_PATH.write_text(json.dumps({"zones": body.zones}, indent=2))
+def set_safe_zone(body: SafeZoneReq, user_id: str = Query(None), user=Depends(auth_user)):
+    target_user_id = _stream_user_id(user, user_id)
+    zone_path = _safe_zone_path(target_user_id)
+    zone_path.parent.mkdir(parents=True, exist_ok=True)
+    zone_path.write_text(json.dumps({"zones": body.zones}, indent=2))
     return {"ok": True}
 
 class CamTypeReq(BaseModel):
@@ -701,9 +829,11 @@ def set_camera_type(body: CamTypeReq, user=Depends(auth_user)):
     return {"ok": True}
 
 @app.delete("/api/safe-zone")
-def clear_safe_zone(user=Depends(auth_user)):
-    if SAFE_ZONE_PATH.exists():
-        SAFE_ZONE_PATH.unlink()
+def clear_safe_zone(user_id: str = Query(None), user=Depends(auth_user)):
+    target_user_id = _stream_user_id(user, user_id)
+    zone_path = _safe_zone_path(target_user_id)
+    if zone_path.exists():
+        zone_path.unlink()
     return {"ok": True}
 
 
@@ -729,3 +859,12 @@ def startup():
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+
+
+
+
+
+
+
+
+

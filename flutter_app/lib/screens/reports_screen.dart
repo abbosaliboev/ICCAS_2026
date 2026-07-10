@@ -1,15 +1,12 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../models/fall_event.dart';
 import '../strings.dart';
-import 'event_detail_screen.dart';
 
-enum _Period { today, week, month, all }
+enum _ReportFilter { week, month, threeMonths, range }
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -17,13 +14,16 @@ class ReportsScreen extends StatefulWidget {
   State<ReportsScreen> createState() => ReportsScreenState();
 }
 
-class ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveClientMixin {
+class ReportsScreenState extends State<ReportsScreen>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
   List<FallEvent> _all = [];
   bool _loading = true;
-  _Period _period = _Period.week;
+  int _callCount = 0;
+  _ReportFilter _filter = _ReportFilter.week;
+  DateTimeRange? _range;
 
   @override
   void initState() {
@@ -31,15 +31,21 @@ class ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCli
     _load();
   }
 
-  /// Called by HomeScreen when this tab becomes visible (kept alive in a
-  /// PageView, so initState only ever runs once).
   void reload() => _load();
 
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final events = await context.read<AuthProvider>().api.getFallEvents();
-      if (mounted) setState(() { _all = events; _loading = false; });
+      final api = context.read<AuthProvider>().api;
+      final events = await api.getFallEvents(limit: 100);
+      final callCount = await api.getReportCallCount();
+      if (mounted) {
+        setState(() {
+          _all = events;
+          _callCount = callCount;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -48,136 +54,184 @@ class ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCli
   List<FallEvent> get _filtered {
     final now = DateTime.now();
     return _all.where((e) {
-      try {
-        final dt = DateTime.parse(e.timestamp).toLocal();
-        switch (_period) {
-          case _Period.today:
-            return dt.year == now.year && dt.month == now.month && dt.day == now.day;
-          case _Period.week:
-            return now.difference(dt).inDays < 7;
-          case _Period.month:
-            return dt.year == now.year && dt.month == now.month;
-          case _Period.all:
-            return true;
-        }
-      } catch (_) { return true; }
+      final dt = DateTime.tryParse(e.timestamp)?.toLocal();
+      if (dt == null) return false;
+      return switch (_filter) {
+        _ReportFilter.week => now.difference(dt).inDays < 7,
+        _ReportFilter.month => dt.year == now.year && dt.month == now.month,
+        _ReportFilter.threeMonths => now.difference(dt).inDays < 92,
+        _ReportFilter.range => _range == null
+            ? true
+            : !dt.isBefore(_dayStart(_range!.start)) &&
+                dt.isBefore(_dayStart(_range!.end).add(const Duration(days: 1))),
+      };
     }).toList();
   }
 
+  DateTime _dayStart(DateTime d) => DateTime(d.year, d.month, d.day);
+
   int get _totalCount => _filtered.length;
-  int get _severeCount => _filtered.where((e) => e.isSevere).length;
+
+  String _filterLabel(S s) {
+    String ymd(DateTime d) =>
+        '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
+    return switch (_filter) {
+      _ReportFilter.week => s.thisWeek,
+      _ReportFilter.month => s.thisMonth,
+      _ReportFilter.threeMonths => s.isKorean ? '최근 3개월' : '3 months',
+      _ReportFilter.range => _range == null
+          ? (s.isKorean ? '기간 선택' : 'Custom range')
+          : '${ymd(_range!.start)} - ${ymd(_range!.end)}',
+    };
+  }
 
   String _peakHour({required bool isKo}) {
-    if (_filtered.isEmpty) return '—';
+    if (_filtered.isEmpty) return '-';
     final hourCounts = <int, int>{};
     for (final e in _filtered) {
-      try {
-        final h = DateTime.parse(e.timestamp).toLocal().hour;
-        hourCounts[h] = (hourCounts[h] ?? 0) + 1;
-      } catch (_) {}
+      final h = DateTime.tryParse(e.timestamp)?.toLocal().hour;
+      if (h != null) hourCounts[h] = (hourCounts[h] ?? 0) + 1;
     }
-    if (hourCounts.isEmpty) return '—';
+    if (hourCounts.isEmpty) return '-';
     final peak = hourCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
     final end = (peak + 2).clamp(0, 23);
-    if (isKo) {
-      return '${peak >= 12 ? "오후" : "오전"} $peak~${end}시';
-    } else {
-      final ampm = peak >= 12 ? 'PM' : 'AM';
-      final h = peak > 12 ? peak - 12 : (peak == 0 ? 12 : peak);
-      return '$h $ampm – ${end > 12 ? end - 12 : end} ${end >= 12 ? 'PM' : 'AM'}';
-    }
+    if (isKo) return '${peak >= 12 ? "오후" : "오전"} $peak~$end시';
+    final ampm = peak >= 12 ? 'PM' : 'AM';
+    final h = peak > 12 ? peak - 12 : (peak == 0 ? 12 : peak);
+    return '$h $ampm - ${end > 12 ? end - 12 : end} ${end >= 12 ? 'PM' : 'AM'}';
   }
 
   String _lastOccurrence({required bool isKo}) {
-    if (_filtered.isEmpty) return '—';
-    try {
-      final sorted = [..._filtered]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      final dt = DateTime.parse(sorted.first.timestamp).toLocal();
-      final diff = DateTime.now().difference(dt);
-      if (isKo) {
-        if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
-        if (diff.inHours < 24) return '${diff.inHours}시간 전';
-        return '${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
-      } else {
-        if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-        if (diff.inHours < 24) return '${diff.inHours}h ago';
-        final h = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-        final ampm = dt.hour >= 12 ? 'PM' : 'AM';
-        return '$h:${dt.minute.toString().padLeft(2,'0')} $ampm';
-      }
-    } catch (_) { return '—'; }
-  }
-
-  String _generateCsv({required bool isKo}) {
-    final header = isKo ? '﻿타임스탬프,유형,상태' : 'Timestamp,Type,Status';
-    final rows = [header];
-    for (final e in _filtered) {
-      final type   = isKo ? (e.isSevere ? "중증" : "경미")   : (e.isSevere ? "Severe" : "Mild");
-      final status = isKo ? (e.isAcknowledged ? "확인됨" : "미확인") : (e.isAcknowledged ? "Confirmed" : "Unconfirmed");
-      rows.add('${e.timestamp},$type,$status');
+    if (_filtered.isEmpty) return '-';
+    final sorted = [..._filtered]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    final dt = DateTime.tryParse(sorted.first.timestamp)?.toLocal();
+    if (dt == null) return '-';
+    final diff = DateTime.now().difference(dt);
+    if (isKo) {
+      if (diff.inMinutes < 60) return '${diff.inMinutes}분 전';
+      if (diff.inHours < 24) return '${diff.inHours}시간 전';
+      return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
-    return rows.join('\n');
-  }
-
-  Future<void> _exportCsv({required bool isKo}) async {
-    final csv = _generateCsv(isKo: isKo);
-    await Share.share(csv, subject: 'MobiCare Fall Records');
-  }
-
-  Future<void> _emailReport({required bool isKo}) async {
-    final auth = context.read<AuthProvider>();
-    final user = auth.user;
-    final now  = DateTime.now();
-    final s    = S.read(context);
-    final periodLabels = [s.today, s.thisWeek, s.thisMonth, s.allTime];
-    final period = periodLabels[_period.index];
-    final subject = Uri.encodeComponent('MobiCare Fall Report – $period');
-    final body = Uri.encodeComponent(
-      'MobiCare Fall Report\n'
-      'User: ${user?.displayName ?? ""}\n'
-      'Period: $period\n'
-      'Generated: ${now.year}-${now.month.toString().padLeft(2,"0")}-${now.day.toString().padLeft(2,"0")}\n\n'
-      'Total Falls: $_totalCount  Severe: $_severeCount\n'
-      'Peak Hours: ${_peakHour(isKo: isKo)}  Last Event: ${_lastOccurrence(isKo: isKo)}\n\n'
-      '--- Detail ---\n'
-      '${_generateCsv(isKo: isKo)}',
-    );
-    final uri = Uri.parse('mailto:?subject=$subject&body=$body');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
   List<_DayBar> get _chartData {
-    final days = _period == _Period.today ? 1
-        : _period == _Period.week ? 7
-        : _period == _Period.month ? 30
-        : 14;
     final now = DateTime.now();
+    final days = switch (_filter) {
+      _ReportFilter.week => 7,
+      _ReportFilter.month => DateUtils.getDaysInMonth(now.year, now.month),
+      _ReportFilter.threeMonths => 92,
+      _ReportFilter.range => _range == null
+          ? 14
+          : max(1, _dayStart(_range!.end).difference(_dayStart(_range!.start)).inDays + 1),
+    };
+    final end = switch (_filter) {
+      _ReportFilter.range => _range?.end ?? now,
+      _ => now,
+    };
     return List.generate(days, (i) {
-      final d = now.subtract(Duration(days: days - 1 - i));
+      final d = _dayStart(end).subtract(Duration(days: days - 1 - i));
       final count = _all.where((e) {
-        try {
-          final dt = DateTime.parse(e.timestamp).toLocal();
-          return dt.year == d.year && dt.month == d.month && dt.day == d.day;
-        } catch (_) { return false; }
+        final dt = DateTime.tryParse(e.timestamp)?.toLocal();
+        return dt != null && dt.year == d.year && dt.month == d.month && dt.day == d.day;
       }).length;
       return _DayBar(d, count);
     });
   }
 
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 1, 12, 31),
+      initialDateRange: _range ?? DateTimeRange(start: now.subtract(const Duration(days: 6)), end: now),
+      helpText: S.read(context).isKorean ? '기간 선택' : 'Select range',
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _range = picked;
+        _filter = _ReportFilter.range;
+      });
+    }
+  }
+
+  Future<void> _openFilterSheet() async {
+    final s = S.read(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? DarkColors.surface
+          : AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(s.isKorean ? '리포트 필터' : 'Report filter',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 14),
+              _ReportFilterTile(
+                label: s.thisWeek,
+                selected: _filter == _ReportFilter.week,
+                onTap: () {
+                  setState(() => _filter = _ReportFilter.week);
+                  Navigator.pop(ctx);
+                },
+              ),
+              _ReportFilterTile(
+                label: s.thisMonth,
+                selected: _filter == _ReportFilter.month,
+                onTap: () {
+                  setState(() => _filter = _ReportFilter.month);
+                  Navigator.pop(ctx);
+                },
+              ),
+              _ReportFilterTile(
+                label: s.isKorean ? '최근 3개월' : '3 months',
+                selected: _filter == _ReportFilter.threeMonths,
+                onTap: () {
+                  setState(() => _filter = _ReportFilter.threeMonths);
+                  Navigator.pop(ctx);
+                },
+              ),
+              _ReportFilterTile(
+                label: s.isKorean ? '기간 선택' : 'Custom range',
+                value: _filter == _ReportFilter.range ? _filterLabel(s) : null,
+                selected: _filter == _ReportFilter.range,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickRange();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final s      = S.of(context);
-    final isKo   = s.isKorean;
-    final isDark  = Theme.of(context).brightness == Brightness.dark;
-    final bg      = isDark ? DarkColors.bg           : AppColors.bg;
-    final textPri = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
+    final s = S.of(context);
+    final isKo = s.isKorean;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? DarkColors.bg : AppColors.bg;
+    final textPri = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
     final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
-    final textTer = isDark ? DarkColors.textTertiary  : AppColors.textTertiary;
-    final primary = isDark ? DarkColors.primary       : AppColors.primary;
-    final chip    = isDark ? DarkColors.chip          : AppColors.chip;
-    final filtered = _filtered;
-    final peakHour     = _peakHour(isKo: isKo);
+    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
+    final primary = isDark ? DarkColors.primary : AppColors.primary;
+    final chip = isDark ? DarkColors.chip : AppColors.chip;
+    final peakHour = _peakHour(isKo: isKo);
     final lastOccurrence = _lastOccurrence(isKo: isKo);
 
     return Scaffold(
@@ -191,14 +245,23 @@ class ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCli
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   children: [
-                    // ── Title ───────────────────────────────────────────────
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          s.reportsTitle,
-                          style: TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.w700, color: textPri),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(s.reportsTitle,
+                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: textPri)),
+                              const SizedBox(height: 3),
+                              Text(_filterLabel(s),
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textSec)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.tune_rounded, color: textSec),
+                          onPressed: _openFilterSheet,
                         ),
                         IconButton(
                           icon: Icon(Icons.refresh_rounded, color: textSec),
@@ -206,37 +269,15 @@ class ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCli
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-
-                    // ── Period segment ──────────────────────────────────────
-                    _PeriodSegment(
-                      selected: _period,
-                      isDark: isDark,
-                      labels: {
-                        _Period.today: s.today,
-                        _Period.week:  s.thisWeek,
-                        _Period.month: s.thisMonth,
-                        _Period.all:   s.allTime,
-                      },
-                      onChanged: (p) => setState(() => _period = p),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Stats grid 2×2 — one hue per meaning: blue=info,
-                    // red=severe (green when none), orange=time-of-risk
+                    const SizedBox(height: 18),
                     Row(
                       children: [
-                        _StatCard(
-                          label: s.totalFalls,
-                          value: s.countEntries(_totalCount),
-                          valueColor: primary,
-                          isDark: isDark,
-                        ),
+                        _StatCard(label: s.totalFalls, value: s.countEntries(_totalCount), valueColor: primary, isDark: isDark),
                         const SizedBox(width: 10),
                         _StatCard(
-                          label: s.severeEvents,
-                          value: s.countEntries(_severeCount),
-                          valueColor: _severeCount > 0
+                          label: s.isKorean ? 'Call 횟수' : 'Calls',
+                          value: s.countEntries(_callCount),
+                          valueColor: _callCount > 0
                               ? (isDark ? DarkColors.danger : AppColors.danger)
                               : (isDark ? DarkColors.success : AppColors.success),
                           isDark: isDark,
@@ -246,133 +287,29 @@ class ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCli
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _StatCard(
-                          label: s.peakTime,
-                          value: peakHour,
-                          valueColor: isDark ? DarkColors.warningText : AppColors.warningText,
-                          isDark: isDark,
-                          smallValue: true,
-                        ),
+                        _StatCard(label: s.peakTime, value: peakHour, valueColor: isDark ? DarkColors.warning : AppColors.warning, isDark: isDark, smallValue: true),
                         const SizedBox(width: 10),
-                        _StatCard(
-                          label: s.lastEvent,
-                          value: lastOccurrence,
-                          valueColor: textPri,
-                          isDark: isDark,
-                          smallValue: true,
-                        ),
-                      ],
-                    ),
-                    if (_totalCount > 0) ...[
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(3),
-                              child: LinearProgressIndicator(
-                                value: _severeCount / _totalCount,
-                                minHeight: 6,
-                                backgroundColor: isDark ? DarkColors.chip : AppColors.chip,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    isDark ? DarkColors.danger : AppColors.danger),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Severe rate: ${(_severeCount / _totalCount * 100).round()}%',
-                            style: TextStyle(color: textSec, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-
-                    // ── Bar chart ────────────────────────────────────────────
-                    if (_period != _Period.today) ...[
-                      Text(
-                        s.dailyChart,
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700, color: textPri),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        height: 160,
-                        padding: const EdgeInsets.all(14),
-                        decoration: cardDeco(radius: 16, dark: isDark),
-                        child: _BarChart(
-                          data: _chartData,
-                          isKo: isKo,
-                          chipColor: chip,
-                          textSecColor: textSec,
-                          textTerColor: textTer,
-                          barColor: primary,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-
-                    // ── Export buttons ───────────────────────────────────────
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: filtered.isEmpty ? null : () => _exportCsv(isKo: isKo),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primary.withOpacity(0.12),
-                              foregroundColor: primary,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            child: Text(s.exportCsv,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: filtered.isEmpty ? null : () => _emailReport(isKo: isKo),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primary.withOpacity(0.12),
-                              foregroundColor: primary,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            child: Text(s.emailReport,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          ),
-                        ),
+                        _StatCard(label: s.lastEvent, value: lastOccurrence, valueColor: textPri, isDark: isDark, smallValue: true),
                       ],
                     ),
                     const SizedBox(height: 20),
-
-                    // ── Events list ──────────────────────────────────────────
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(s.fallList,
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textPri)),
-                        Text(s.countEntries(filtered.length),
-                            style: TextStyle(color: textTer, fontSize: 13)),
-                      ],
-                    ),
+                    Text(s.dailyChart,
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textPri)),
                     const SizedBox(height: 10),
-                    if (filtered.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: cardDeco(radius: 14, dark: isDark),
-                        child: Center(
-                          child: Text(
-                            s.noEventsInPeriod,
-                            style: TextStyle(color: textSec),
-                          ),
-                        ),
-                      )
-                    else
-                      ...filtered.map((e) => _EventTile(event: e, isDark: isDark)),
+                    Container(
+                      height: 170,
+                      padding: const EdgeInsets.all(14),
+                      decoration: cardDeco(radius: 16, dark: isDark),
+                      child: _BarChart(
+                        data: _chartData,
+                        isKo: isKo,
+                        chipColor: chip,
+                        textSecColor: textSec,
+                        textTerColor: textTer,
+                        barColor: primary,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -381,63 +318,36 @@ class ReportsScreenState extends State<ReportsScreen> with AutomaticKeepAliveCli
   }
 }
 
-// ── Period segment tabs ───────────────────────────────────────────────────────
+class _ReportFilterTile extends StatelessWidget {
+  final String label;
+  final String? value;
+  final bool selected;
+  final VoidCallback onTap;
 
-class _PeriodSegment extends StatelessWidget {
-  final _Period selected;
-  final bool isDark;
-  final Map<_Period, String> labels;
-  final ValueChanged<_Period> onChanged;
-  const _PeriodSegment({
+  const _ReportFilterTile({
+    required this.label,
+    this.value,
     required this.selected,
-    required this.isDark,
-    required this.labels,
-    required this.onChanged,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final chip    = isDark ? DarkColors.chip          : AppColors.chip;
-    final primary = isDark ? DarkColors.primary       : AppColors.primary;
-    final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: chip,
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: Row(
-        children: _Period.values.map((p) {
-          final active = p == selected;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onChanged(p),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(vertical: 9),
-                decoration: BoxDecoration(
-                  color: active ? primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Text(
-                  labels[p]!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: active ? Colors.white : textSec,
-                    fontSize: 13,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.normal,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = isDark ? DarkColors.primary : AppColors.primary;
+    final textPri = isDark ? DarkColors.textPrimary : AppColors.textPrimary;
+    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: onTap,
+      title: Text(label, style: TextStyle(color: textPri, fontWeight: FontWeight.w700)),
+      subtitle: value == null ? null : Text(value!, style: TextStyle(color: textTer, fontSize: 12)),
+      trailing: selected
+          ? Icon(Icons.check_circle_rounded, color: primary)
+          : Icon(Icons.chevron_right_rounded, color: textTer),
     );
   }
 }
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
   final String label;
@@ -459,19 +369,20 @@ class _StatCard extends StatelessWidget {
     final textSec = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: cardDeco(radius: 14, dark: isDark),
+        padding: const EdgeInsets.all(18),
+        decoration: cardDeco(radius: 16, dark: isDark, bordered: false),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
-                style: TextStyle(color: textSec, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(label, style: TextStyle(color: textSec, fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             Text(
               value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: valueColor,
-                fontSize: smallValue ? 18 : 26,
+                fontSize: smallValue ? 19 : 28,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -481,8 +392,6 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
-
-// ── Bar chart ─────────────────────────────────────────────────────────────────
 
 class _DayBar {
   final DateTime date;
@@ -546,7 +455,6 @@ class _BarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
-
     final zeroPaint = Paint()..color = chipColor;
     const labelH = 20.0;
     final chartH = size.height - labelH;
@@ -558,13 +466,9 @@ class _BarChartPainter extends CustomPainter {
       final x = gap * i + gap / 2;
       final ratio = maxCount == 0 ? 0.0 : d.count / maxCount;
       final barH = (ratio * (chartH - 12)).clamp(0.0, chartH);
-
-      // single brand hue, lighter for lower-frequency days — height already
-      // encodes the value, so color doesn't need to add a second dimension
       final barPaintColor = d.count == 0
           ? chipColor
           : Color.lerp(barColor.withOpacity(0.45), barColor, ratio)!;
-
       final rect = RRect.fromRectAndRadius(
         Rect.fromLTWH(x - barW / 2, chartH - barH, barW, barH.clamp(3.0, chartH)),
         const Radius.circular(4),
@@ -573,10 +477,7 @@ class _BarChartPainter extends CustomPainter {
 
       if (d.count > 0) {
         final tp = TextPainter(
-          text: TextSpan(
-            text: '${d.count}',
-            style: TextStyle(color: textSecColor, fontSize: 10),
-          ),
+          text: TextSpan(text: '${d.count}', style: TextStyle(color: textSecColor, fontSize: 10)),
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(canvas, Offset(x - tp.width / 2, chartH - barH - 14));
@@ -584,14 +485,9 @@ class _BarChartPainter extends CustomPainter {
 
       final showLabel = data.length <= 10 || i % (data.length ~/ 7 + 1) == 0;
       if (showLabel) {
-        final label = data.length <= 7
-            ? '${d.date.month}/${d.date.day}'
-            : (isKo ? '${d.date.day}일' : '${d.date.day}');
+        final label = data.length <= 7 ? '${d.date.month}/${d.date.day}' : (isKo ? '${d.date.day}일' : '${d.date.day}');
         final tp = TextPainter(
-          text: TextSpan(
-            text: label,
-            style: TextStyle(color: textTerColor, fontSize: 9),
-          ),
+          text: TextSpan(text: label, style: TextStyle(color: textTerColor, fontSize: 9)),
           textDirection: TextDirection.ltr,
         )..layout();
         tp.paint(canvas, Offset(x - tp.width / 2, chartH + 4));
@@ -601,89 +497,15 @@ class _BarChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BarChartPainter old) =>
-      old.data != data || old.maxCount != maxCount ||
-      old.chipColor != chipColor || old.textSecColor != textSecColor ||
+      old.data != data ||
+      old.maxCount != maxCount ||
+      old.chipColor != chipColor ||
+      old.textSecColor != textSecColor ||
       old.barColor != barColor;
 }
 
-// ── Event tile ────────────────────────────────────────────────────────────────
 
-class _EventTile extends StatelessWidget {
-  final FallEvent event;
-  final bool isDark;
-  const _EventTile({required this.event, required this.isDark});
 
-  @override
-  Widget build(BuildContext context) {
-    final s       = S.of(context);
-    final textTer = isDark ? DarkColors.textTertiary : AppColors.textTertiary;
-    final severeColor = isDark ? DarkColors.danger : AppColors.danger;
-    final mildColor   = isDark ? DarkColors.warningText : AppColors.warningText;
-    final successColor = isDark ? DarkColors.success : AppColors.success;
-    final successTint  = isDark ? DarkColors.successTint : AppColors.successTint;
-    final statusColor = event.isSevere ? severeColor : mildColor;
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: event.id)),
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: cardDeco(radius: 14, dark: isDark),
-        child: Row(
-          children: [
-            Container(
-              width: 3,
-              height: 32,
-              decoration: BoxDecoration(
-                color: statusColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.isSevere ? s.severeFall : s.fallSuspect,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(
-                    _formatTs(event.timestamp),
-                    style: TextStyle(color: textTer, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: event.isAcknowledged ? successTint : statusColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: Text(event.isAcknowledged ? s.confirmed : s.unconfirmed,
-                  style: TextStyle(
-                      color: event.isAcknowledged ? successColor : statusColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  String _formatTs(String ts) {
-    try {
-      final dt = DateTime.parse(ts).toLocal();
-      return '${dt.year}.${dt.month.toString().padLeft(2, '0')}.${dt.day.toString().padLeft(2, '0')} '
-          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) { return ts; }
-  }
-}
+
+
