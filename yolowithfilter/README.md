@@ -148,6 +148,36 @@ conda run -n falldetection python -m pose_motion run \
 
 Add `--show-plot` to display the (pixel-unit) velocity/acceleration graphs.
 
+Full pipeline **with graphs** in one command:
+
+```bash
+conda run -n falldetection python -m pose_motion run \
+  yaxis_test_2_second_squat.mov \
+  --height 1.84 \
+  --shoulder-ankle-ratio 0.867 \
+  --output-dir 0613_codex_integrate \
+  --show-plot
+```
+
+`--show-plot` opens three windows:
+
+1. **Combined** (3 rows) — position / velocity / acceleration, raw + derived +
+   filtered overlaid
+2. **Raw** (2 rows, 4:3) — unfiltered noisy velocity + acceleration only
+3. **Filtered** (2 rows, 4:3) — filtered clean velocity + acceleration only
+
+The legacy script entry point still works and takes the same options
+(it forwards to `pose_motion run`):
+
+```bash
+conda run -n falldetection python vel_acc_calculation_pipeline.py \
+  yaxis_test_2_second_squat.mov \
+  --height 1.84 \
+  --shoulder-ankle-ratio 0.867 \
+  --output-dir 0613_codex_integrate \
+  --show-plot
+```
+
 Individual stages:
 
 ```bash
@@ -331,6 +361,35 @@ conda run -n falldetection python -m pose_motion run \
 ```
 
 속도·가속도 그래프(픽셀 단위)를 표시하려면 `--show-plot`을 추가합니다.
+
+그래프까지 한 번에 보는 전체 파이프라인 명령:
+
+```bash
+conda run -n falldetection python -m pose_motion run \
+  yaxis_test_2_second_squat.mov \
+  --height 1.84 \
+  --shoulder-ankle-ratio 0.867 \
+  --output-dir 0613_codex_integrate \
+  --show-plot
+```
+
+`--show-plot`을 켜면 창 세 개가 열립니다:
+
+1. **통합** (3행) — 위치/속도/가속도, 원본 + 파생 + 필터 결과를 겹쳐서 표시
+2. **Raw** (2행, 4:3 비율) — 필터링 전 노이즈 많은 속도 + 가속도만
+3. **Filtered** (2행, 4:3 비율) — 필터링 후 깔끔한 속도 + 가속도만
+
+레거시 스크립트 진입점도 같은 옵션으로 동작합니다
+(`pose_motion run`으로 포워딩):
+
+```bash
+conda run -n falldetection python vel_acc_calculation_pipeline.py \
+  yaxis_test_2_second_squat.mov \
+  --height 1.84 \
+  --shoulder-ankle-ratio 0.867 \
+  --output-dir 0613_codex_integrate \
+  --show-plot
+```
 
 단계별 실행:
 

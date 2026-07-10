@@ -62,6 +62,8 @@ Both measured on the same class of hardware (Jetson Orin NX), same FPS methodolo
 
 > FPS measured live on-device (n=3002 samples, mean ± std = 30.48 ± 1.28 fps) — MobiCare runs **~1.6× faster** than TCNTE's reported 19 fps on comparable hardware. F1 not stated in the TCNTE paper (only accuracy/sensitivity/specificity given), shown as "—" rather than estimated. The LOSO row uses the identical deployed model/pipeline — FPS is a hardware property, not evaluation-split-dependent; it is included to show accuracy under the harder, honest cross-subject protocol TCNTE does not report.
 
+> ⚠️ **Caveat on the subject-stratified row: physics rescue contributes nothing to this number.** How the two-stage code works: ST-GCN prob ≥ `stage1_threshold` → FALL; prob in the gray zone [`rescue_threshold`, `stage1_threshold`) → physics decides (FALL iff max hip velocity > `vel_threshold` AND max |acceleration| > `acc_threshold`); below → NO-FALL. On the 17-subject subject-stratified split, exhaustive grid search tuned these to **stage1 = 0.90, rescue = 0.85, and vel/acc thresholds = 0.0** (`checkpoints/two_stage_config.json`) — i.e. the search only adjusted the gray zone and zeroed out the physics thresholds. With thresholds at 0, physics passes every gray-zone window as FALL, so the pipeline collapses to the **original ST-GCN with a single 0.85 threshold**; the FP reduction (31 → 12) comes from raising the decision threshold, not from physics. **Consequently, the head-to-head comparison above is effectively meaningless as stated** — it credits "ST-GCN + Physics" for a number that plain ST-GCN produces on its own.
+
 ---
 
 ## Run history (17-subject)
@@ -174,5 +176,7 @@ Saved to: `experiments/subject1_to_17/loso/`
 | MobiCare (본 연구, LOSO cross-subject) | 84.1% | 85.5% | 85.3% | 0.625 | Jetson Orin NX + 모바일 앱 | 30.48 |
 
 > FPS는 실제 기기에서 측정(n=3002, 평균±표준편차 = 30.48 ± 1.28 fps) — TCNTE가 보고한 19 fps 대비 MobiCare가 **약 1.6배 빠름** (비슷한 하드웨어 기준). TCNTE 논문에는 F1이 명시되어 있지 않아(accuracy/sensitivity/specificity만 제공) 추정하지 않고 "—"로 표기. LOSO 행은 동일하게 배포된 모델/파이프라인을 사용 — FPS는 평가 분할과 무관한 하드웨어 속성이며, TCNTE가 보고하지 않은 더 엄격하고 정직한 cross-subject 프로토콜에서의 정확도를 보여주기 위해 포함.
+
+> ⚠️ **Subject-stratified 행 주의: 이 수치에 physics rescue의 기여는 없음.** 2단계 코드 원리: ST-GCN 확률 ≥ `stage1_threshold` → FALL; 그레이존 [`rescue_threshold`, `stage1_threshold`) → physics가 판정 (최대 hip 속도 > `vel_threshold` AND 최대 |가속도| > `acc_threshold`일 때만 FALL); 그 미만 → NO-FALL. 17명 subject-stratified split에서 전수 grid search 결과 **stage1 = 0.90, rescue = 0.85, 속도/가속도 threshold = 0.0**으로 튜닝됨 (`checkpoints/two_stage_config.json`) — 즉 탐색이 그레이존만 조정하고 physics threshold는 0으로 만들어버림. threshold가 0이면 physics가 그레이존의 모든 윈도우를 FALL로 통과시키므로, 파이프라인은 **단일 threshold 0.85의 오리지널 ST-GCN과 동일**함. FP 감소(31 → 12)는 physics가 아니라 판정 threshold 상향에서 온 것. **따라서 위 직접 비교는 현재 상태로는 사실상 의미가 없음** — 순수 ST-GCN이 혼자 내는 수치를 "ST-GCN + Physics"의 성과로 제시하고 있기 때문.
 
 > 전체 실행 기록(Run 1–15)은 [RESULTS_ARCHIVE.md](RESULTS_ARCHIVE.md) 참고.
