@@ -75,6 +75,8 @@ class AppSettingsScreen extends StatelessWidget {
                 onTap: () => Navigator.push(
                     context, MaterialPageRoute(builder: (_) => const SafeZoneScreen())),
               ),
+              const SizedBox(height: 8),
+              const _CameraDemoModeRow(),
             ],
 
             const SizedBox(height: 28),
@@ -877,6 +879,105 @@ class _SettingsRow extends StatelessWidget {
               Icon(Icons.chevron_right, size: 18, color: textT),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Camera demo mode ─────────────────────────────────────────────────────────
+// Swaps the physical edge device's live feed for a looping demo clip so the
+// real AI pipeline (YOLO + ST-GCN) can be shown reacting to a fall without
+// staging one. Distinct from the "Demo Tool" TTS/STT card below — this one
+// controls the actual camera hardware, so its state is always re-fetched from
+// the server rather than trusted from a local cache.
+
+class _CameraDemoModeRow extends StatefulWidget {
+  const _CameraDemoModeRow();
+  @override
+  State<_CameraDemoModeRow> createState() => _CameraDemoModeRowState();
+}
+
+class _CameraDemoModeRowState extends State<_CameraDemoModeRow> {
+  bool _loading = true;
+  bool _busy = false;
+  bool _enabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final enabled = await context.read<AuthProvider>().api.getCameraDemoMode();
+      if (mounted) setState(() { _enabled = enabled; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _toggle(bool value) async {
+    final s = S.read(context);
+    setState(() => _busy = true);
+    try {
+      await context.read<AuthProvider>().api.setCameraDemoMode(value);
+      if (!mounted) return;
+      context.read<SettingsProvider>().setCameraDemoModeLocal(value);
+      setState(() => _enabled = value);
+      AppToast.show(context, value ? s.cameraDemoModeOnMsg : s.cameraDemoModeOffMsg,
+          type: value ? ToastType.warning : ToastType.success);
+    } catch (e) {
+      if (mounted) AppToast.show(context, s.saveFailed(e), type: ToastType.error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s       = S.of(context);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final chipBg  = isDark ? DarkColors.chip    : AppColors.chip;
+    final textP   = isDark ? DarkColors.textPrimary   : AppColors.textPrimary;
+    final textS   = isDark ? DarkColors.textSecondary : AppColors.textSecondary;
+    final primary = isDark ? DarkColors.primary : AppColors.primary;
+    final warning = isDark ? DarkColors.warning : AppColors.warning;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: cardDeco(radius: 16, dark: isDark, bordered: false),
+      child: Row(
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: chipBg, borderRadius: BorderRadius.circular(10)),
+            child: Icon(Icons.smart_display_outlined, size: 19,
+                color: _enabled ? warning : textS),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.cameraDemoModeLabel,
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textP)),
+                Text(s.cameraDemoModeSubtitle, style: TextStyle(fontSize: 13, color: textS)),
+              ],
+            ),
+          ),
+          if (_loading || _busy)
+            SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: primary),
+            )
+          else
+            Switch.adaptive(
+              value: _enabled,
+              onChanged: _toggle,
+              activeColor: warning,
+            ),
+        ],
       ),
     );
   }

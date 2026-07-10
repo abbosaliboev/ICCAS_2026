@@ -42,15 +42,30 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _subscribeWs();
       _loadEvents();
+      _refreshCameraDemoMode();
     });
   }
 
   // Tabs are kept alive (never re-initState), so data would silently go stale
   // when the user switches pages — refresh whichever tab just became visible.
   void _onTabVisible(int i) {
-    if (i == 0) _loadEvents();
+    if (i == 0) {
+      _loadEvents();
+      _refreshCameraDemoMode();
+    }
     if (i == 1) _eventsKey.currentState?.reload();
     if (i == 2) _reportsKey.currentState?.reload();
+  }
+
+  // Always re-checks the server rather than trusting a cached value — camera
+  // demo mode being silently left on (real monitoring paused) is a safety
+  // issue, not just a UI staleness one.
+  Future<void> _refreshCameraDemoMode() async {
+    try {
+      final api = context.read<AuthProvider>().api;
+      final enabled = await api.getCameraDemoMode();
+      if (mounted) context.read<SettingsProvider>().setCameraDemoModeLocal(enabled);
+    } catch (_) {}
   }
 
   void _goToTab(int i) {
@@ -343,6 +358,7 @@ class _DashboardTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cameraDemoMode = context.watch<SettingsProvider>().cameraDemoMode;
     return SafeArea(
       child: RefreshIndicator(
         color: AppColors.primary,
@@ -350,6 +366,10 @@ class _DashboardTab extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
           children: [
+            if (cameraDemoMode) ...[
+              const _CameraDemoModeBanner(),
+              const SizedBox(height: 18),
+            ],
             _Header(user: user),
             const SizedBox(height: 18),
             _StatusHeroBanner(activeAlert: activeAlert, onDismiss: onDismissAlert),
@@ -364,6 +384,57 @@ class _DashboardTab extends StatelessWidget {
               onViewAll: onGoToEvents,
             ),
             const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Camera demo mode banner ──────────────────────────────────────────────────
+// Unmissable on purpose: while camera demo mode is on, real fall detection is
+// NOT running on the live feed. Tapping jumps straight to Settings to turn it
+// back off.
+
+class _CameraDemoModeBanner extends StatelessWidget {
+  const _CameraDemoModeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final s      = S.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final warn     = isDark ? DarkColors.warning     : AppColors.warning;
+    final warnText = isDark ? DarkColors.warningText : AppColors.warningText;
+    final warnTint = isDark ? DarkColors.warningTint : AppColors.warningTint;
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AppSettingsScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: warnTint,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: warn, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(width: 4, height: 34,
+                decoration: BoxDecoration(color: warn, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.cameraDemoModeActive,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: warnText)),
+                  const SizedBox(height: 2),
+                  Text(s.cameraDemoModeBannerBody,
+                      style: TextStyle(fontSize: 12, color: warnText, height: 1.3)),
+                ],
+              ),
+            ),
           ],
         ),
       ),

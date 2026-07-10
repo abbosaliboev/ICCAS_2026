@@ -391,6 +391,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--exp",          default=None,            help="Experiment dir with checkpoints/ (default: fall_iccas — uses checkpoints/, the latest 17-subject model)")
     ap.add_argument("--source",       default="0",             help="Camera index or RTSP URL")
+    ap.add_argument("--demo-video",   default=os.path.join("..", "assets", "Fall_Demo.mp4"),
+                     help="Looping demo clip used when Camera Demo Mode is toggled on from the app")
     ap.add_argument("--backend",      default="http://localhost:8000", help="Backend server URL")
     ap.add_argument("--device-token", default="edge-device-001", help="Device token for backend auth")
     ap.add_argument("--stream-port",  type=int, default=8081,  help="MJPEG HTTP port (default 8081)")
@@ -447,7 +449,14 @@ def main():
         backend = cv2.CAP_FFMPEG
     else:
         backend = cv2.CAP_ANY
-    def open_cap():
+    demo_video_path = args.demo_video if os.path.isabs(args.demo_video) else os.path.join(base, args.demo_video)
+
+    def open_cap(use_demo: bool = False):
+        if use_demo:
+            c = cv2.VideoCapture(demo_video_path)
+            if not c.isOpened():
+                log.warning(f"Demo video not found: {demo_video_path}")
+            return c
         c = cv2.VideoCapture(src, backend)
         if backend == cv2.CAP_FFMPEG:
             c.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -455,7 +464,8 @@ def main():
         c.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
         return c
 
-    cap = open_cap()
+    demo_mode = False
+    cap = open_cap(use_demo=demo_mode)
     if not cap.isOpened():
         log.warning(f"Cannot open source yet: {src} — will keep retrying...")
 
@@ -495,13 +505,14 @@ def main():
         return {"x1": x, "y1": y, "x2": x + w, "y2": y + h}
 
     def load_config():
-        nonlocal camera_type, safe_zones
+        nonlocal camera_type, safe_zones, demo_mode
         # 1) try backend API
         cfg = client.get_config()
         if cfg:
             safe_zones  = [_zone_norm(z) for z in cfg.get("zones", [])]
             camera_type = cfg.get("camera_type", "front")
-            log.info(f"Config from API: cam={camera_type}, zones={len(safe_zones)}")
+            demo_mode   = bool(cfg.get("demo_mode", False))
+            log.info(f"Config from API: cam={camera_type}, zones={len(safe_zones)}, demo_mode={demo_mode}")
             return
         # 2) local file fallback
         try:
@@ -520,16 +531,21 @@ def main():
 
     load_config()
     log.info(f"Camera type: {camera_type}")
+    if demo_mode:
+        # demo mode was left on from a previous session — honor it from the start
+        log.info(f"Camera Demo Mode ENABLED at startup — playing {demo_video_path}")
+        cap.release()
+        cap = open_cap(use_demo=True)
     log.info("Edge server running. Ctrl+C to stop.")
 
     while True:
         if not cap.isOpened():
             read_fail_count += 1
             if read_fail_count % 5 == 1:
-                log.warning(f"Camera not connected — retrying ({read_fail_count})...")
+                log.warning(f"{'Demo video' if demo_mode else 'Camera'} not connected — retrying ({read_fail_count})...")
                 cap.release()
                 time.sleep(3.0)
-                cap = open_cap()
+                cap = open_cap(use_demo=demo_mode)
             else:
                 time.sleep(1.0)
             continue
@@ -538,12 +554,16 @@ def main():
         ret, frame = cap.read()
         t_read1 = time.time()
         if not ret:
+            if demo_mode:
+                # end of the demo clip — loop back to the start, not a failure
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                continue
             read_fail_count += 1
             if read_fail_count % 10 == 1:
                 log.warning(f"Frame read failed ({read_fail_count}x) — reconnecting...")
                 cap.release()
                 time.sleep(2.0)
-                cap = open_cap()
+                cap = open_cap(use_demo=demo_mode)
             else:
                 time.sleep(0.1)
             continue
@@ -570,12 +590,19 @@ def main():
         person_visible = float(kp[:, 2].max()) > 0.15
         no_person_frames = 0 if person_visible else no_person_frames + 1
 
-        # reload config (safe zones + camera type) from backend API every 15 s;
-        # also re-report our stream URL in case the backend restarted and lost it
+        # reload config (safe zones + camera type + demo mode) from backend API
+        # every 15 s; also re-report our stream URL in case the backend restarted
         if time.time() - last_cfg_reload > 15:
+            was_demo = demo_mode
             load_config()
             client.report_stream_url(stream_url)
             last_cfg_reload = time.time()
+            if demo_mode != was_demo:
+                log.info(f"Camera Demo Mode {'ENABLED — playing ' + demo_video_path if demo_mode else 'DISABLED — back to live camera'}")
+                cap.release()
+                cap = open_cap(use_demo=demo_mode)
+                buf.clear()
+                read_fail_count = 0
 
         # check if mid-hip is inside a safe zone
         in_safe_zone = False

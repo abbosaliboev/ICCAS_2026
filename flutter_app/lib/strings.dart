@@ -62,6 +62,16 @@ class S {
   String get noRecentFalls => _t('최근 낙상 기록이 없습니다', 'No recent fall events');
   String get liveCam => _t('라이브 카메라', 'Live Camera');
   String get aiAnalyzing => _t('AI 분석 중', 'AI Monitoring');
+  String get cameraDemoModeActive => _t('카메라 데모 모드 켜짐', 'Camera Demo Mode Active');
+  String get cameraDemoModeBannerBody => _t(
+      '실시간 카메라 감지가 일시 중지되었습니다 — 데모 영상이 재생 중입니다. 탭하여 끄세요.',
+      'Live camera monitoring is paused — playing a demo clip instead. Tap to turn off.');
+  String get cameraDemoModeLabel => _t('카메라 데모 모드', 'Camera Demo Mode');
+  String get cameraDemoModeSubtitle => _t(
+      '실제 카메라 대신 데모 영상을 반복 재생합니다 (AI 감지 테스트용)',
+      'Loop a demo clip instead of the live camera (to test AI detection)');
+  String get cameraDemoModeOnMsg => _t('카메라 데모 모드 켜짐', 'Camera demo mode turned on');
+  String get cameraDemoModeOffMsg => _t('카메라 데모 모드 꺼짐 — 실시간 카메라로 복귀', 'Camera demo mode turned off — back to live camera');
   String zonesCount(int n) => _ko ? '안전 구역 $n개' : '$n zone${n == 1 ? '' : 's'}';
   String get emergencyCall => _t('긴급 연락', 'Emergency');
   String get allClearBtn => _t('안심 확인', 'All Clear');

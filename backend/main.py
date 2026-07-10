@@ -757,6 +757,7 @@ async def stream_snapshot(user_id: str = Query(None), user=Depends(auth_user)):
 
 SAFE_ZONE_PATH  = BASE.parent / "fall_iccas" / "safe_zone.json"
 CAM_CONFIG_PATH = BASE.parent / "fall_iccas" / "camera_config.json"
+DEMO_MODE_PATH  = BASE.parent / "fall_iccas" / "demo_mode.json"
 
 def _safe_zone_path(user_id: str = None):
     if not user_id:
@@ -766,7 +767,7 @@ def _safe_zone_path(user_id: str = None):
 
 @app.get("/api/device/config")
 def get_device_config(dev=Depends(auth_device)):
-    """Edge server polls this every 15s to get safe zones + camera type."""
+    """Edge server polls this every 15s to get safe zones + camera type + demo mode."""
     zones = []
     zone_path = _safe_zone_path(dev.get("user_id"))
     if not zone_path.exists():
@@ -782,7 +783,13 @@ def get_device_config(dev=Depends(auth_device)):
             cam_type = json.loads(CAM_CONFIG_PATH.read_text()).get("camera_type", "front")
         except Exception:
             pass
-    return {"zones": zones, "camera_type": cam_type}
+    demo_mode = False
+    if DEMO_MODE_PATH.exists():
+        try:
+            demo_mode = bool(json.loads(DEMO_MODE_PATH.read_text()).get("demo_mode", False))
+        except Exception:
+            pass
+    return {"zones": zones, "camera_type": cam_type, "demo_mode": demo_mode}
 
 
 class DeviceStreamUrlReq(BaseModel):
@@ -795,6 +802,33 @@ def report_device_stream_url(body: DeviceStreamUrlReq, dev=Depends(auth_device))
     having to manually configure EDGE_STREAM_URL when edge and backend run on
     different machines."""
     db.update_device_stream_url(dev["id"], body.stream_url)
+    return {"ok": True}
+
+
+# ── camera demo mode ──────────────────────────────────────────────────────────
+# Lets a tester swap the physical edge device's live camera feed for a looping
+# local clip (assets/Fall_Demo.mp4) — shows the real AI pipeline (YOLO+ST-GCN)
+# reacting to a fall without staging one. Picked up by edge_server.py's normal
+# 15s config poll, no separate process/port needed. Distinct from the
+# guardian's "demo://" placeholder stream (a fake care-recipient with no real
+# device) — this one drives the actual edge-device-001 hardware.
+
+@app.get("/api/device/demo-mode")
+def get_camera_demo_mode(user=Depends(auth_user)):
+    if not DEMO_MODE_PATH.exists():
+        return {"demo_mode": False}
+    try:
+        return {"demo_mode": bool(json.loads(DEMO_MODE_PATH.read_text()).get("demo_mode", False))}
+    except Exception:
+        return {"demo_mode": False}
+
+
+class CameraDemoModeReq(BaseModel):
+    demo_mode: bool
+
+@app.post("/api/device/demo-mode")
+def set_camera_demo_mode(body: CameraDemoModeReq, user=Depends(auth_user)):
+    DEMO_MODE_PATH.write_text(json.dumps({"demo_mode": body.demo_mode}))
     return {"ok": True}
 
 

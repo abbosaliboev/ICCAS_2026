@@ -265,6 +265,20 @@ class ApiService {
   Future<void> setCameraType(String cameraType) =>
       _post('/api/safe-zone/camera-type', {'camera_type': cameraType});
 
+  // ── camera demo mode ─────────────────────────────────────────────────────
+  // Swaps the physical edge device's live camera feed for a looping local
+  // clip, for showing the AI fall-detection pipeline working without staging
+  // a real fall. Distinct from the guardian "demo://" placeholder stream and
+  // the TTS/STT voice demo toggle — this one drives the real device.
+
+  Future<bool> getCameraDemoMode() async {
+    final data = await _get('/api/device/demo-mode');
+    return (data as Map<String, dynamic>?)?['demo_mode'] == true;
+  }
+
+  Future<void> setCameraDemoMode(bool enabled) =>
+      _post('/api/device/demo-mode', {'demo_mode': enabled});
+
   // ── stream ────────────────────────────────────────────────────────────────
 
   String snapshotUrl({String? userId}) {

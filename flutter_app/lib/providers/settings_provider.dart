@@ -16,12 +16,24 @@ class SettingsProvider extends ChangeNotifier {
 
   int _zonesVersion = 0;
 
+  // Not persisted locally — always mirrors the edge device's real state via
+  // api.getCameraDemoMode(), so a stale local cache can never hide the fact
+  // that real live monitoring is paused for a demo.
+  bool _cameraDemoMode = false;
+
   String get localeCode   => _localeCode;
   String get cameraType   => _cameraType;
   String get contactName  => _contactName;
   String get contactPhone => _contactPhone;
   bool get demoTtsSttEnabled => _demoTtsSttEnabled;
+  bool get cameraDemoMode => _cameraDemoMode;
   int get zonesVersion => _zonesVersion;
+
+  void setCameraDemoModeLocal(bool value) {
+    if (_cameraDemoMode == value) return;
+    _cameraDemoMode = value;
+    notifyListeners();
+  }
 
   void bumpZonesVersion() {
     _zonesVersion++;
