@@ -1,0 +1,86 @@
+Experiment  : subj_1_to_8
+Data dir    : experiments/subject1_to_17/cv_dataset
+Checkpoint  : experiments/incremental_run2\subj_1_to_8
+Results     : experiments/incremental_run2\subj_1_to_8\results.txt
+Device      : cuda
+Patience    : 15
+
+Subjects    : [1, 2, 3, 4, 5, 6, 7, 8] (8 subjects)
+Data: X=(8736, 30, 17, 3)  y=(8736,)  FALL=1262  NO-FALL=7474
+Subject-stratified split: train=6112 val=1307 test=1317
+  Subject1: train=801 val=171 test=173
+  Subject2: train=745 val=159 test=161
+  Subject3: train=798 val=171 test=171
+  Subject4: train=798 val=171 test=171
+  Subject5: train=817 val=175 test=176
+  Subject6: train=646 val=138 test=140
+  Subject7: train=811 val=173 test=175
+  Subject8: train=696 val=149 test=150
+
+==================================================
+  Stage 1: Training ST-GCN
+==================================================
+  Epoch   1/60  tr_loss=0.3995 tr_acc=0.816  val_acc=0.878 val_fall_f1=0.607  best_f1=0.607  no_improve=0
+  Epoch  10/60  tr_loss=0.1381 tr_acc=0.943  val_acc=0.963 val_fall_f1=0.833  best_f1=0.864  no_improve=1
+  Epoch  20/60  tr_loss=0.0849 tr_acc=0.964  val_acc=0.986 val_fall_f1=0.939  best_f1=0.939  no_improve=0
+  Epoch  30/60  tr_loss=0.0580 tr_acc=0.980  val_acc=0.987 val_fall_f1=0.944  best_f1=0.944  no_improve=0
+  Epoch  40/60  tr_loss=0.0419 tr_acc=0.984  val_acc=0.987 val_fall_f1=0.943  best_f1=0.961  no_improve=6
+
+  Early stopping at epoch 49 (no improvement for 15 epochs)
+
+Loaded best model (val fall F1=0.9605, stopped at epoch 49)
+
+==================================================
+  Stage 1 Only — ST-GCN
+==================================================
+  Accuracy : 0.9916
+  Fall F1  : 0.9719
+
+              precision    recall  f1-score   support
+
+     NO-FALL       0.99      1.00      1.00      1121
+        FALL       0.97      0.97      0.97       196
+
+    accuracy                           0.99      1317
+   macro avg       0.98      0.98      0.98      1317
+weighted avg       0.99      0.99      0.99      1317
+
+Confusion Matrix:
+[[1116    5]
+ [   6  190]]
+
+==================================================
+  Stage 2: Fitting Physics Filter
+==================================================
+[PhysicsFilter] grid-search — vel > 0.00000  acc > 0.00000  best_val_fall_F1 = 0.9571
+[TwoStage] stage1_threshold=0.35  rescue_threshold=0.30  val_fall_F1=0.9677
+
+==================================================
+  Stage 1 + Stage 2 — ST-GCN + Physics (Rescue)
+==================================================
+  Accuracy : 0.9848
+  Fall F1  : 0.9500
+
+              precision    recall  f1-score   support
+
+     NO-FALL       0.99      0.99      0.99      1121
+        FALL       0.93      0.97      0.95       196
+
+    accuracy                           0.98      1317
+   macro avg       0.96      0.98      0.97      1317
+weighted avg       0.99      0.98      0.98      1317
+
+Confusion Matrix:
+[[1107   14]
+ [   6  190]]
+
+==================================================
+  COMPARISON SUMMARY
+==================================================
+  Model                            Accuracy    Fall F1
+  --------------------------------------------------
+  ST-GCN (Stage 1)                   0.9916     0.9719
+  ST-GCN + Physics (2-Stage)         0.9848     0.9500
+
+Config saved : experiments/incremental_run2\subj_1_to_8\two_stage_config.json
+Results saved: experiments/incremental_run2\subj_1_to_8\results.txt
