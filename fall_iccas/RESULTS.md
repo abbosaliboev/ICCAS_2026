@@ -50,6 +50,18 @@ There are two ways to split the data:
 
 > Ours: subject-stratified split. Competitive accuracy; **Sensitivity 97.3% exceeds TCNTE (95.4%)** — fewer missed falls, the safety-critical metric. Unique to our work: physics-informed rescue (real-world robustness, ~0 latency) + a full deployed system (edge + caregiver mobile app + safe-zone). Competitor numbers: Yu et al. 2025 (TCNTE), Table 5.
 
+### Head-to-head: TCNTE vs MobiCare
+
+Both measured on the same class of hardware (Jetson Orin NX), same FPS methodology (full pipeline: pose estimation + classifier, live, single person).
+
+| Method | Sensitivity | Specificity | Accuracy | Fall F1 | Edge deployment | FPS |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| TCNTE 2025 (TCN+Transformer) | 95.4% | 99.7% | 99.6% | — (not reported) | Jetson Orin NX | 19 |
+| **MobiCare (ours, subject-stratified)** | **97.3%** | **99.5%** | **99.19%** | **0.972** | Jetson Orin NX + mobile app | **30.48** |
+| MobiCare (ours, LOSO cross-subject) | 84.1% | 85.5% | 85.3% | 0.625 | Jetson Orin NX + mobile app | 30.48 |
+
+> FPS measured live on-device (n=3002 samples, mean ± std = 30.48 ± 1.28 fps) — MobiCare runs **~1.6× faster** than TCNTE's reported 19 fps on comparable hardware. F1 not stated in the TCNTE paper (only accuracy/sensitivity/specificity given), shown as "—" rather than estimated. The LOSO row uses the identical deployed model/pipeline — FPS is a hardware property, not evaluation-split-dependent; it is included to show accuracy under the harder, honest cross-subject protocol TCNTE does not report.
+
 ---
 
 ## Run history (17-subject)
@@ -150,5 +162,17 @@ Saved to: `experiments/subject1_to_17/loso/`
 | **MobiCare (본 연구)** | **ST-GCN + Physics** | **97.3** | **99.5** | **99.19** | **Orin NX, ~30 fps (69 fps 파이프라인) + 앱** |
 
 > 본 연구는 subject-stratified split. 정확도 경쟁력 있음, **Sensitivity 97.3%로 TCNTE(95.4%)보다 높음** (낙상 놓침 적음). 차별점: physics 기반 rescue(실환경 강건성, ~0 지연) + 완전한 배포 시스템(엣지 + 보호자 모바일 앱 + safe-zone).
+
+### TCNTE vs MobiCare 직접 비교
+
+동일 계열 하드웨어(Jetson Orin NX), 동일 FPS 측정 방식(전체 파이프라인: pose estimation + classifier, 실시간, 1인 기준).
+
+| 방법 | Sensitivity | Specificity | Accuracy | Fall F1 | 엣지 배포 | FPS |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| TCNTE 2025 (TCN+Transformer) | 95.4% | 99.7% | 99.6% | — (미공개) | Jetson Orin NX | 19 |
+| **MobiCare (본 연구, subject-stratified)** | **97.3%** | **99.5%** | **99.19%** | **0.972** | Jetson Orin NX + 모바일 앱 | **30.48** |
+| MobiCare (본 연구, LOSO cross-subject) | 84.1% | 85.5% | 85.3% | 0.625 | Jetson Orin NX + 모바일 앱 | 30.48 |
+
+> FPS는 실제 기기에서 측정(n=3002, 평균±표준편차 = 30.48 ± 1.28 fps) — TCNTE가 보고한 19 fps 대비 MobiCare가 **약 1.6배 빠름** (비슷한 하드웨어 기준). TCNTE 논문에는 F1이 명시되어 있지 않아(accuracy/sensitivity/specificity만 제공) 추정하지 않고 "—"로 표기. LOSO 행은 동일하게 배포된 모델/파이프라인을 사용 — FPS는 평가 분할과 무관한 하드웨어 속성이며, TCNTE가 보고하지 않은 더 엄격하고 정직한 cross-subject 프로토콜에서의 정확도를 보여주기 위해 포함.
 
 > 전체 실행 기록(Run 1–15)은 [RESULTS_ARCHIVE.md](RESULTS_ARCHIVE.md) 참고.
