@@ -114,4 +114,28 @@ def plot_motion(combined: pd.DataFrame) -> None:
         axis.grid()
         axis.legend()
     figure.tight_layout(h_pad=5, rect=[0, 0.02, 1, 0.98])
+
+    # 추가 그래프 2개 (각 1열 2행, 4:3 비율) — raw 단독 / filtered 단독 비교용
+    # 강렬한 색: 파랑 = raw, 빨강 = filtered / 축제목은 그래프 제목과 비슷한 크기로
+    axis_label_size = 17
+    for series_pair, color, tag in (
+        ((extra.get("raw_velocity"), extra.get("raw_acceleration")), "#0000FF", "Raw"),
+        ((combined["velocity_pixel_s"], combined["acceleration_pixel_s2"]), "#FF0000", "Filtered"),
+    ):
+        fig2, axes2 = plt.subplots(2, 1, figsize=(8, 6))
+        for axis, values, title, unit in zip(
+            axes2,
+            series_pair,
+            (f"{tag} Velocity", f"{tag} Acceleration"),
+            ("Velocity (pixel/s)", "Acceleration (pixel/s^2)"),
+        ):
+            axis.plot(time, values, label=title, color=color)
+            axis.set_title(title)
+            axis.set_xlabel("Time (s)", fontsize=axis_label_size)
+            axis.set_ylabel(unit, fontsize=axis_label_size)
+            axis.set_xlim(left=0)
+            axis.grid()
+            axis.legend()
+        fig2.tight_layout()
+
     plt.show()
