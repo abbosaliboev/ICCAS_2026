@@ -32,3 +32,16 @@ This subject-stratified (subject-dependent) study does **not** cleanly support "
 3. **The subject-dependent ST-GCN is already saturated** (Fall F1 ≈ 0.94–1.0 even at 1 subject, on a tiny easy test set) — a ceiling that leaves almost no room for physics to add value.
 
 **Takeaway.** On this clean, staged UP-Fall benchmark the velocity/acceleration filter does not measurably help once the model has data. Its likely real value is **deployment robustness** (live Jetson, unseen conditions/people) — which a clean offline benchmark cannot capture. To test the low-data thesis more fairly, evaluate in the **cross-subject (LOSO)** setting, where the base model is genuinely weaker, rather than subject-dependent where it is already near-perfect. This is an honest negative result and should shape how physics is framed in the paper (robustness / interpretability, not offline accuracy gains).
+
+## Best case where physics helped: Subject 1–3
+
+Where the velocity/acceleration physics is active (subjects 1–3), the clearest win is the 3-subject set. Test: 505 windows (75 fall / 430 no-fall).
+
+| Model | Accuracy | Fall F1 | Precision | Recall | FP | FN |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| ST-GCN (model alone) | 0.9683 | 0.8806 | 1.000 | 0.787 | 0 | 16 |
+| ST-GCN + Physics (2-stage) | 0.9802 | 0.9315 | 0.958 | 0.907 | 3 | 7 |
+
+Physics rescue recovered **9 missed falls (FN 16 → 7)**, raising recall 0.79 → 0.91 and Fall F1 0.88 → 0.93, at the cost of only 3 false alarms (FP 0 → 3). In the low-data regime the data-starved ST-GCN misses falls; the physics filter catches them — the clearest illustration of the "physics helps when data is scarce" idea.
+
+*Caveat: single run. In the same run, physics did not help at 1 subject (hurt, +2 FP) or 1–2 subjects (no change). Verify across multiple seeds before presenting this as a general claim.*
