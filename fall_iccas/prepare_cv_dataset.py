@@ -176,7 +176,7 @@ def get_trials(root, subjects=None):
 
 
 def main():
-    global CAMERA
+    global CAMERA, WINDOW_SIZE, STRIDE
     parser = argparse.ArgumentParser(description="Extract YOLO keypoints into sliding-window arrays.")
     parser.add_argument("--subjects", type=int, nargs="+", default=None,
                         help="Subject IDs to include (e.g. 1 2). Default: all.")
@@ -186,9 +186,17 @@ def main():
     parser.add_argument("--camera", default=CAMERA,
                         help=f"Camera view substring to extract (default: {CAMERA}). "
                              "Use 'Camera2' for the second viewpoint.")
+    parser.add_argument("--window", type=int, default=WINDOW_SIZE,
+                        help=f"Sliding window size in frames (default: {WINDOW_SIZE}). "
+                             "Use 18 to match TCNTE's 1-second window on UP-Fall.")
+    parser.add_argument("--stride", type=int, default=STRIDE,
+                        help=f"Sliding window step in frames (default: {STRIDE}). "
+                             "Use 4 (~200 ms) to match TCNTE.")
     args = parser.parse_args()
 
     CAMERA = args.camera
+    WINDOW_SIZE = args.window
+    STRIDE = args.stride
 
     subjects = set(args.subjects) if args.subjects else None
     out_dir  = args.out_dir or os.path.join(os.path.dirname(__file__), "cv_dataset")
