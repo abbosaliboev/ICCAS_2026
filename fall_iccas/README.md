@@ -122,16 +122,25 @@ python edge_server.py \
 > Password special characters must be URL-encoded: `$` → `%24`
 > Full argument list: see [HOW_TO_RUN.md](HOW_TO_RUN.md)
 
-## Current results (Subject 1–4, subject-stratified split)
+## Current results (Subject 1–17, subject-stratified split)
 
-| Model | Accuracy | Fall F1 | Precision | Recall |
+| Model | Accuracy | Fall F1 | Sensitivity | Specificity |
 |---|---|---|---|---|
-| ST-GCN (Stage 1) | 98.5% | 0.950 | 0.95 | 0.95 |
-| ST-GCN + Physics Rescue | 98.7% | **0.955** | 0.95 | 0.96 |
+| ST-GCN (Stage 1) | 98.7% | 0.958 | 98.8% | 98.7% |
+| **ST-GCN + Physics Rescue** | **99.2%** | **0.972** | 97.3% | 99.5% |
 
-> **Important:** Results are subject-dependent (trained/tested on Subjects 1–4 with stratified split).
-> For publication, LOSO (Leave-One-Subject-Out) across all 17 subjects is required.
-> See [RESULTS.md](RESULTS.md) for full run history and ablation.
+### vs TCNTE — same data, window & split
+
+We re-implemented TCNTE (Yu et al. 2025, TCN + Transformer) and trained it on the **identical** 17-subject windows, window size (30), and subject-stratified split as our model, to isolate the architecture:
+
+| Model | Accuracy | Fall F1 | Sensitivity | Specificity | False alarms (FP) |
+|---|---|---|---|---|---|
+| TCNTE (our pipeline) | 93.3% | 0.792 | 87.2% | 94.4% | 137 |
+| **MobiCare (ST-GCN + Physics)** | **99.2%** | **0.972** | 97.3% | **99.5%** | **12** |
+
+On the same data and pipeline, our graph-based ST-GCN + Physics reaches **F1 0.972 vs TCNTE's 0.792** — the graph convolution captures joint-to-joint structure that TCNTE's flat-feature TCN misses, giving far fewer false alarms (12 vs 137).
+
+> **Honest notes.** (1) This compares architectures on *our* pipeline (window 30, 17 keypoints, no data cleaning). TCNTE's published 99.58% used their own preprocessing (window 18, 12 keypoints, poor-pose / post-fall trial removal), which we did not replicate. (2) Results are subject-dependent (same subjects in train/test). See [RESULTS.md](RESULTS.md) for the stricter LOSO (cross-subject) numbers and [TCNTE_COMPARISON.md](TCNTE_COMPARISON.md) for the low-data (Subject 1–3) comparison.
 
 ## Model size & complexity
 

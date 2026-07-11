@@ -39,6 +39,18 @@ Lead with the metrics where we clearly win and that do **not** split a complemen
 
 Do **not** show specificity while hiding sensitivity (they are a pair — that reads as cherry-picking). If asked about sensitivity, answer honestly: TCNTE's is slightly higher, but it comes with 37 false alarms vs our 3.
 
+## Full 17-subject result (window 30, subject-stratified)
+
+Same comparison on the full dataset (test n=2837, 414 fall):
+
+| Method | Accuracy | Fall F1 | Sensitivity | Specificity | FP | FN |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| TCNTE (our pipeline) | 93.3% | 0.792 | 87.2% | 94.4% | 137 | 53 |
+| Our ST-GCN (alone) | 98.7% | 0.958 | 98.8% | 98.7% | 31 | 5 |
+| **Our ST-GCN + Physics** | **99.2%** | **0.972** | 97.3% | **99.5%** | **12** | 11 |
+
+At full scale our ST-GCN + Physics wins **every** metric (unlike the small-data case, where TCN/TCNTE had higher sensitivity). TCNTE over-predicts falls (137 false alarms). Honest caveat: this is TCNTE's *architecture* on *our* pipeline (window 30, 17 keypoints, no data cleaning) — not their published preprocessing (window 18, 12 keypoints, trial cleaning) that yielded 99.58% in the paper.
+
 ## Caveats (to strengthen before the paper)
 
 - **Single run / seed.** Both models have training randomness. Verify across 3–5 seeds (mean ± std) so the conclusion is not a lucky run.
