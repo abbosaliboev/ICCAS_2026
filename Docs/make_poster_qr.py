@@ -12,9 +12,7 @@ import qrcode.image.svg
 # main 브랜치 blob 링크: 스캔하면 GitHub 미리보기가 뜨고,
 # 나중에 같은 경로에 새 커밋을 올리면 QR 수정 없이 최신 버전이 보입니다.
 URL = (
-    "https://github.com/abbosaliboev/ICCAS_2026/blob/main/"
-    "Docs/PPT/ICCAS_4%EC%A1%B0_%EC%B5%B8%EC%BD%94%ED%95%98%EC%9E%84"
-    "_%EA%B0%80%EC%8B%9C%ED%99%94%EC%9E%90%EB%A3%8C.pdf"
+    "https://github.com/abbosaliboev/ICCAS_2026.git"
 )
 
 # 출력 위치: 스크립트가 있는 폴더 (어디서 실행하든 동일)
