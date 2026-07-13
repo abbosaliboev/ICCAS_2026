@@ -6,7 +6,7 @@
 
 <img src="./Docs/Poster/Team-4_Poster_Final.jpg" alt="MobiCare Poster (EKC 2026)" width="900">
 
-📄 **Presentation**: [`Docs/PPT/260713_PPT_FinalFinal.pdf`](./Docs/Poster/Team-4_Poster_Final.jpg)
+📄 **Presentation**: [`Docs/PPT/260713_PPT_FinalFinal.pdf`](./Docs/PPT/260713_PPT_FinalFinal.pdf)
 
 > **Language / 언어 선택**
 > - [🇺🇸 English](#english)
