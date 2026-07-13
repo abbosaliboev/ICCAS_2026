@@ -48,6 +48,7 @@ Thumbs.db
 
 *.jpg
 *.jpeg
+!Docs/Poster/Team-4_Poster_Final.jpg
 
 # Backend runtime storage (screenshots, clips)
 backend/storage/
