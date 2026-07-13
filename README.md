@@ -2,6 +2,8 @@
 ### Edge AI-Based Real-Time Fall Detection and Alert System for Elderly People Living Alone
 ### 독거 노인을 위한 엣지 AI 기반 실시간 낙상 감지 및 알림 시스템
 
+<img src="./Docs/Poster/Team-4_Poster_Final.jpg" alt="MobiCare Poster (EKC 2026)" width="800">
+
 ![MobiCare](./Docs/Images/MobiCare.png)
 
 > **Language / 언어 선택**
