@@ -486,6 +486,37 @@ Notes:
 
 Saved to: `experiments/subject1_to_17/two_stage/`
 
+---
+
+### Run 16 — 2026-07-13 (Fixed cross-subject split, test on unseen Subject 17)
+
+Cross-subject evaluation (prompted by the "why no LOSO?" review question). A **fixed** subject split (not 17-fold LOSO): train on chosen subjects, validate on S16, test on the held-out **S17** — the *same* test subject in both cases, only the training size differs, to isolate the effect of training-data size on cross-subject generalization. `crosssub_compare.py`. Test S17 = 1112 windows (160 fall).
+
+**Full (train S1–15, val S16, test S17):**
+
+| Model | Accuracy | Fall F1 | Sensitivity | Specificity | FP | FN |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| TCNTE | 0.781 | 0.494 | 0.744 | 0.787 | 203 | 41 |
+| ST-GCN | 0.811 | 0.602 | 0.994 | 0.780 | 209 | 1 |
+| ST-GCN + Physics | 0.808 | 0.600 | 1.000 | 0.776 | 213 | 0 |
+
+**Limited (train S1–3, val S16, test S17):**
+
+| Model | Accuracy | Fall F1 | Sensitivity | Specificity | FP | FN |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| TCNTE | 0.790 | 0.522 | 0.794 | 0.790 | 200 | 33 |
+| ST-GCN | 0.581 | 0.321 | 0.688 | 0.563 | 416 | 50 |
+| ST-GCN + Physics | 0.591 | 0.324 | 0.681 | 0.576 | 404 | 51 |
+
+**Honest findings (important — shapes the paper/poster framing):**
+- **The "limited-data advantage" reverses under cross-subject.** Full data (15 subj): ST-GCN+Physics beats TCNTE (F1 0.60 vs 0.49). Limited data (3 subj): TCNTE beats us (0.52 vs 0.32). Our larger ST-GCN (3.1M params) generalises poorly from few subjects; the tiny TCNTE (21k) generalises better. This is the OPPOSITE of the subject-*dependent* limited-data result (Subject 1–3 stratified, ours 0.93 vs 0.79) — which was optimistic because the same subjects appear in train and test.
+- **Physics does not help cross-subject** (full 0.602→0.600; limited 0.321→0.324). The rescue mechanism only *adds* falls (helps recall), but the cross-subject bottleneck is *precision* (A11-laying false alarms, FP 200–400). A velocity/accel veto cannot remove them — velocity does not separate laying from falling (AUC ≈ 0.55, `veto_experiment.py`). Physics helps recall (missed falls) only in the clean subject-dependent low-data case.
+- **What survives:** with enough data, ST-GCN generalises better cross-subject than TCNTE (0.60 vs 0.49) with near-perfect recall (0.994–1.000, FN 0–1) — it misses almost no falls. Two-camera fusion is the real precision fix (Run 14: 0.62→0.68). Caveat: single test subject (S17) is noisy; the 17-fold LOSO (Run 12 + `loso_tcnte.py`) is more robust and shows ours ≈ TCNTE (0.625 vs 0.607).
+
+Saved to: `experiments/crosssub_full/`, `experiments/crosssub_limited/`, `experiments/loso_tcnte/`.
+
+---
+
 <a name="korean"></a>
 # 🇰🇷 한국어
 
