@@ -1,0 +1,49 @@
+{
+  "tag": "limited_focal",
+  "train": [
+    1,
+    2,
+    3
+  ],
+  "val": [
+    16
+  ],
+  "test": [
+    17
+  ],
+  "results": {
+    "TCNTE": {
+      "accuracy": 0.7859712230215827,
+      "fall_f1": 0.524,
+      "sensitivity": 0.81875,
+      "specificity": 0.7804621848739496,
+      "precision": 0.38529411764705884,
+      "fp": 209,
+      "fn": 29,
+      "tp": 131,
+      "tn": 743
+    },
+    "ST-GCN": {
+      "accuracy": 0.8039568345323741,
+      "fall_f1": 0.5240174672489084,
+      "sensitivity": 0.75,
+      "specificity": 0.8130252100840336,
+      "precision": 0.40268456375838924,
+      "fp": 178,
+      "fn": 40,
+      "tp": 120,
+      "tn": 774
+    },
+    "ST-GCN + Physics": {
+      "accuracy": 0.802158273381295,
+      "fall_f1": 0.502262443438914,
+      "sensitivity": 0.69375,
+      "specificity": 0.8203781512605042,
+      "precision": 0.39361702127659576,
+      "fp": 171,
+      "fn": 49,
+      "tp": 111,
+      "tn": 781
+    }
+  }
+}

@@ -517,6 +517,38 @@ Saved to: `experiments/crosssub_full/`, `experiments/crosssub_limited/`, `experi
 
 ---
 
+### Run 17 — 2026-07-13 (Cross-subject ablation: model capacity vs class-imbalance strategy)
+
+Follow-up to Run 16 (our ST-GCN lost to TCNTE on limited-data cross-subject). Two hypotheses tested on the same fixed split (val S16, test S17). `crosssub_compare.py --stgcn-width / --stgcn-loss`.
+
+**Hypothesis A — smaller ST-GCN (match capacity to data): REJECTED.** Limited data (train S1–3), Fall F1:
+
+| ST-GCN width | Params | F1 | F1 + Physics |
+|---|:---:|:---:|:---:|
+| 64 (original) | 3.1 M | 0.321 | 0.324 |
+| 16 | 211 k | 0.302 | 0.291 |
+| 8 | 65 k | 0.252 | 0.396 |
+
+Shrinking made it *worse*. At width=8 the model collapsed to predicting every window as fall (specificity 0.000, sensitivity 1.000, FP 952). **The failure was informative:** the bottleneck is not capacity, it is class-imbalance handling.
+
+**Hypothesis B — weighted focal loss instead of WeightedRandomSampler: WORKS on limited data.**
+
+| Split | ST-GCN + sampler | ST-GCN + focal | TCNTE |
+|---|:---:|:---:|:---:|
+| Limited (train S1–3) | 0.321 (FP 416) | **0.524** (FP 178) | 0.524 (FP 209) |
+| Full (train S1–15) | **0.602** (recall 0.994, FN 1) | 0.524 | 0.494 |
+
+The `WeightedRandomSampler` forces over-prediction of falls (limited: FP 416). Weighted focal loss (TCNTE's technique, α = neg/pos ratio, γ=3) fixes it and lifts limited-data cross-subject F1 **0.321 → 0.524**, matching TCNTE with better accuracy (0.804 vs 0.786) and fewer false alarms (178 vs 209). On full data, however, the sampler is better (0.602 vs 0.524) and gives near-perfect recall (0.994, FN 1).
+
+**Honest conclusions:**
+- **Best imbalance strategy depends on training-set size:** sampler for full data, focal loss for limited data. Worth adopting `--stgcn-loss focal` for low-data settings.
+- **Cross-subject summary:** with sufficient data our ST-GCN clearly beats TCNTE (F1 0.602 vs 0.494) and misses almost no falls (recall 99.4%, FN 1). With limited data, ours *ties* TCNTE (0.524) once focal loss is used.
+- **Physics still does not carry the cross-subject result** (full+sampler 0.602→0.600; limited+focal 0.524→0.502). Where it appears to help (full+focal 0.524→0.546) the gain comes from the two-stage *threshold tuning*, not the velocity/accel filter. The poster claim "physics helps most with limited data" is **not supported cross-subject** and should not be the headline.
+
+Saved to: `experiments/crosssub_limited_w16/`, `crosssub_limited_w8/`, `crosssub_limited_focal/`, `crosssub_full_focal/`.
+
+---
+
 <a name="korean"></a>
 # 🇰🇷 한국어
 

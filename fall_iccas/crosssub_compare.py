@@ -40,11 +40,20 @@ def stats(y_true, y_pred):
             "precision": prec, "fp": int(fp), "fn": int(fn), "tp": int(tp), "tn": int(tn)}
 
 
-def train_stgcn(Xtr, ytr, Xva, yva, patience=15):
-    tr = DataLoader(FallDataset(Xtr, ytr, augment=True), BATCH_SIZE, sampler=make_sampler(ytr))
+def train_stgcn(Xtr, ytr, Xva, yva, patience=15, width=64, loss="sampler"):
+    """loss='sampler' -> WeightedRandomSampler + CrossEntropy (our original);
+       loss='focal'   -> no sampler + weighted focal loss (TCNTE's technique)."""
+    if loss == "focal":
+        tr = DataLoader(FallDataset(Xtr, ytr, augment=True), BATCH_SIZE, shuffle=True)
+        npos = int(ytr.sum()); alpha = (len(ytr) - npos) / max(npos, 1)
+        crit = WeightedFocalLoss(alpha=alpha, gamma=3.0)
+        print(f"  ST-GCN loss=focal (alpha={alpha:.2f}, gamma=3)")
+    else:
+        tr = DataLoader(FallDataset(Xtr, ytr, augment=True), BATCH_SIZE, sampler=make_sampler(ytr))
+        crit = nn.CrossEntropyLoss()
     va = DataLoader(FallDataset(Xva, yva), BATCH_SIZE, shuffle=False)
-    m = STGCN(in_channels=3, num_classes=2, dropout=DROPOUT).to(DEVICE)
-    crit = nn.CrossEntropyLoss()
+    m = STGCN(in_channels=3, num_classes=2, dropout=DROPOUT, width=width).to(DEVICE)
+    print(f"  ST-GCN width={width}  params={sum(p.numel() for p in m.parameters()):,}")
     opt = torch.optim.Adam(m.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     sch = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=EPOCHS)
     best, state, no = -1, None, 0
@@ -92,6 +101,11 @@ def main():
     ap.add_argument("--val-subjects", type=int, nargs="+", required=True)
     ap.add_argument("--test-subjects", type=int, nargs="+", required=True)
     ap.add_argument("--tag", default="split")
+    ap.add_argument("--stgcn-loss", choices=["sampler", "focal"], default="sampler",
+                    help="sampler = WeightedRandomSampler+CE (original); focal = weighted focal loss (TCNTE's technique)")
+    ap.add_argument("--stgcn-width", type=int, default=64,
+                    help="ST-GCN base channels (64 = original ~3.1M params; "
+                         "16 ~200k; 8 ~50k — smaller fits limited data better)")
     args = ap.parse_args()
 
     X = np.load(os.path.join(args.data_dir, "X.npy"))
@@ -110,7 +124,7 @@ def main():
     results["TCNTE"] = stats(y[te], pred(X[te]))
 
     # ST-GCN + Physics
-    stgcn = train_stgcn(X[tr], y[tr], X[va], y[va])
+    stgcn = train_stgcn(X[tr], y[tr], X[va], y[va], width=args.stgcn_width, loss=args.stgcn_loss)
     te_loader = DataLoader(FallDataset(X[te], y[te]), BATCH_SIZE, shuffle=False)
     _, _, s1_preds, y_te, _ = evaluate(stgcn, te_loader, nn.CrossEntropyLoss())
     results["ST-GCN"] = stats(y_te, s1_preds)

@@ -108,27 +108,34 @@ class STGCN(nn.Module):
         dropout     : dropout rate in ST-GCN blocks
     """
 
-    def __init__(self, in_channels=3, num_classes=2, A=None, dropout=0.5):
+    def __init__(self, in_channels=3, num_classes=2, A=None, dropout=0.5, width=64):
+        """
+        width : base channel count (default 64 -> the original 64/128/256 model,
+                ~3.1M params). Smaller widths give a compact model that fits
+                limited training data — e.g. width=16 -> 16/32/64 (~200k params),
+                width=8 -> 8/16/32 (~50k). Params scale roughly with width^2.
+        """
         super().__init__()
         if A is None:
             A = ADJACENCY
 
         self.data_bn = nn.BatchNorm1d(in_channels * A.shape[1])
 
+        w = width
         self.layers = nn.ModuleList([
-            STGCNBlock(in_channels, 64,  A, dropout=dropout),
-            STGCNBlock(64,          64,  A, dropout=dropout),
-            STGCNBlock(64,          64,  A, dropout=dropout),
-            STGCNBlock(64,          128, A, stride=2, dropout=dropout),
-            STGCNBlock(128,         128, A, dropout=dropout),
-            STGCNBlock(128,         128, A, dropout=dropout),
-            STGCNBlock(128,         256, A, stride=2, dropout=dropout),
-            STGCNBlock(256,         256, A, dropout=dropout),
-            STGCNBlock(256,         256, A, dropout=dropout),
+            STGCNBlock(in_channels, w,     A, dropout=dropout),
+            STGCNBlock(w,           w,     A, dropout=dropout),
+            STGCNBlock(w,           w,     A, dropout=dropout),
+            STGCNBlock(w,           2 * w, A, stride=2, dropout=dropout),
+            STGCNBlock(2 * w,       2 * w, A, dropout=dropout),
+            STGCNBlock(2 * w,       2 * w, A, dropout=dropout),
+            STGCNBlock(2 * w,       4 * w, A, stride=2, dropout=dropout),
+            STGCNBlock(4 * w,       4 * w, A, dropout=dropout),
+            STGCNBlock(4 * w,       4 * w, A, dropout=dropout),
         ])
 
         self.pool = nn.AdaptiveAvgPool2d(1)
-        self.fc   = nn.Linear(256, num_classes)
+        self.fc   = nn.Linear(4 * w, num_classes)
 
     def forward(self, x, return_features=False):
         """
